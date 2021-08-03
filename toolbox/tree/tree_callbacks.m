@@ -3274,8 +3274,8 @@ end
 function SetDefaultSurf(iSubject, SurfaceType, iSurface)
     % Update database
     db_surface_default(iSubject, SurfaceType, iSurface);
-    % Repaint tree
-    panel_protocols('RepaintTree');
+    % Update Subject node
+    panel_protocols('UpdateNode', 'Subject', iSubject);
 end
 
 %% ===== SET DEFAULT HEADMODEL =====

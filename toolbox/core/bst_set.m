@@ -307,8 +307,9 @@ switch contextName
         selectedFiles = cell(1, length(categories));
         for iCat = 1:length(categories)
             field = ['i' categories{iCat}];
-            if ~isempty(sSubject.(field)) && ischar(sSubject.(field))
-                selectedFiles{iCat} = sSubject.(field);
+            if ~isempty(sSubject.(field))
+                sFile = db_get(sqlConn, 'AnatomyFile', sSubject.(field), 'FileName');
+                selectedFiles{iCat} = sFile.FileName;
                 sSubject.(field) = [];
             else
                 selectedFiles{iCat} = [];

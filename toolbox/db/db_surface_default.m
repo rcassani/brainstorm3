@@ -23,6 +23,9 @@ function sSubject = db_surface_default( iSubject, SurfaceType, iSurface, isUpdat
 %
 % Authors: Francois Tadel, 2008-2011
 
+% Lock Subject
+LockId = lock_acquire(mfilename ,iSubject);
+
 % Get protocol description
 ProtocolInfo = bst_get('ProtocolInfo');
 sSubject = bst_get('Subject', iSubject);
@@ -69,15 +72,8 @@ end
 
 % Get new default surface
 if ~isempty(iSurface)
-    if strcmpi(SurfaceType, 'Anatomy')
-        sSurface = sSubject.Anatomy(iSurface);
-    else
-        if (iSurface > length(sSubject.Surface))
-            error(sprintf('Invalid surface index #%d. Subject has only %d registered surfaces.', iSurface, length(sSubject.Surface)));
-        end
-        sSurface = sSubject.Surface(iSurface);
-    end
-    DefaultFile = sSurface.FileName;
+    sAnatFile = db_get('AnatomyFile', iSurface);
+    DefaultFile = sAnatFile.FileName;
 else
     DefaultFile = '';
 end
@@ -107,5 +103,7 @@ if isUpdate
     end
 end
 
+% Unlock Subject
+lock_release([], LockId);
 
 
