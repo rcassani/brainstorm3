@@ -1586,7 +1586,8 @@ function sInputs = GetInputStruct(FileNames)
         [sInputs(iGroupFiles).SubjectFile] = deal(file_win2unix(SubjectFile));
         % Get channel file
         if iChannel ~= 0
-            [~, sChannel] = db_get(sqlConn, 'FunctionalFile', iChannel);
+            sFuncFile = db_get(sqlConn, 'FunctionalFile', iChannel);
+            sChannel = db_convert_functionalfile(sFuncFile);
             [sInputs(iGroupFiles).ChannelFile]  = deal(file_win2unix(sChannel.FileName));
             [sInputs(iGroupFiles).ChannelTypes] = deal(sChannel.Modalities);
         end
@@ -1597,7 +1598,8 @@ function sInputs = GetInputStruct(FileNames)
         % Get item info
         for iItem = 1:length(iGroupFiles)
             iInput = iGroupFiles(iItem);
-            [sFile, sItem] = db_get(sqlConn, 'FunctionalFile', GroupFileNames{iItem});
+            sFuncFile = db_get(sqlConn, 'FunctionalFile', GroupFileNames{iItem});
+            sItem = db_convert_functionalfile(sFuncFile);
             
             % Skip if file not found in database
             if isempty(sItem)

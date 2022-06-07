@@ -78,8 +78,8 @@ end
 if length(varargin) > 3
     FileId = varargin{4};
     if ischar(FileId)
-        sFile = db_get(sqlConn, 'FunctionalFile', FileId, 'Id');
-        FileId = sFile.Id;
+        sFuncFile = db_get(sqlConn, 'FunctionalFile', FileId, 'Id');
+        FileId = sFuncFile.Id;
     end
 else
     FileId = [];

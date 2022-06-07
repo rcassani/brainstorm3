@@ -1286,9 +1286,9 @@ switch contextName
         sStudy = sql_query(sqlConn, 'select', 'Study', 'Id', struct('FileName', StudyFile));
         % If data file instead on Study file
         if isempty(sStudy)
-            sFile = db_get(sqlConn, 'FunctionalFile', StudyFile, 'Study');
-            if ~isempty(sFile)
-                iStudy = sFile.Study;
+            sFuncFile = db_get(sqlConn, 'FunctionalFile', StudyFile, 'Study');
+            if ~isempty(sFuncFile)
+                iStudy = sFuncFile.Study;
             end
         else
             iStudy = sStudy.Id;
@@ -1327,7 +1327,8 @@ switch contextName
             % Get study 
             iStudy = iStudies(i);
             [iChannel, iChanStudy] = db_get(sqlConn, 'ChannelFromStudy', iStudy);
-            [~, sChannel] = db_get(sqlConn, 'FunctionalFile', iChannel);
+            sFuncFile = db_get(sqlConn, 'FunctionalFile', iChannel);
+            sChannel = db_convert_functionalfile(sFuncFile);
             if ~isempty(sChannel)
                 iChanStudies = [iChanStudies, iChanStudy];
                 sListChannel = [sListChannel, sChannel];
@@ -1344,13 +1345,14 @@ switch contextName
     case 'ChannelModalities'
         % Get channel from input file
         sqlConn = sql_connect();
-        sFile = db_get(sqlConn, 'FunctionalFile', varargin{2}, {'Id', 'Study', 'Type'});
-        if strcmpi(sFile.Type, 'channel')
-            [~, sChannel] = db_get(sqlConn, 'FunctionalFile', sFile.Id);
+        sFuncFile = db_get(sqlConn, 'FunctionalFile', varargin{2}, {'Id', 'Study', 'Type'});
+        if strcmpi(sFuncFile.Type, 'channel')
+            sFuncFile = db_get(sqlConn, 'FunctionalFile', sFuncFile.Id);
+            sChannel = db_convert_functionalfile(sFuncFile);
             sql_close(sqlConn);
         else
             sql_close(sqlConn);
-            sChannel = bst_get('ChannelForStudy', sFile.Study);
+            sChannel = bst_get('ChannelForStudy', sFuncFile.Study);
         end
         % Return modalities
         if ~isempty(sChannel)

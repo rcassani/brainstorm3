@@ -945,12 +945,12 @@ function nodeFound = GetNode( nodeRoot, nodeTypes, iStudy, iFile )
     if (nargin <= 2)
         % Find file in database
         FileName = nodeTypes;
-        sFile = db_get('FunctionalFile', file_short(FileName), {'Id', 'Study'});
-        if isempty(sFile)
+        sFuncFile = db_get('FunctionalFile', file_short(FileName), {'Id', 'Study'});
+        if isempty(sFuncFile)
             return
         end
-        iFile = sFile.Id;
-        iStudy = sFile.Study;
+        iFile = sFuncFile.Id;
+        iStudy = sFuncFile.Study;
         nodeTypes = file_gettype(FileName);
         isExpand = 1;
     else

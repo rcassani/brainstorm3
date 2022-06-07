@@ -282,7 +282,7 @@ switch contextName
                 end
             end
 
-            sFile = getFunctionalFileStruct(type, results(iFile));
+            sFile = db_convert_functionalfile(results(iFile));
 
             if ~isempty(sStudy)
                 % Special case to make sure noise and data covariances are
@@ -395,7 +395,7 @@ switch contextName
           
         
 %% ==== FUNCTIONAL FILE ====
-    % [sFiles, sItems] = db_get('FunctionalFile', FileIDs,   Fields)
+    % sFunctionalFiles = db_get('FunctionalFile', FileIDs,   Fields)
     %                  = db_get('FunctionalFile', FileNames, Fields)
     %                  = db_get('FunctionalFile', CondQuery, Fields)
     case 'FunctionalFile'
@@ -403,6 +403,7 @@ switch contextName
         iFiles = args{1};
         fields = '*';                              
         templateStruct = db_template('FunctionalFile');
+        resultStruct = templateStruct;
 
         if ischar(iFiles)
             iFiles = {iFiles};
@@ -410,17 +411,24 @@ switch contextName
             condQuery = args{1};           
         end
 
+        % Parse Fields parameter
         if length(args) > 1
             fields = args{2};
-            if ischar(fields)
-                fields = {fields};
+            if ~strcmp(fields, '*')
+                if ischar(fields)
+                    fields = {fields};
+                end
+                % Verify requested fields
+                if ~all(isfield(templateStruct, fields))
+                    error('Invalid Fields requested in db_get()');
+                else
+                    resultStruct = [];
+                    for i = 1 : length(fields)
+                        resultStruct.(fields{i}) = templateStruct.(fields{i});
+                    end
+                end
             end
-            for i = 1 : length(fields)
-                resultStruct.(fields{i}) = templateStruct.(fields{i});
-            end
-        else
-            resultStruct = templateStruct;
-        end
+        end         
 
         % Input is FileIDs and FileNames
         if ~isstruct(iFiles)
@@ -446,19 +454,9 @@ switch contextName
         else % Input is struct query
             sFiles = sql_query(sqlConn, 'select', 'functionalfile', fields, condQuery(1));
         end
-        sItems = [];
-        
-        % If output expected, all fields requested, and all sFiles are same Type     
-        if nargout > 1 && isequal(fields, '*') && length(unique({sFiles(:).Type})) == 1
-            nFiles = length(sFiles);
-            sItems = repmat(db_template(sFiles(1).Type), 1, nFiles);
-            for i = 1 : nFiles
-                sItems(i) = getFunctionalFileStruct(sFiles(i).Type, sFiles(i));
-            end
-        end        
-
         varargout{1} = sFiles;
-        varargout{2} = sItems;
+
+
 %% ==== SUBJECT FROM STUDY ====
     % iSubject = db_get('SubjectFromStudy', StudyID)
     case 'SubjectFromStudy'
@@ -511,9 +509,9 @@ switch contextName
             if ~isempty(sStudy)
                 % If no channel selected, find first channel in study
                 if isempty(sStudy.iChannel)
-                    sFile = db_get(sqlConn, 'FunctionalFile', struct('Study', sStudy.Id, 'Type', 'channel'), 'Id');
-                    if ~isempty(sFile)
-                        sStudy.iChannel = sFile(1).Id;
+                    sFuncFile = db_get(sqlConn, 'FunctionalFile', struct('Study', sStudy.Id, 'Type', 'channel'), 'Id');
+                    if ~isempty(sFuncFile)
+                        sStudy.iChannel = sFuncFile(1).Id;
                     end
                 end
 
@@ -639,72 +637,4 @@ end
 if handleConn
     sql_close(sqlConn);
 end
-end
-
-%% ==== LOCAL HELPERS ====
-
-% Get a specific functional file db_template structure from the generic
-% db_template('FunctionalFile') structure
-function sFile = getFunctionalFileStruct(type, funcFile)
-    sFile = db_template(type);
-    if isempty(funcFile)
-        return;
-    end
-    sFile.FileName = funcFile.FileName;
-    sFile.Comment  = funcFile.Name;
-
-    % Extra fields
-    switch lower(type)
-        case 'data'
-            sFile.DataType = funcFile.SubType;
-            sFile.BadTrial = funcFile.ExtraNum;
-
-        case 'channel'
-            sFile.nbChannels = funcFile.ExtraNum;
-            sFile.Modalities = str_split(funcFile.ExtraStr1, ',');
-            sFile.DisplayableSensorTypes = str_split(funcFile.ExtraStr2, ',');
-
-        case {'result', 'results'}
-            sFile.DataFile      = funcFile.ExtraStr1;
-            sFile.isLink        = funcFile.ExtraNum;
-            sFile.HeadModelType = funcFile.ExtraStr2;
-
-        case 'timefreq'
-            sFile.DataFile = funcFile.ExtraStr1;
-            sFile.DataType = funcFile.ExtraStr2;
-
-        case 'stat'
-            sFile.Type       = funcFile.SubType;
-            sFile.pThreshold = funcFile.ExtraStr1;
-            sFile.DataFile   = funcFile.ExtraStr2;
-
-        case 'headmodel'
-            sFile.HeadModelType = funcFile.SubType;
-            modalities = str_split(funcFile.ExtraStr1, ',');
-            methods    = str_split(funcFile.ExtraStr2, ',');
-
-            for iMod = 1:length(modalities)
-                switch upper(modalities{iMod})
-                    case 'MEG'
-                        sFile.MEGMethod = methods{iMod};
-                    case 'EEG'
-                        sFile.EEGMethod = methods{iMod};
-                    case 'ECOG'
-                        sFile.ECOGMethod = methods{iMod};
-                    case 'SEEG'
-                        sFile.SEEGMethod = methods{iMod};
-                    otherwise
-                        error('Unsupported modality for head model method.');
-                end
-            end
-
-        case 'dipoles'
-            sFile.DataFile = funcFile.ExtraStr1;
-
-        case {'matrix', 'noisecov', 'ndatacov', 'image'}
-            % Nothing to add
-
-        otherwise
-            error('Unsupported functional file type.');
-    end
 end
