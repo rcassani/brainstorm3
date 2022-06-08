@@ -586,10 +586,85 @@ switch contextName
             varargout{1} = sStudy.Id;
         end
 %% ==== STUDY ====   
-    % sStudy = db_get('Study', StudyID)
+    % sStudy = db_get('Study', StudyIDs,         Fields);
+    %        = db_get('Study', StudyFileNames,   Fields);
+    %        = db_get('Study', CondQuery,        Fields);
+    %        = db_get('Study', '@inter',         Fields);
+    %        = db_get('Study', '@default_study', Fields);
+    %        = db_get('Study');
     case 'Study'
-        iStudy = args{1};
-        varargout{1} = sql_query(sqlConn, 'select', 'Study', '*', struct('Id', iStudy));
+        % Default parameters
+        fields = '*';
+        templateStruct = db_template('Study');
+        resultStruct = templateStruct;
+
+        % Parse first parameter
+        if isempty(args)
+           ProtocolInfo = bst_get('ProtocolInfo');
+           iStudies = ProtocolInfo.iStudy;
+        else
+           iStudies = args{1};
+        end
+        % StudyFileNames and CondQuery cases
+        if ischar(iStudies)
+            if strcmp(iStudies, '@inter')
+                iStudies = struct('Name', iStudies);
+                condQuery = iStudies;
+            elseif strcmp(iStudies, '@default_study')
+                sSubject = db_get(sqlConn, 'Subject', '@default_subject', 'Id');
+                iStudies = struct('Name', iStudies, 'Subject', sSubject.Id);
+                condQuery = iStudies;
+            else
+                iStudies = {iStudies};
+            end
+        elseif isstruct(iStudies)
+            condQuery = args{1};
+        end
+
+        % Parse Fields parameter
+        if length(args) > 1
+            fields = args{2};
+            if ~strcmp(fields, '*')
+                if ischar(fields)
+                    fields = {fields};
+                end
+                % Verify requested fields
+                if ~all(isfield(templateStruct, fields))
+                    error('Invalid Fields requested in db_get()');
+                else
+                    resultStruct = [];
+                    for i = 1 : length(fields)
+                        resultStruct.(fields{i}) = templateStruct.(fields{i});
+                    end
+                end
+            end
+        end
+
+        % Input is StudyIDs or StudyFileNames
+        if ~isstruct(iStudies)
+            nStudies = length(iStudies);
+            sStudies = repmat(resultStruct, 1, nStudies);
+            for i = 1:nStudies
+                if iscell(iStudies)
+                    condQuery.FileName = iStudies{i};
+                else
+                    condQuery.Id = iStudies(i);
+                end
+                result = sql_query(sqlConn, 'select', 'study', fields, condQuery);
+                if isempty(result)
+                    if isfield(condQuery, 'FileName')
+                        entryStr = ['FileName "', iStudies{i}, '"'];
+                    else
+                        entryStr = ['Id "', num2str(iStudies(i)), '"'];
+                    end
+                    error(['Study with ', entryStr, ' was not found in database.']);
+                end
+                sStudies(i) = result;
+            end
+        else % Input is struct query
+            sStudies = sql_query(sqlConn, 'select', 'study', fields, condQuery(1));
+        end
+        varargout{1} = sStudies;
 
 %% ==== STUDIES ====              
     % sStudy = db_get('Studies', Fields)
