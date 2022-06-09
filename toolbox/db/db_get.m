@@ -207,11 +207,13 @@ switch contextName
         end
         varargout{1} = sql_query(sqlConn, 'select', 'subject', '*', [], addQuery);
 
+
 %% ==== SUBJECTS COUNT ====
     % nSubjects = db_get('SubjectCount')
     case 'SubjectCount'
         varargout{1} = sql_query(sqlConn, 'count', 'subject', [], 'WHERE Name <> "@default_subject"');
-        
+
+
 %% ==== FILES WITH SUBJECT ====
     % sAnatomyFiles = db_get('FilesWithSubject', SubjectID, AnatomyFileType, Fields)
     %               = db_get('FilesWithSubject', SubjectID, AnatomyFileType)
@@ -384,6 +386,7 @@ switch contextName
 
         varargout{1} = iSubject;
 
+
 %% ==== CHANNEL FROM STUDY ====
     % iFile = db_get('ChannelFromStudy', StudyID)
     case 'ChannelFromStudy'
@@ -434,7 +437,8 @@ switch contextName
                 end
             end
         end
-    
+
+
 %% ==== STUDIES FROM SUBJECT ====        
     % iStudies = db_get('StudiesFromSubject', iSubject)                                   % Exclude 'intra_subject' and 'default_study')
     %          = db_get('StudiesFromSubject', iSubject, 'intra_subject', 'default_study') % Include 'intra_subject' and 'default_study')
@@ -470,6 +474,7 @@ switch contextName
             end
         end
 
+
 %% ==== DEFAULT STUDY ====       
     % iStudy = db_get('DefaultStudy', iSubject)
     case 'DefaultStudy'
@@ -498,6 +503,8 @@ switch contextName
         if ~isempty(sStudy)
             varargout{1} = sStudy.Id;
         end
+
+
 %% ==== STUDY ====   
     % sStudy = db_get('Study', StudyIDs,         Fields);
     %        = db_get('Study', StudyFileNames,   Fields);
@@ -579,6 +586,7 @@ switch contextName
         end
         varargout{1} = sStudies;
 
+
 %% ==== STUDIES ====              
     % sStudy = db_get('Studies', Fields)
     %        = db_get('Studies')
@@ -591,6 +599,7 @@ switch contextName
         
         varargout{1} = sql_query(sqlConn, 'select', 'Study', fields, [], ...
             'WHERE Name <> "@inter" AND (Subject <> 0 OR Name <> "@default_study")');
+
 
 %% ==== SUBJECT FROM FUNCTIONAL FILE ====              
     % iSubject = db_get('SubjectFromFunctionalFile', FileId)
@@ -610,7 +619,8 @@ switch contextName
             varargout{1} = [];
         end
         result.close();
-        
+
+
 %% ==== ERROR ====      
     otherwise
         error('Invalid context : "%s"', contextName);
