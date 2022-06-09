@@ -656,7 +656,7 @@ switch contextName
         % ===== GET STUDY BY FILENAME =====
         % Call: bst_get('Study', StudyFileName);
         if ~isempty(StudyFileName)
-            sStudy = sql_query(sqlConn, 'select', 'study', {'Id', 'Subject', 'Name'}, struct('FileName', StudyFileName));
+            sStudy = db_get(sqlConn, 'Study', StudyFileName, {'Id', 'Subject', 'Name'});
             if ~isempty(sStudy)
                 if strcmpi(sStudy.Name, '@inter')
                     iStudies(end + 1) = iAnalysisStudy;
@@ -674,19 +674,21 @@ switch contextName
             argout1 = repmat(db_template('Study'), 0);
             argout2 = [];
             iNext = 1;
-            for iStudy = iStudies
+            for ix_study = 1 : length(iStudies)
+                iStudy = iStudies(ix_study);
                 if iStudy == iAnalysisStudy
-                    sStudy = sql_query(sqlConn, 'select', 'study', '*', struct('Name', '@inter'));
+                    sStudy = db_get(sqlConn, 'Study', '@inter');
                 elseif iStudy == iDefaultStudy
-                    sStudy = sql_query(sqlConn, 'select', 'study', '*', struct('Subject', 0, 'Name', '@default_study'));
+                    sStudy = db_get(sqlConn, 'Study', '@default_study');
                 else
-                    sStudy = sql_query(sqlConn, 'select', 'study', '*', struct('Id', iStudy));
+                    sStudy = db_get(sqlConn, 'Study', iStudy);
                 end
                 
                 if isempty(sStudy)
                     continue
                 end
                 
+                % Add missing fields to complete output of bst_get('Study')
                 sSubject = db_get(sqlConn, 'Subject', sStudy.Subject, 'FileName');
                 sStudy.BrainStormSubject = sSubject.FileName;
                 if isempty(sStudy.Condition)
@@ -695,22 +697,51 @@ switch contextName
                     sStudy.Condition = {sStudy.Condition};
                 end
                 
-                % Populate functional files data
-                sStudy = db_get(sqlConn, 'FilesWithStudy', sStudy);
+                % === Populate functional files data
+                sFuncFiles = db_get(sqlConn, 'FilesWithStudy', iStudy);
+                % Names of fields in sStudy for types of functional files
+                types = {'Channel', 'Data', 'HeadModel', 'Result', 'Stat', ...
+                         'Image', 'NoiseCov', 'Dipoles', 'Timefreq', 'Matrix'};
+                for ix_type = 1 : length(types)
+                    type = types{ix_type};
+                    % Make sure noise and data covariances are in the expected order
+                    % (1) = noise, (2) = data
+                    if strcmpi(type, 'noisecov')
+                        % Find data covariance file
+                        ix_dc = find(strcmpi('ndatacov', {sFuncFiles.Type}));
+                        if length(ix_dc) == 1
+                            sStudy.(type) = repmat(db_template(type), 1, 2);
+                            sStudy.(type)(2) = db_convert_functionalfile(sFuncFiles(ix_dc));
+                        end
+                        % Find noise covariance file
+                        ix_nc = find(strcmpi('noisecov', {sFuncFiles.Type}));
+                        if length(ix_nc) == 1
+                            if isempty(sStudy.(type))
+                                sStudy.(type) = repmat(db_template(type), 1);
+                            end
+                            sStudy.(type)(1) = db_convert_functionalfile(sFuncFiles(ix_nc));
+                        end
+                    else
+                        % Find functionalFiles of this type
+                        ix_funcfiles = strcmpi(type, {sFuncFiles.Type});
+                        sStudy.(type) = [repmat(db_template(type), 0), ...
+                            db_convert_functionalfile(sFuncFiles(ix_funcfiles))];
+                    end
+                end
                 
+                % Append to output
                 argout1(iNext) = sStudy;
                 argout2(iNext) = sStudy.Id;
                 iNext = iNext + 1;
             end
-            sql_close(sqlConn);
             % Error
             if isempty(argout1)
                 GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol).iStudy = [];
             end
         end
         sql_close(sqlConn);
- 
-        
+
+
 %% ==== STUDY WITH SUBJECT FILE ====
     % Usage : [sStudies, iStudies] = bst_get('StudyWithSubject', SubjectFile) : WITHOUT the system studies ('intra_subject', 'default_study')
     %         [sStudies, iStudies] = bst_get(..., 'intra_subject', 'default_study') : WITH the system studies: 'intra_subject' | 'default_study'
