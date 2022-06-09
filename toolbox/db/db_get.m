@@ -228,108 +228,20 @@ switch contextName
 
 
 %% ==== FILES WITH STUDY ====
-    % sFiles = db_get('FilesWithStudy', FileType (e.g. Data), StudyID)
+    % sFunctionalFiles = db_get('FilesWithStudy', StudyID, FunctionalFileType, Fields)
+    %                  = db_get('FilesWithStudy', StudyID, FunctionalFileType)
+    %                  = db_get('FilesWithStudy', StudyID)
     case 'FilesWithStudy'
-        % Special case: sStudy = db_get('FilesWithStudy', sStudy)
-        % This sets the functional file fields in sStudy (e.g. Data)
-        if length(args) == 1
-            sStudy = args{1};
-            iStudy = sStudy.Id;
-            types = {'Channel', 'Data', 'HeadModel', 'Result', 'Stat', ...
-                'Image', 'NoiseCov', 'Dipoles', 'Timefreq', 'Matrix'};
-
-            for iType = 1:length(types)
-                sStudy.(types{iType}) = repmat(db_template(types{iType}), 0);
-            end
-        elseif length(args) > 1
-            types  = {lower(args{1})};
-            iStudy = args{2};
-            sStudy = [];
-            sAnatFiles = repmat(db_template(types{1}),0);
-        else
-            error('Invalid call.');
-        end
-
-        if length(args) > 2
-            cond = args{3};
-        else
-            cond = struct();
-        end
-        cond.Study = iStudy;
-        extraQry = 'ORDER BY Id';
-        if isempty(sStudy)
-            % Noise and data covariance used to be merged
-            if strcmpi(types{1}, 'noisecov')
-                extraQry = ['AND Type IN ("noisecov", "ndatacov") ' extraQry];
-            else
-                cond.Type = types{1};
+        condQuery.Study = args{1};
+        fields = '*';
+        if length(args) > 1
+            condQuery.Type = lower(args{2});
+            if length(args) > 2
+                fields = args{3};
             end
         end
+        varargout{1} = db_get(sqlConn, 'FunctionalFile', condQuery, fields);
 
-        results = sql_query(sqlConn, 'select', 'functionalfile', '*', cond, extraQry);
-
-        for iFile = 1:length(results)
-            type = results(iFile).Type;
-            if ~isempty(sStudy)
-                if strcmpi(type, 'ndatacov')
-                    iType = find(strcmpi(types, 'noisecov'), 1);
-                else
-                    iType = find(strcmpi(types, type), 1);
-                end
-                
-                if isempty(iType)
-                    continue;
-                end
-            end
-
-            sFile = db_convert_functionalfile(results(iFile));
-
-            if ~isempty(sStudy)
-                % Special case to make sure noise and data covariances are
-                % in the expected order (1. noise, 2. data)
-                if strcmpi(type, 'noisecov')
-                    if isempty(sStudy.NoiseCov)
-                        sStudy.NoiseCov = sFile;
-                    else
-                        sStudy.NoiseCov(1) = sFile;
-                    end
-                elseif strcmpi(type, 'ndatacov')
-                    if isempty(sStudy.NoiseCov)
-                        sStudy.NoiseCov = repmat(db_template('NoiseCov'),1,2);
-                    end
-                    sStudy.NoiseCov(2) = sFile;
-                else
-                    if isempty(sStudy.(types{iType}))
-                        sStudy.(types{iType}) = sFile;
-                    else
-                        sStudy.(types{iType})(end + 1) = sFile;
-                    end
-                end
-            else
-                % Special case to make sure noise and data covariances are
-                % in the expected order (1. noise, 2. data)
-                if strcmpi(type, 'noisecov')
-                    if isempty(sAnatFiles)
-                        sAnatFiles = sFile;
-                    else
-                        sAnatFiles(1) = sFile;
-                    end
-                elseif strcmpi(type, 'ndatacov')
-                    if isempty(sAnatFiles)
-                        sAnatFiles = repmat(db_template('NoiseCov'),1,2);
-                    end
-                    sAnatFiles(2) = sFile;
-                else
-                    sAnatFiles(end + 1) = sFile;
-                end
-            end
-        end
-
-        if ~isempty(sStudy)
-            varargout{1} = sStudy;
-        else
-            varargout{1} = sAnatFiles;
-        end
 
 %% ==== ANATOMY FILE ====
     % sAnatomyFiles = db_get('AnatomyFile', FileIDs,   Fields)
