@@ -214,14 +214,15 @@ switch contextName
         
 %% ==== FILES WITH SUBJECT ====
     % sAnatomyFiles = db_get('FilesWithSubject', SubjectID, AnatomyFileType, Fields)
+    %               = db_get('FilesWithSubject', SubjectID, AnatomyFileType)
+    %               = db_get('FilesWithSubject', SubjectID)
     case 'FilesWithSubject'
         condQuery.Subject = args{1};
+        fields = '*';
         if length(args) > 1 
             condQuery.Type = lower(args{2});
             if length(args) > 2
                 fields = args{3};
-            else
-                fields = '*';
             end
         end
         varargout{1} = db_get(sqlConn, 'AnatomyFile', condQuery, fields);
