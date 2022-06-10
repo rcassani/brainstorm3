@@ -651,11 +651,10 @@ switch contextName
         end
         
         % ===== GET STUDY BY INDEX =====
+        argout1 = repmat(db_template('Study'), 0);
+        argout2 = [];
         % Call: bst_get('Study', iStudies);
         if ~isempty(iStudies)
-            argout1 = repmat(db_template('Study'), 0);
-            argout2 = [];
-            iNext = 1;
             for ix_study = 1 : length(iStudies)
                 iStudy = iStudies(ix_study);
                 if iStudy == iAnalysisStudy
@@ -712,9 +711,8 @@ switch contextName
                 end
                 
                 % Append to output
-                argout1(iNext) = sStudy;
-                argout2(iNext) = sStudy.Id;
-                iNext = iNext + 1;
+                argout1(ix_study) = sStudy;
+                argout2(ix_study) = sStudy.Id;
             end
             % Error
             if isempty(argout1)
