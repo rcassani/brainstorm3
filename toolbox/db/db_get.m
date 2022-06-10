@@ -562,9 +562,8 @@ switch contextName
 
         % Input is StudyIDs or StudyFileNames
         if ~isstruct(iStudies)
-            nStudies = length(iStudies);
-            sStudies = repmat(resultStruct, 1, nStudies);
-            for i = 1:nStudies
+            sStudies = repmat(resultStruct, 0);
+            for i = 1:length(iStudies)
                 if iscell(iStudies)
                     condQuery.FileName = iStudies{i};
                 else
@@ -577,9 +576,10 @@ switch contextName
                     else
                         entryStr = ['Id "', num2str(iStudies(i)), '"'];
                     end
-                    error(['Study with ', entryStr, ' was not found in database.']);
+                    warning(['Study with ', entryStr, ' was not found in database.']);
+                else
+                    sStudies(i) = result;
                 end
-                sStudies(i) = result;
             end
         else % Input is struct query
             sStudies = sql_query(sqlConn, 'select', 'study', fields, condQuery(1));
