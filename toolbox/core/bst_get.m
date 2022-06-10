@@ -566,7 +566,7 @@ switch contextName
         
         
     case 'ProtocolStudies'
-        warning('This function is deprecated with the new Brainstorm database system.');
+        warning('bst_get(\''%s'') is deprecated with the new Brainstorm database system.', contextName);
         argout1 = db_template('ProtocolStudies');
         if GlobalData.DataBase.iProtocol == 0
             % No protocol loaded
@@ -576,44 +576,26 @@ switch contextName
             error('No database information.');
         end
         
-        sqlConn = sql_connect();
-        argout1.Study = db_get(sqlConn, 'Studies');
-        defaultStudy = sql_query(sqlConn, 'select', 'study', '*', struct('Subject', 0, 'Name', '@default_study'));
-        analysisStudy = sql_query(sqlConn, 'select', 'study', '*', struct('Name', '@inter'));
-        
-        for iSub = -1:length(argout1.Study)
-            if iSub == -1
-                sStudy = defaultStudy;
-            elseif iSub == 0
-                sStudy = analysisStudy;
-            else
-                sStudy = argout1.Study(iSub);
+        % Get all the studies (old sStudy structure) from Protocol
+        studyIds = db_get('Studies', 1, 'Id');
+        if ~isempty(studyIds)
+            studyIds = [studyIds.Id];
+            sStudies = bst_get('Study', studyIds);
+            % Separate @inter study
+            ix_inter = find(strcmpi('@inter', {sStudies.Name}));
+            if ~isempty(ix_inter)
+                argout1.AnalysisStudy = sStudies(ix_inter);
+                sStudies(ix_inter) = [];
             end
-            
-            if ~isempty(sStudy)
-                sSubject = db_get(sqlConn, 'Subject', sStudy.Subject, 'FileName');
-                sStudy.BrainStormSubject = sSubject.FileName;
-                
-                if isempty(sStudy.Condition)
-                    sStudy.Condition = {sStudy.Name};
-                elseif ~iscell(sStudy.Condition)
-                    sStudy.Condition = {sStudy.Condition};
-                end
-                
-                % Populate functional files data
-                sStudy = db_get(sqlConn, 'FilesWithStudy', sStudy);
+            % Separate global @default_study
+            ix_default = find(strcmpi('@default_study', {sStudies.Name}) & ([sStudies.Subject] == 0));
+            if ~isempty(ix_default)
+                argout1.DefaultStudy = sStudies(ix_default);
+                sStudies(ix_default) = [];
             end
-            
-            if iSub == -1
-                argout1.DefaultStudy = sStudy;
-            elseif iSub == 0
-                argout1.AnalysisStudy = sStudy;
-            else
-                argout1.Study(iSub) = sStudy;
-            end
+            % All other studies
+            argout1.Study = sStudies;
         end
-        
-        sql_close(sqlConn);
         
     case 'isProtocolLoaded'
         error('TODO: Not supported anymore.');
