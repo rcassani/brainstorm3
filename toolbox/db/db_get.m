@@ -588,17 +588,26 @@ switch contextName
 
 
 %% ==== STUDIES ====              
-    % sStudy = db_get('Studies', Fields)
-    %        = db_get('Studies')
+    % sStudy = db_get('Studies')             % Exclude @inter and global @default_study
+    %        = db_get('Studies', 0, Fields)  % Exclude @inter and global @default_study
+    %        = db_get('Studies', 1, Fields)  % Include @inter and global @default_study
     case 'Studies'
+        includeGlobalStudies  = [];
+        fields = '*';
+        % Parse arguments
         if length(args) > 0
-            fields = args{1};
-        else
-            fields = '*';
+            includeGlobalStudies = args{1};
+            if length(args) > 1
+                fields = args{2};
+            end
+        end
+        % Exclude global studies if indicated
+        addQuery = '';
+        if isempty(includeGlobalStudies) || (includeGlobalStudies == 0)
+            addQuery = 'WHERE Name <> "@inter" AND (Subject <> 0 OR Name <> "@default_study")';
         end
         
-        varargout{1} = sql_query(sqlConn, 'select', 'Study', fields, [], ...
-            'WHERE Name <> "@inter" AND (Subject <> 0 OR Name <> "@default_study")');
+        varargout{1} = sql_query(sqlConn, 'select', 'Study', fields, [], addQuery);
 
 
 %% ==== SUBJECT FROM FUNCTIONAL FILE ====              
