@@ -423,20 +423,73 @@ switch contextName
                 end
             end
         end
+
         
-%% ==== FUNCTIONAL FILE ====       
-    % db_set('FunctionalFile', 'insert', db_template('FunctionalFile'))
-    % db_set('FunctionalFile', 'update', db_template('FunctionalFile'), struct('Id', 1))
+%% ==== FUNCTIONAL FILES ====
+    % [Success]                            db_set('FunctionalFile', 'Delete')
+    % [Success]                            db_set('FunctionalFile', 'Delete', FunctionalFileId)
+    % [Success]                            db_set('FunctionalFile', 'Delete', CondQuery)
+    % [FunctionalFileId, FunctionalFile] = db_set('FunctionalFile', FunctionalFile)
+    % [FunctionalFileId, FunctionalFile] = db_set('FunctionalFile', FunctionalFile, FunctionalFileId)
     case 'FunctionalFile'
-        queryType = args{1};
-        sFile = args{2};
-        if length(args) > 2
-            updateCondition = args{3};
-        else
-            updateCondition = [];
+        % Default parameters
+        iFunctionalFile = [];
+        varargout{1} = [];
+
+        if length(args) < 1
+            error('Error in number of arguments')
         end
         
-        varargout{1} = ModifyFunctionalFile(sqlConn, queryType, sFile, updateCondition);
+        sFunctionalFile = args{1};
+        if length(args) > 1
+            iFunctionalFile = args{2};
+        end
+        % Delete
+        if ischar(sFunctionalFile) && strcmpi(sFunctionalFile, 'delete')
+            if isempty(iFunctionalFile)
+                % Delete all rows in FunctionalFile table
+                delResult = sql_query(sqlConn, 'delete', 'functionalfile');
+            else
+                if isstruct(iFunctionalFile)
+                    % Delete using the CondQuery
+                    delResult = sql_query(sqlConn, 'delete', 'functionalfile', iFunctionalFile);
+                elseif isnumeric(iFunctionalFile)
+                    % Delete using iFunctionalFile
+                    delResult = sql_query(sqlConn, 'delete', 'functionalfile', struct('Id', iFunctionalFile));
+                end
+            end
+            if delResult > 0
+                varargout{1} = 1;
+            end
+
+        % Insert or Update
+        elseif isstruct(sFunctionalFile)
+            % Modify UNIX time
+            sFunctionalFile.LastModified = bst_get('CurrentUnixTime');
+            if isempty(iFunctionalFile)
+                % Insert FunctionalFile row
+                sFunctionalFile.Id = [];
+                iFunctionalFile = sql_query(sqlConn, 'insert', 'functionalfile', sFunctionalFile);
+                varargout{1} = iFunctionalFile;
+            else
+                % Update FunctionalFile row
+                if ~isfield(sFunctionalFile, 'Id') || isempty(sFunctionalFile.Id) || sFunctionalFile.Id == iFunctionalFile
+                    resUpdate = sql_query(sqlConn, 'update', 'functionalfile', sFunctionalFile, struct('Id', iFunctionalFile));
+                else
+                    error('Cannot update FunctionalFile, Ids do not match');
+                end
+                if resUpdate>0
+                    varargout{1} = iFunctionalFile;
+                end
+            end
+            % If requested, get the inserted or updated row
+            if nargout > 1
+                varargout{2} = db_get(sqlConn, 'FunctionalFile', iFunctionalFile);
+            end
+        else
+            % No action
+        end
+
 
 %% ==== PARENT COUNT ====       
     % db_set('ParentCount', ParentFile, modifier, count)

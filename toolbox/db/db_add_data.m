@@ -96,8 +96,8 @@ if isempty(iItem)
         end
     end
     
-    % Update database
-    db_set(sqlConn, 'FunctionalFile', 'insert', sNew);
+    % Insert in database
+    db_set(sqlConn, 'FunctionalFile', sNew);
 else
     % Delete replaced file
     sFuncFileOld = db_get(sqlConn, 'FunctionalFile', iItem, 'FileName');
@@ -106,7 +106,7 @@ else
     end
     
     % Update database
-    db_set(sqlConn, 'FunctionalFile', 'update', sNew, struct('Id', iItem));
+    db_set(sqlConn, 'FunctionalFile', sNew, iItem);
 end
 sql_close(sqlConn);
 

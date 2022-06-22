@@ -268,7 +268,7 @@ else
             error('Unsupported for now.');
     end
     %TODO, get rest of metadata from file (see db_parse_study)
-    db_set(sqlConn, 'FunctionalFile', 'insert', sFile);
+    db_set(sqlConn, 'FunctionalFile', sFile);
     % Update count of parent file
     db_set(sqlConn, 'ParentCount', ParentFile, '+', 1);
 end
