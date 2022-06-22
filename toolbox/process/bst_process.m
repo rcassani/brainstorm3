@@ -1605,18 +1605,18 @@ function sInputs = GetInputStruct(FileNames)
             if isempty(sItem)
                 continue;
             end
-            
+
             % Extract input type
-            if strcmpi(sFile.Type, 'data') && strcmpi(sItem.DataType, 'raw')
+            if strcmpi(sFuncFile.Type, 'data') && strcmpi(sItem.DataType, 'raw')
                 InputType = 'raw';
-            elseif strcmpi(sFile.Type, 'link')
+            elseif strcmpi(sFuncFile.Type, 'link')
                 InputType = 'results';
             else
-                InputType = sFile.Type;
+                InputType = sFuncFile.Type;
             end
             
             % Fill structure
-            sInputs(iInput).iItem = sFile.Id;
+            sInputs(iInput).iItem = sFuncFile.Id;
             sInputs(iInput).FileType = InputType;
             sInputs(iInput).FileName = sItem.FileName;
             sInputs(iInput).Comment = sItem.Comment;
