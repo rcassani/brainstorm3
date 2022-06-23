@@ -20,10 +20,10 @@ function varargout = db_get(varargin)
 %    - db_get('SubjectFromFunctionalFile', FileName)      : Find Subject for FunctionalFile with FileID 
 %
 % ====== STUDIES =======================================================================
-%    - db_get('StudiesFromSubject', SubjectID, 'intra_subject', 'default_study') : Find Studies for Subject with SubjectID (with intra_subject and default_study)
-%    - db_get('StudiesFromSubject', SubjectIDs)  : Find Studies for Subject with SubjectID (w/o intra_subject and default_study)
-%    - db_get('StudiesFromSubject', SubjectName) : Find Studies for Subject with SubjectName (w/o intra_subject and default_study)
-%    - db_get('DefaultStudy', iSubject)
+%    - db_get('StudiesFromSubject', SubjectID,   Fields, 'intra_subject', 'default_study') : Find Studies for Subject with SubjectID (with intra_subject and default_study)
+%    - db_get('StudiesFromSubject', SubjectID,   Fields) : Find Studies for Subject with SubjectID (w/o intra_subject and default_study)
+%    - db_get('StudiesFromSubject', SubjectName, Fields) : Find Studies for Subject with SubjectName (w/o intra_subject and default_study)
+%    - db_get('DefaultStudy', iSubject, Fields)
 %    - db_get('Study', StudyID) : Find Study by ID
 %    - db_get('Studies', Fields) : Get all Studies in current protocol
 %    - db_get('Studies')         : Get all Studies in current protocol
@@ -403,9 +403,7 @@ switch contextName
                 % If no channel file is defined in 'Analysis-intra' node: look in 
                 if isempty(sStudy.iChannel)
                     % Get global default study
-                    sStudy = sql_query(sqlConn, 'select', 'Study', ...
-                        {'Id', 'Subject', 'iChannel'}, ...
-                        struct('Subject', 0, 'Name', '@default_study'));
+                    sStudy = db_get(sqlConn, 'DefaultStudy', 0, {'Id', 'Subject', 'iChannel'});
                     iChanStudy = sStudy.Id;
                 end
             % === All other nodes ===
@@ -414,8 +412,7 @@ switch contextName
                 sSubject = db_get(sqlConn, 'Subject', sStudy.Subject, 'UseDefaultChannel');
                 % Subject uses default channel/headmodel
                 if ~isempty(sSubject) && (sSubject.UseDefaultChannel ~= 0)
-                    sStudy = sql_query(sqlConn, 'select', 'Study', {'Id', 'iChannel'}, ...
-                        struct('Subject', sStudy.Subject, 'Name', '@default_study'));
+                    sStudy = db_get(sqlConn, 'DefaultStudy', sStudy.Subject, {'Id', 'iChannel'});
                     if ~isempty(sStudy)
                         iChanStudy = sStudy.Id;
                     end
@@ -440,11 +437,20 @@ switch contextName
 
 
 %% ==== STUDIES FROM SUBJECT ====        
-    % iStudies = db_get('StudiesFromSubject', iSubject)                                   % Exclude 'intra_subject' and 'default_study')
-    %          = db_get('StudiesFromSubject', iSubject, 'intra_subject', 'default_study') % Include 'intra_subject' and 'default_study')
-    %          = db_get('StudiesFromSubject', SubjectName)
+    % sStudies = db_get('StudiesFromSubject', iSubject,    Fields)                                   % Exclude 'intra_subject' and 'default_study')
+    %          = db_get('StudiesFromSubject', iSubject,    Fileds, 'intra_subject', 'default_study') % Include 'intra_subject' and 'default_study')
+    %          = db_get('StudiesFromSubject', SubjectName, Fields)
     case 'StudiesFromSubject'
         iSubject = args{1};
+        fields = '*';
+        if length(args) >= 2 && ~strcmp('intra_subject', args{2}) && ~strcmp('default_study', args{2})
+            fields = args{2};
+            if ~strcmp(fields, '*')
+                if ischar(fields)
+                    fields = {fields};
+                end
+            end
+        end
         
         addQuery = [];
         if length(args) < 2 || ~ismember('intra_subject', args(2:end))
@@ -466,20 +472,24 @@ switch contextName
             result.close();
             varargout{1} = iStudies;
         else
-            sStudy = sql_query(sqlConn, 'select', 'Study', 'Id', struct('Subject', iSubject), addQuery);
+            sStudy = sql_query(sqlConn, 'select', 'Study', fields, struct('Subject', iSubject), addQuery);
             if isempty(sStudy)
                 varargout{1} = [];
             else
-                varargout{1} = [sStudy.Id];
+                varargout{1} = sStudy;
             end
         end
 
 
 %% ==== DEFAULT STUDY ====       
-    % iStudy = db_get('DefaultStudy', iSubject)
+    % sStudy = db_get('DefaultStudy', iSubject, Fields)
     case 'DefaultStudy'
+        fields = '*';
         iSubject = args{1};
         varargout{1} = [];
+        if length(args) > 1
+            fields = args{2};
+        end
         defaultStudy = bst_get('DirDefaultStudy');
         
         % === DEFAULT SUBJECT ===
@@ -501,7 +511,7 @@ switch contextName
         
         sStudy = sql_query(sqlConn, 'select', 'Study', 'Id', struct('Subject', iSubject, 'Name', defaultStudy));
         if ~isempty(sStudy)
-            varargout{1} = sStudy.Id;
+            varargout{1} = sStudy;
         end
 
 

@@ -916,16 +916,16 @@ switch contextName
             % If subject uses default channel file    
             elseif (sSubject.UseDefaultChannel ~= 0)
                 % Get default study for this subject
-                iStudiesNew = db_get(sqlConn, 'DefaultStudy', iSubject);
-                iStudies = [iStudies, iStudiesNew];
+                sStudy = db_get(sqlConn, 'DefaultStudy', iSubject, 'Id');
+                iStudies = [iStudies, sStudy.Id];
             % Else: get all the studies belonging to this subject
             else
                 if NoIntra
-                    iStudiesNew = db_get(sqlConn, 'StudiesFromSubject', iSubject);
+                    sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, 'Id');
                 else
-                    iStudiesNew = db_get(sqlConn, 'StudiesFromSubject', iSubject, 'intra_subject');
+                    sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, 'Id', 'intra_subject');
                 end
-                iStudies = [iStudies, iStudiesNew];
+                iStudies = [iStudies, sStudies.Id];
             end
         end
         sql_close(sqlConn);
@@ -1049,8 +1049,7 @@ switch contextName
             % === SUBJECT'S DEFAULT STUDY ===
             elseif sSubject.UseDefaultChannel == 1
                 % Get studies related to subject
-                sStudy = sql_query(sqlConn, 'select', 'study', 'Id', ...
-                    struct('Subject', iSubject, 'Name', '@default_study'));
+                sStudy = db_get(sqlConn, 'DefaultStudy', iSubject, 'Id');
                 if ~isempty(sStudy)
                     argout1 = bst_get('Study', sStudy.Id);
                     argout2 = sStudy.Id;
