@@ -1293,7 +1293,7 @@ switch contextName
         % Get study in database
         sqlConn = sql_connect();
         iStudy = [];
-        sStudy = sql_query(sqlConn, 'select', 'Study', 'Id', struct('FileName', StudyFile));
+        sStudy = db_get(sqlConn, 'Study', StudyFile, 'Id');
         % If data file instead on Study file
         if isempty(sStudy)
             sFuncFile = db_get(sqlConn, 'FunctionalFile', StudyFile, 'Study');

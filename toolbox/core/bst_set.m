@@ -367,13 +367,13 @@ switch contextName
         for i = 1:length(iStudies)
             % Inter-subject analysis study
             if iStudies(i) == iAnalysisStudy
-                sExistingStudy = sql_query(sqlConn, 'select', 'study', 'Id', struct('Name', '@inter'));
+                sExistingStudy = db_get(sqlConn, 'Study', '@inter', 'Id');
             % Default study
             elseif iStudies(i) == iDefaultStudy
-                sExistingStudy = sql_query(sqlConn, 'select', 'study', 'Id', struct('Name', '@default_study'));
+                sExistingStudy = db_get(sqlConn, 'Study', '@default_study', 'Id');
             % Normal study
             else
-                sExistingStudy = sql_query(sqlConn, 'select', 'study', 'Id', struct('Id', iStudies(i)));
+                sExistingStudy = db_get(sqlConn, 'Study', iStudies(i), 'Id');
             end
             
             % Get ID of parent subject

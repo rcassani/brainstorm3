@@ -142,7 +142,7 @@ else
             ParentFolder = bst_fileparts(sFuncFileParent.FileName);
         end
     else
-        sStudy = sql_query(sqlConn, 'select', 'Study', 'FileName', struct('Id', iTarget));
+        sStudy = db_get(sqlConn, 'Study', iTarget, 'FileName');
         ParentFolder = bst_fileparts(sStudy.FileName);
     end
     % Build full filename

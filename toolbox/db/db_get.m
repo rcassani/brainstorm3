@@ -376,7 +376,7 @@ switch contextName
     % iSubject = db_get('SubjectFromStudy', StudyID)
     case 'SubjectFromStudy'
         iStudy = args{1};
-        sStudy = sql_query(sqlConn, 'select', 'Study', 'Subject', struct('Id', iStudy));
+        sStudy = db_get(sqlConn, 'Study', iStudy, 'Subject');
 
         if ~isempty(sStudy)
             iSubject = sStudy.Subject;
@@ -394,8 +394,7 @@ switch contextName
         varargout{1} = [];
         varargout{2} = [];
         
-        sStudy = sql_query(sqlConn, 'select', 'Study', ...
-            {'Id', 'Subject', 'Name', 'iChannel'}, struct('Id', iStudy));
+        sStudy = db_get(sqlConn, 'Study', iStudy, {'Id', 'Subject', 'Name', 'iChannel'});
         if ~isempty(sStudy)
             iChanStudy = iStudy;
             % === Analysis-Inter node ===
@@ -509,7 +508,7 @@ switch contextName
             end
         end
         
-        sStudy = sql_query(sqlConn, 'select', 'Study', 'Id', struct('Subject', iSubject, 'Name', defaultStudy));
+        sStudy = db_get(sqlConn, 'Study', struct('Subject', iSubject, 'Name', defaultStudy), fields);
         if ~isempty(sStudy)
             varargout{1} = sStudy;
         end

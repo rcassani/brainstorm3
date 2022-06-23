@@ -67,7 +67,7 @@ end
 if length(varargin) > 2
     StudyId = varargin{3};
     if ischar(StudyId)
-        sStudy = sql_query(sqlConn, 'select', 'study', 'Id', struct('FileName', StudyId));
+        sStudy = db_get(sqlConn, 'Study', StudyId, 'Id');
         StudyId = sStudy.Id;
     end
 else

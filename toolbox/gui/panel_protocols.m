@@ -499,7 +499,7 @@ function CreateStudyNode(nodeStudy) %#ok<DEFNU>
     iStudy = nodeStudy.getStudyIndex();
     if iStudy ~= 0
         sqlConn = sql_connect();
-        sStudy = sql_query(sqlConn, 'select', 'study', '*', struct('Id', iStudy));
+        sStudy = db_get(sqlConn, 'Study', iStudy);
         sSubject = db_get(sqlConn, 'Subject', sStudy.Subject, 'UseDefaultChannel');
         sql_close(sqlConn);
         if ~isempty(sStudy)
@@ -690,7 +690,7 @@ function UpdateNode(category, indices, isExpandTrials)
                             nodeStudy.removeAllChildren();
                             % Get study and associated subject
                             sqlConn = sql_connect();
-                            sStudy = sql_query(sqlConn, 'select', 'Study', '*', struct('Id', iStudy));
+                            sStudy = db_get(sqlConn, 'Study', iStudy);
                             sSubject = db_get(sqlConn, 'Subject', sStudy.Subject, 'UseDefaultChannel');
                             sql_close(sqlConn);
                             % Create new study node (default node / normal node)
