@@ -214,7 +214,8 @@ switch contextName
             else
                 sStudy = contextValue.Study(iStudy);
             end
-            
+            sStudy.Condition = char(sStudy.Condition);
+
             % Skip empty Default / Analysis studies
             if isempty(sStudy) || ((iStudy < 1 || ismember(sStudy.Name, {'@default_study', '@intra', '@inter'})) ...
                     && isempty(sStudy.Channel) && isempty(sStudy.Data) ...
@@ -239,15 +240,9 @@ switch contextName
                 end
                 
                 sql_query(sqlConn, 'delete', 'functionalfile', struct('Study', sStudy.Id));
-                sql_query(sqlConn, 'delete', 'study', struct('Id', sStudy.Id));
+                db_set(sqlConn, 'Study', 'Delete', sStudy.Id);
             end
-            
-            % Get ID of parent subject
-            sSubject = db_get(sqlConn, 'Subject', sStudy.BrainStormSubject, 'Id');
-            sStudy.Id = [];
-            sStudy.Subject = sSubject.Id;
-            sStudy.Condition = char(sStudy.Condition);
-            
+
             % Extract selected channel/head model to get inserted ID later
             selectedFiles = cell(1, length(categories));
             for iCat = 1:length(categories)
@@ -261,7 +256,7 @@ switch contextName
             end
             
             % Insert study
-            StudyId = sql_query(sqlConn, 'insert', 'study', sStudy);
+            StudyId = db_set(sqlConn, 'Study', sStudy);
             sStudy.Id = StudyId;
             
             % Insert functional files
@@ -277,7 +272,7 @@ switch contextName
                 end
             end
             if hasSelFiles
-                sql_query(sqlConn, 'update', 'Study', selFiles, struct('Id', StudyId));
+                db_set(sqlConn, 'Study', selFiles, StudyId);
             end
         end
         
@@ -403,8 +398,8 @@ switch contextName
             % If study exists, UPDATE query
             if ~isempty(sExistingStudy)
                 sStudies(i).Id = sExistingStudy.Id;
-                result = sql_query(sqlConn, 'update', 'study', sStudies(i), struct('Id', sExistingStudy.Id));
-                if result
+                sExistingStudy.Id = db_set(sqlConn, 'Study', sStudies(i), sExistingStudy.Id);
+                if sExistingStudy.Id
                     iStudy = sExistingStudy.Id;
                     argout1(end + 1) = iStudy;
                 else
@@ -413,7 +408,7 @@ switch contextName
             % If study is new, INSERT query
             else
                 sStudies(i).Id = [];
-                iStudy = sql_query(sqlConn, 'insert', 'study', sStudies(i));
+                iStudy = db_set(sqlConn, 'Study', sStudies(i));
                 if ~isempty(iStudy)
                     argout1(end + 1) = iStudy;
                 end
@@ -434,7 +429,7 @@ switch contextName
                     end
                 end
                 if hasSelFiles
-                    sql_query(sqlConn, 'update', 'Study', selFiles, struct('Id', iStudy));
+                    db_set(sqlConn, 'Study', selFiles, iStudy);
                 end
             end
         end

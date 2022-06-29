@@ -236,6 +236,74 @@ switch contextName
             end
         end
 
+
+%% ==== STUDY ====
+    % [Success]          db_set('Study', 'Delete')
+    % [Success]          db_set('Study', 'Delete', SubjectId)
+    % [Success]          db_set('Study', 'Delete', CondQuery)
+    % [StudyId, Study] = db_set('Study', Study)
+    % [StudyId, Study] = db_set('Study', Study, StudyId)
+    case 'Study'
+        % Default parameters
+        iStudy = [];
+        varargout{1} = [];
+
+        if length(args) < 1
+            error('Error in number of arguments')
+        end
+
+        sStudy = args{1};
+        if length(args) > 1
+            iStudy = args{2};
+        end
+        % Delete
+        if ischar(sStudy) && strcmpi(sStudy, 'delete')
+            if isempty(iStudy)
+                % Delete all rows in Study table
+                delResult = sql_query(sqlConn, 'delete', 'study');
+            else
+                if isstruct(iStudy)
+                    % Delete using the CondQuery
+                    delResult = sql_query(sqlConn, 'delete', 'study', iStudy);
+                elseif isnumeric(iStudy)
+                    % Delete using iStudy
+                    delResult = sql_query(sqlConn, 'delete', 'study', struct('Id', iStudy));
+                end
+            end
+            if delResult > 0
+                varargout{1} = 1;
+            end
+
+        % Insert or Update
+        elseif isstruct(sStudy)
+            if isempty(iStudy)
+                % Get ID of parent subject
+                sSubject = db_get(sqlConn, 'Subject', sStudy.BrainStormSubject, 'Id');
+                sStudy.Subject = sSubject.Id;
+                % Insert Study row
+                sStudy.Id = [];
+                iStudy = sql_query(sqlConn, 'insert', 'study', sStudy);
+                varargout{1} = iStudy;
+            else
+                % Update Study row
+                if ~isfield(sStudy, 'Id') || isempty(sStudy.Id) || sStudy.Id == iStudy
+                    resUpdate = sql_query(sqlConn, 'update', 'study', sStudy, struct('Id', iStudy));
+                else
+                    error('Cannot update Study, Ids do not match');
+                end
+                if resUpdate>0
+                    varargout{1} = iStudy;
+                end
+            end
+            % If requested, get the inserted or updated row
+            if nargout > 1
+                varargout{2} = db_get(sqlConn, 'study', iStudy);
+            end
+        else
+            % No action
+        end
+
+
 %% ==== FILES WITH STUDY ====
     % db_set('FilesWithStudy', FileType, db_template('data/timefreq/etc'), StudyID)
     % db_set('FilesWithStudy', sStudy, [selectedChannel/HeadModel])
