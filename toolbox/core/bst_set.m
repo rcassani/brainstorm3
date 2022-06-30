@@ -239,7 +239,7 @@ switch contextName
                     end
                 end
                 
-                sql_query(sqlConn, 'delete', 'functionalfile', struct('Study', sStudy.Id));
+                db_set(sqlConn, 'FunctionalFile', 'Delete', struct('Study', sStudy.Id));
                 db_set(sqlConn, 'Study', 'Delete', sStudy.Id);
             end
 
@@ -416,7 +416,7 @@ switch contextName
             
             % Insert functional files
             if ~isempty(iStudy)
-                sql_query(sqlConn, 'delete', 'functionalfile', struct('Study', iStudy));
+                db_set(sqlConn, 'FunctionalFile', 'Delete', struct('Study', iStudy));
                 selectedFiles = db_set(sqlConn, 'FilesWithStudy', sStudies(i), selectedFiles);
             
                 % Update study entry to add selected functional files, if any

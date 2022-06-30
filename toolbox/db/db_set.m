@@ -368,6 +368,10 @@ switch contextName
                 functionalFile  = sFunctionalFile;
                 % Add study
                 functionalFile.Study = iStudy;
+                % Get parent
+                if isfield(sFiles(iFile), 'DataFile')
+                    functionalFile.ParentFile = GetParent({'data', 'result', 'matrix'}, sFiles(iFile).DataFile);
+                end
 
                 % For data trials, do not insert them right away in the 
                 % database since we need to group in trial groups first
@@ -409,7 +413,7 @@ switch contextName
                         functionalFile.FileName = dataGroups(iGroup).files(1).FileName;
                         functionalFile.Name = dataGroups(iGroup).name;
                         functionalFile.NumChildren = nFiles;
-                        ParentId = ModifyFunctionalFile(sqlConn, 'insert', functionalFile);
+                        ParentId = db_set(sqlConn, 'FunctionalFile', functionalFile);
                     else
                         ParentId = [];
                     end
@@ -417,7 +421,7 @@ switch contextName
                     % Insert trials
                     for iFile = 1:nFiles
                         dataGroups(iGroup).files(iFile).ParentFile = ParentId;
-                        FileId = ModifyFunctionalFile(sqlConn, 'insert', dataGroups(iGroup).files(iFile));
+                        FileId = db_set(sqlConn, 'FunctionalFile', dataGroups(iGroup).files(iFile));
                         SaveParent(type, dataGroups(iGroup).files(iFile).FileName, FileId);
                     end
                 end
@@ -429,9 +433,9 @@ switch contextName
         for iField = 1:length(fieldTypes)
             for iFile = 1:length(parentFiles.(fieldTypes{iField}))
                 if parentFiles.(fieldTypes{iField})(iFile).numChildren > 0
-                    ModifyFunctionalFile(sqlConn, 'update', ...
-                        struct('NumChildren', parentFiles.(fieldTypes{iField})(iFile).numChildren), ...
-                        struct('Id', parentFiles.(fieldTypes{iField})(iFile).id));
+                    db_set(sqlConn, 'FunctionalFile', ...
+                           struct('NumChildren', parentFiles.(fieldTypes{iField})(iFile).numChildren), ...
+                           parentFiles.(fieldTypes{iField})(iFile).id);
                 end
             end
         end
@@ -596,14 +600,4 @@ function FileName = FileStandard(FileName)
     end
 end
 
-% Set UNIX time when Insert or Update a FunctionalFile
-function res = ModifyFunctionalFile(sqlConn, queryType, sFile, updateCondition)
-    if nargin < 4
-        updateCondition = [];
-    end
-
-    sFile.LastModified = bst_get('CurrentUnixTime');
-    
-    res = sql_query(sqlConn, queryType, 'functionalfile', sFile, updateCondition);
-end
 

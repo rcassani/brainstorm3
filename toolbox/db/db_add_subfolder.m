@@ -93,7 +93,7 @@ for iStudy = iStudies
         mkdir(FolderPath);
     end
     
-    iItem = sql_query(sqlConn, 'insert', 'FunctionalFile', sFile);
+    iItem = db_set(sqlConn, 'FunctionalFile', sFile);
     iItems(end + 1) = iItem;
 end
 sql_close(sqlConn);
