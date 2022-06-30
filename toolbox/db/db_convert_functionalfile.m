@@ -156,12 +156,24 @@ else
                 outStructs(iStruct).ExtraStr2 = inStructs(iStruct).DataFile;
             case 'timefreq'
                 outStructs(iStruct).ExtraStr1  = inStructs(iStruct).DataFile;
-                outStructs(iStruct).ExtraStr2  = sinStructs(iStruct).DataType;
+                outStructs(iStruct).ExtraStr2  = inStructs(iStruct).DataType;
                 outStructs(iStruct).ParentFile = 0;
             case {'image', 'matrix', 'noisecov', 'ndatacov'}
                 % Nothing to add
             otherwise
                 error('Unsupported functional file type.');
         end
+    end
+end
+end
+
+% Concatenate strings using delimiter
+function outStr = str_join(cellStr, delimiter)
+    outStr = '';
+    for iCell = 1:length(cellStr)
+        if iCell > 1
+            outStr = [outStr delimiter];
+        end
+        outStr = [outStr cellStr{iCell}];
     end
 end

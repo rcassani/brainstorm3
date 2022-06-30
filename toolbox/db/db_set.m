@@ -354,76 +354,20 @@ switch contextName
             end
 
             for iFile = 1:length(sFiles)
-                functionalFile = db_template('FunctionalFile');
-                functionalFile.Study = iStudy;
-                functionalFile.Type = type;
-                functionalFile.FileName = sFiles(iFile).FileName;
-                functionalFile.Name = sFiles(iFile).Comment;
-                
+                type_convert = type;
                 % Noise and data covariances used to share their type, with
                 % 1st one being noise and second one being data.
                 if strcmpi(type, 'NoiseCov')
                     if iFile == 1
-                        functionalFile.Type = 'noisecov';
+                        type_convert = 'noisecov';
                     else
-                        functionalFile.Type = 'ndatacov';
+                        type_convert = 'ndatacov';
                     end
                 end
-
-                % Extra fields
-                switch type
-                    case 'data'
-                        functionalFile.SubType  = sFiles(iFile).DataType;
-                        functionalFile.ExtraNum = sFiles(iFile).BadTrial;
-
-                    case 'channel'
-                        functionalFile.ExtraNum  = sFiles(iFile).nbChannels;
-                        functionalFile.ExtraStr1 = str_join(sFiles(iFile).Modalities, ',');
-                        functionalFile.ExtraStr2 = str_join(sFiles(iFile).DisplayableSensorTypes, ',');
-
-                    case {'result', 'results'}
-                        functionalFile.ExtraStr1  = sFiles(iFile).DataFile;
-                        functionalFile.ExtraNum   = sFiles(iFile).isLink;
-                        functionalFile.ExtraStr2  = sFiles(iFile).HeadModelType;
-                        functionalFile.ParentFile = GetParent('data', sFiles(iFile).DataFile);
-
-                    case 'timefreq'
-                        functionalFile.ExtraStr1  = sFiles(iFile).DataFile;
-                        functionalFile.ExtraStr2  = sFiles(iFile).DataType;
-                        functionalFile.ParentFile = GetParent({'data', 'result', 'matrix'}, sFiles(iFile).DataFile);
-
-                    case 'stat'
-                        functionalFile.SubType   = sFiles(iFile).Type;
-                        functionalFile.ExtraStr1 = sFiles(iFile).pThreshold;
-                        functionalFile.ExtraStr2 = sFiles(iFile).DataFile;
-
-                    case 'headmodel'
-                        % Get list of methods and modalities
-                        allMods = {'MEG', 'EEG', 'ECOG', 'SEEG'};
-                        modalities = {};
-                        methods = {};
-                        for iMod = 1:length(allMods)
-                            field = [allMods{iMod} 'Method'];
-                            if ~isempty(sFiles(iFile).(field))
-                                modalities{end + 1} = allMods{iMod};
-                                methods{end + 1} = sFiles(iFile).(field);
-                            end
-                        end
-
-                        functionalFile.SubType   = sFiles(iFile).HeadModelType;
-                        functionalFile.ExtraStr1 = str_join(modalities, ',');
-                        functionalFile.ExtraStr2 = str_join(methods, ',');
-                        
-                    case 'dipoles'
-                        functionalFile.ExtraStr1  = sFiles(iFile).DataFile;
-                        functionalFile.ParentFile = GetParent({'result', 'data'}, sFiles(iFile).DataFile);
-
-                    case {'matrix', 'noisecov', 'image'}
-                        % Nothing to add
-
-                    otherwise
-                        error('Unsupported functional file type');
-                end
+                sFunctionalFile = db_convert_functionalfile(sFiles(iFile), type_convert);
+                functionalFile  = sFunctionalFile;
+                % Add study
+                functionalFile.Study = iStudy;
 
                 % For data trials, do not insert them right away in the 
                 % database since we need to group in trial groups first
@@ -640,16 +584,7 @@ end
 
 %% ==== LOCAL HELPERS ====
 
-% Concatenate strings using delimiter
-function outStr = str_join(cellStr, delimiter)
-    outStr = '';
-    for iCell = 1:length(cellStr)
-        if iCell > 1
-            outStr = [outStr delimiter];
-        end
-        outStr = [outStr cellStr{iCell}];
-    end
-end
+
 
 % Format FileName
 function FileName = FileStandard(FileName)
