@@ -130,7 +130,6 @@ else
                 outStructs(iStruct).ExtraNum = inStructs(iStruct).BadTrial;
             case 'dipoles'                                        
                 outStructs(iStruct).ExtraStr1  = inStructs(iStruct).DataFile;
-                outStructs(iStruct).ParentFile = 0;
             case 'headmodel'
                 allMods = {'MEG', 'EEG', 'ECOG', 'SEEG'};
                 modalities = {};
@@ -149,7 +148,6 @@ else
                 outStructs(iStruct).ExtraNum   = inStructs(iStruct).isLink;
                 outStructs(iStruct).ExtraStr1  = inStructs(iStruct).DataFile;
                 outStructs(iStruct).ExtraStr2  = inStructs(iStruct).HeadModelType;
-                outStructs(iStruct).ParentFile = 0;
             case 'stat'
                 outStructs(iStruct).SubType   = inStructs(iStruct).Type;
                 outStructs(iStruct).ExtraStr1 = inStructs(iStruct).pThreshold;
@@ -157,7 +155,6 @@ else
             case 'timefreq'
                 outStructs(iStruct).ExtraStr1  = inStructs(iStruct).DataFile;
                 outStructs(iStruct).ExtraStr2  = inStructs(iStruct).DataType;
-                outStructs(iStruct).ParentFile = 0;
             case {'image', 'matrix', 'noisecov', 'ndatacov'}
                 % Nothing to add
             otherwise
