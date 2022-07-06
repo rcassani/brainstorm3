@@ -205,7 +205,11 @@ switch contextName
         
     case 'ProtocolStudies'
         sqlConn = sql_connect();
-        
+        % Delete existing studies and functional files
+        db_set(sqlConn, 'Study', 'delete');
+        db_set(sqlConn, 'FunctionalFile', 'delete');
+        sql_close(sqlConn);
+
         for iStudy = -1:length(contextValue.Study)
             if iStudy == -1
                 sStudy = contextValue.DefaultStudy;
@@ -225,58 +229,13 @@ switch contextName
                     && isempty(sStudy.Timefreq) && isempty(sStudy.Matrix))
                 continue
             end
-            
-            % If study exists: save its metadata and delete its files
-            categories = {'Channel', 'HeadModel'};
-            if ~isempty(sStudy.Id)
-                for iCat = 1:length(categories)
-                    field = ['i' categories{iCat}];
-                    if ~isempty(sStudy.(field)) && isnumeric(sStudy.(field))
-                        sFuncFile = db_get(sqlConn, 'FunctionalFile', sStudy.(field), 'FileName');
-                        if ~isempty(sFuncFile)
-                            sStudy.(field) = sFuncFile.FileName;
-                        end
-                    end
-                end
-                
-                db_set(sqlConn, 'FunctionalFile', 'Delete', struct('Study', sStudy.Id));
-                db_set(sqlConn, 'Study', 'Delete', sStudy.Id);
-            end
 
-            % Extract selected channel/head model to get inserted ID later
-            selectedFiles = cell(1, length(categories));
-            for iCat = 1:length(categories)
-                category = categories{iCat};
-                field = ['i' category];
-                if ~isempty(sStudy.(field)) && ischar(sStudy.(field))
-                    selectedFiles{iCat} = sStudy.(field);
-                elseif isempty(sStudy.(field)) && ~isempty(sStudy.(category))
-                    selectedFiles{iCat} = sStudy.(category)(1).FileName;
-                end
-            end
-            
             % Insert study
-            StudyId = db_set(sqlConn, 'Study', sStudy);
+            StudyId = db_set('Study', sStudy);
             sStudy.Id = StudyId;
-            
-            % Insert functional files
-            selectedFiles = db_set(sqlConn, 'FilesWithStudy', sStudy, selectedFiles);
-            
-            % Update study entry to add selected functional files, if any
-            hasSelFiles = 0;
-            selFiles = struct();
-            for iCat = 1:length(categories)
-                if ~isempty(selectedFiles{iCat})
-                    hasSelFiles = 1;
-                    selFiles.(['i' categories{iCat}]) = selectedFiles{iCat};
-                end
-            end
-            if hasSelFiles
-                db_set(sqlConn, 'Study', selFiles, StudyId);
-            end
+            bst_set('Study', sStudy.Id, sStudy);
         end
         
-        sql_close(sqlConn);
         
     case 'ProtocolInfo'
         for structField = fieldnames(contextValue)'
@@ -375,7 +334,7 @@ switch contextName
             sSubject = db_get(sqlConn, 'Subject', sStudies(i).BrainStormSubject, 'Id');
             sStudies(i).Subject = sSubject.Id;
             
-            % Extract selected channel/head model to get inserted ID later
+            % Get FileNames for currently selected Channel and HeadModel files
             categories = {'Channel', 'HeadModel'};
             selectedFiles = cell(1, length(categories));
             for iCat = 1:length(categories)
@@ -383,13 +342,14 @@ switch contextName
                 field = ['i' category];
                 if ~isempty(sStudies(i).(field)) && ischar(sStudies(i).(field))
                     selectedFiles{iCat} = sStudies(i).(field);
-                elseif ~isempty(sStudies(i).(field)) && isnumeric(sStudies(i).(field))
+                elseif ~isempty(sStudies(i).(field)) && isnumeric(sStudies(i).(field)) && sStudies(i).(field) > 0
                     % Get FileName with previous file ID before it's deleted
-                    sFuncFile = db_get(sqlConn, 'FunctionalFile', sStudies(i).(field), 'FileName');
-                    if ~isempty(sFuncFile)
-                        selectedFiles{iCat} = sFuncFile.FileName;
+                    sFunctionalFile = db_get(sqlConn, 'FunctionalFile', sStudies(i).(field), 'FileName');
+                    if ~isempty(sFunctionalFile)
+                        selectedFiles{iCat} = sFunctionalFile.FileName;
                     end
                 end
+                % Set default selected files
                 if isempty(selectedFiles{iCat}) && ~isempty(sStudies(i).(category))
                     selectedFiles{iCat} = sStudies(i).(category)(1).FileName;
                 end
@@ -414,18 +374,70 @@ switch contextName
                 end
             end
             
-            % Insert functional files
             if ~isempty(iStudy)
-                db_set(sqlConn, 'FunctionalFile', 'Delete', struct('Study', iStudy));
-                selectedFiles = db_set(sqlConn, 'FilesWithStudy', sStudies(i), selectedFiles);
-            
-                % Update study entry to add selected functional files, if any
+                % Delete existing functional files for this study
+                db_set(sqlConn, 'FilesWithStudy', 'Delete', iStudy);
+                % Note: Order important here, as potential parent files (Data, Matrix, Result)
+                % should be created before potential child files (Result, Timefreq, dipoles).
+                types = {'Channel', 'HeadModel', 'Data', 'Matrix', 'Result', ...
+                         'Stat', 'Image', 'NoiseCov', 'Dipoles', 'Timefreq'};
+                for iType = 1:length(types)
+                    sFiles = sStudies(i).(types{iType});
+                    type = lower(types{iType});
+                    if isempty(sFiles)
+                        continue
+                    end
+                    % Convert to FunctionalFile structure
+                    sFunctionalFiles = db_convert_functionalfile(sFiles, type);
+                    switch type
+                        % Create datalist or matrixlist FunctionalFiles if needed
+                        case {'data', 'matrix'}
+                            % Get name of trial groups
+                            cleanNames = cellfun(@(x) str_remove_parenth(x), {sFunctionalFiles.Name}, 'UniformOutput', false);
+                            nameGroups = unique(cleanNames, 'stable');
+                            trialGroups = repmat(struct('Name', [], 'Children', [], 'nChildren', []), 1, length(nameGroups));
+                            % Find trials for each trial group
+                            for ix = 1 : length(nameGroups)
+                                trialGroups(ix).Name = nameGroups{ix};
+                                trialGroups(ix).nChildren = sum(strcmp(nameGroups{ix}, cleanNames));
+                            end
+                            % Separate FunctionalFiles by trial group
+                            sFunctionalFiles = mat2cell(sFunctionalFiles, 1, [trialGroups.nChildren]);
+                            % Create list FunctionalFile and add to sFunctionalFiles if needed
+                            for ix = 1 : length(nameGroups)
+                                if trialGroups(ix).nChildren > 4
+                                    listFunctionalFile = db_template('FunctionalFile');
+                                    listFunctionalFile.Study = iStudy;
+                                    listFunctionalFile.Type = [type 'list'];
+                                    listFunctionalFile.FileName = sFunctionalFiles{ix}(1).FileName;
+                                    listFunctionalFile.Name = trialGroups(ix).Name;
+                                    sFunctionalFiles{ix} = [listFunctionalFile, sFunctionalFiles{ix}];
+                                end
+                            end
+                            % Concatenate Functional Files
+                            sFunctionalFiles = [sFunctionalFiles{:}];
+
+                        % Check for noisecov and ndatacov
+                        case 'noisecov'
+                            if length(sFunctionalFiles) == 2
+                                sFunctionalFiles(2).Type = 'ndatacov';
+                            end
+
+                        % Other types
+                        otherwise
+                            % Do nothing
+                    end
+                    % Insert FunctionalFiles in database
+                    db_set(sqlConn, 'FilesWithStudy', sFunctionalFiles, iStudy);
+                end
+                % Set selected Channel and HeadModel files
                 hasSelFiles = 0;
                 selFiles = struct();
                 for iCat = 1:length(categories)
                     if ~isempty(selectedFiles{iCat})
                         hasSelFiles = 1;
-                        selFiles.(['i' categories{iCat}]) = selectedFiles{iCat};
+                        sFunctionalFile = db_get(sqlConn, 'FunctionalFile', selectedFiles{iCat}, 'Id');
+                        selFiles.(['i' categories{iCat}]) = sFunctionalFile.Id;
                     end
                 end
                 if hasSelFiles
