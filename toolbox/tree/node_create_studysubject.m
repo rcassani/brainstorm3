@@ -58,7 +58,7 @@ else
 end
 
 % Get all studies of selected subject
-sStudies = db_get('Study', struct('Subject', iSubject));
+sStudies = db_get('StudiesFromSubject', iSubject);
 iDefaultStudy = find(strcmp({sStudies.Name}, bst_get('DirDefaultStudy')), 1);
 iIntraStudy   = find(strcmp({sStudies.Name}, bst_get('DirAnalysisIntra')), 1);
 % Extract raw studies
