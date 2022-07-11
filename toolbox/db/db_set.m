@@ -310,21 +310,21 @@ switch contextName
     % [Success]          = db_set('FilesWithStudy', 'Delete'        , StudyID)
     % [sFunctionalFiles] = db_set('FilesWithStudy', sFunctionalFiles, StudyID)
     case 'FilesWithStudy'
-        sFunctionalFiles = args{1};
+        sFuncFiles = args{1};
         iStudy = args{2};
         
         % Delete all FunctionalFiles with StudyID
-        if ischar(sFunctionalFiles) && strcmpi(sFunctionalFiles, 'delete')
+        if ischar(sFuncFiles) && strcmpi(sFuncFiles, 'delete')
             delResult = sql_query(sqlConn, 'delete', 'functionalfile', struct('Study', iStudy));
             varargout{1} = 1;
 
         % Insert FunctionalFiles to StudyID
-        elseif isstruct(sFunctionalFiles)
-            nFunctionalFiles = length(sFunctionalFiles);
+        elseif isstruct(sFuncFiles)
+            nFunctionalFiles = length(sFuncFiles);
             insertedIds = zeros(1, nFunctionalFiles);
             for ix = 1 : nFunctionalFiles
-                sFunctionalFiles(ix).Study = iStudy;
-                insertedIds(ix) = db_set(sqlConn, 'FunctionalFile', sFunctionalFiles(ix));
+                sFuncFiles(ix).Study = iStudy;
+                insertedIds(ix) = db_set(sqlConn, 'FunctionalFile', sFuncFiles(ix));
             end
             % If requested get all the inserted FunctionalFiles
             if nargout > 0
@@ -348,12 +348,12 @@ switch contextName
             error('Error in number of arguments')
         end
         
-        sFunctionalFile = args{1};
+        sFuncFile = args{1};
         if length(args) > 1
             iFunctionalFile = args{2};
         end
         % Delete
-        if ischar(sFunctionalFile) && strcmpi(sFunctionalFile, 'delete')
+        if ischar(sFuncFile) && strcmpi(sFuncFile, 'delete')
             if isempty(iFunctionalFile)
                 % Delete all rows in FunctionalFile table
                 delResult = sql_query(sqlConn, 'delete', 'functionalfile');
@@ -377,50 +377,50 @@ switch contextName
             end
 
         % Insert or Update
-        elseif isstruct(sFunctionalFile)
+        elseif isstruct(sFuncFile)
             % Modify UNIX time
-            sFunctionalFile.LastModified = bst_get('CurrentUnixTime');
+            sFuncFile.LastModified = bst_get('CurrentUnixTime');
 
             % Insert FunctionalFile row
             if isempty(iFunctionalFile)
-                sFunctionalFile.Id = [];
-                switch sFunctionalFile.Type
+                sFuncFile.Id = [];
+                switch sFuncFile.Type
                     % If data or matrix, check for datalist and matrixlist
                     case {'data', 'matrix'}
-                        typeList = [sFunctionalFile.Type, 'list'];
-                        cleanName = str_remove_parenth(sFunctionalFile.Name);
+                        typeList = [sFuncFile.Type, 'list'];
+                        cleanName = str_remove_parenth(sFuncFile.Name);
                         list = sql_query(sqlConn, 'select', 'functionalfile', 'Id', ...
-                               struct('Name', cleanName, 'Study', sFunctionalFile.Study), ...;
+                               struct('Name', cleanName, 'Study', sFuncFile.Study), ...;
                                [' AND Type == "' typeList '"']);
                         if ~isempty(list)
-                            sFunctionalFile.ParentFile = list.Id;
+                            sFuncFile.ParentFile = list.Id;
                         end
                     % Check for parent files
                     case {'dipoles', 'result', 'results', 'timefreq'}
-                        if ~isempty(sFunctionalFile.ExtraStr1) % Parent FileName
+                        if ~isempty(sFuncFile.ExtraStr1) % Parent FileName
                             % Seach parent in database (ignore datalist and matrixlist functionalfiles)
                             parent = sql_query(sqlConn, 'select', 'functionalfile', 'Id', ...
-                                     struct('FileName', sFunctionalFile.ExtraStr1), ...;
+                                     struct('FileName', sFuncFile.ExtraStr1), ...;
                                      ' AND Type <> "datalist" AND Type <> "matrixlist"');
                             if ~isempty(parent)
-                                sFunctionalFile.ParentFile = parent.Id;
+                                sFuncFile.ParentFile = parent.Id;
                             end
                         end
                     % Other types
                     otherwise
                         % Do nothing
                 end
-                iFunctionalFile = sql_query(sqlConn, 'insert', 'functionalfile', sFunctionalFile);
+                iFunctionalFile = sql_query(sqlConn, 'insert', 'functionalfile', sFuncFile);
                 varargout{1} = iFunctionalFile;
                 % Increase the number of children in parent or list
-                if ~isempty(sFunctionalFile.ParentFile) && sFunctionalFile.ParentFile > 0
-                   db_set(sqlConn, 'ParentCount', sFunctionalFile.ParentFile, '+', 1);
+                if ~isempty(sFuncFile.ParentFile) && sFuncFile.ParentFile > 0
+                   db_set(sqlConn, 'ParentCount', sFuncFile.ParentFile, '+', 1);
                 end
 
             % Update FunctionalFile row
             else
-                if ~isfield(sFunctionalFile, 'Id') || isempty(sFunctionalFile.Id) || sFunctionalFile.Id == iFunctionalFile
-                    resUpdate = sql_query(sqlConn, 'update', 'functionalfile', sFunctionalFile, struct('Id', iFunctionalFile));
+                if ~isfield(sFuncFile, 'Id') || isempty(sFuncFile.Id) || sFuncFile.Id == iFunctionalFile
+                    resUpdate = sql_query(sqlConn, 'update', 'functionalfile', sFuncFile, struct('Id', iFunctionalFile));
                 else
                     error('Cannot update FunctionalFile, Ids do not match');
                 end

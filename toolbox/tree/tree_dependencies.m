@@ -177,8 +177,8 @@ try
                 % Check for bad trials
                 if ~GetBadTrials
                     % Get study
-                    sFunctFile = db_get('FunctionalFile', nodeFileNames{iNode});
-                    sData = db_convert_functionalfile(sFunctFile);
+                    sFuncFile = db_get('FunctionalFile', nodeFileNames{iNode});
+                    sData = db_convert_functionalfile(sFuncFile);
                     % Ignore bad trials
                     if sData.BadTrial
                         continue;

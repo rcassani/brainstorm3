@@ -344,9 +344,9 @@ switch contextName
                     selectedFiles{iCat} = sStudies(i).(field);
                 elseif ~isempty(sStudies(i).(field)) && isnumeric(sStudies(i).(field)) && sStudies(i).(field) > 0
                     % Get FileName with previous file ID before it's deleted
-                    sFunctionalFile = db_get(sqlConn, 'FunctionalFile', sStudies(i).(field), 'FileName');
-                    if ~isempty(sFunctionalFile)
-                        selectedFiles{iCat} = sFunctionalFile.FileName;
+                    sFuncFile = db_get(sqlConn, 'FunctionalFile', sStudies(i).(field), 'FileName');
+                    if ~isempty(sFuncFile)
+                        selectedFiles{iCat} = sFuncFile.FileName;
                     end
                 end
                 % Set default selected files
@@ -388,12 +388,12 @@ switch contextName
                         continue
                     end
                     % Convert to FunctionalFile structure
-                    sFunctionalFiles = db_convert_functionalfile(sFiles, type);
+                    sFuncFiles = db_convert_functionalfile(sFiles, type);
                     switch type
                         % Create datalist or matrixlist FunctionalFiles if needed
                         case {'data', 'matrix'}
                             % Get name of trial groups
-                            cleanNames = cellfun(@(x) str_remove_parenth(x), {sFunctionalFiles.Name}, 'UniformOutput', false);
+                            cleanNames = cellfun(@(x) str_remove_parenth(x), {sFuncFiles.Name}, 'UniformOutput', false);
                             nameGroups = unique(cleanNames, 'stable');
                             trialGroups = repmat(struct('Name', [], 'Children', [], 'nChildren', []), 1, length(nameGroups));
                             % Find trials for each trial group
@@ -402,25 +402,25 @@ switch contextName
                                 trialGroups(ix).nChildren = sum(strcmp(nameGroups{ix}, cleanNames));
                             end
                             % Separate FunctionalFiles by trial group
-                            sFunctionalFiles = mat2cell(sFunctionalFiles, 1, [trialGroups.nChildren]);
+                            sFuncFiles = mat2cell(sFuncFiles, 1, [trialGroups.nChildren]);
                             % Create list FunctionalFile and add to sFunctionalFiles if needed
                             for ix = 1 : length(nameGroups)
                                 if trialGroups(ix).nChildren > 4
                                     listFunctionalFile = db_template('FunctionalFile');
                                     listFunctionalFile.Study = iStudy;
                                     listFunctionalFile.Type = [type 'list'];
-                                    listFunctionalFile.FileName = sFunctionalFiles{ix}(1).FileName;
+                                    listFunctionalFile.FileName = sFuncFiles{ix}(1).FileName;
                                     listFunctionalFile.Name = trialGroups(ix).Name;
-                                    sFunctionalFiles{ix} = [listFunctionalFile, sFunctionalFiles{ix}];
+                                    sFuncFiles{ix} = [listFunctionalFile, sFuncFiles{ix}];
                                 end
                             end
                             % Concatenate Functional Files
-                            sFunctionalFiles = [sFunctionalFiles{:}];
+                            sFuncFiles = [sFuncFiles{:}];
 
                         % Check for noisecov and ndatacov
                         case 'noisecov'
-                            if length(sFunctionalFiles) == 2
-                                sFunctionalFiles(2).Type = 'ndatacov';
+                            if length(sFuncFiles) == 2
+                                sFuncFiles(2).Type = 'ndatacov';
                             end
 
                         % Other types
@@ -428,7 +428,7 @@ switch contextName
                             % Do nothing
                     end
                     % Insert FunctionalFiles in database
-                    db_set(sqlConn, 'FilesWithStudy', sFunctionalFiles, iStudy);
+                    db_set(sqlConn, 'FilesWithStudy', sFuncFiles, iStudy);
                 end
                 % Set selected Channel and HeadModel files
                 hasSelFiles = 0;
@@ -436,8 +436,8 @@ switch contextName
                 for iCat = 1:length(categories)
                     if ~isempty(selectedFiles{iCat})
                         hasSelFiles = 1;
-                        sFunctionalFile = db_get(sqlConn, 'FunctionalFile', selectedFiles{iCat}, 'Id');
-                        selFiles.(['i' categories{iCat}]) = sFunctionalFile.Id;
+                        sFuncFile = db_get(sqlConn, 'FunctionalFile', selectedFiles{iCat}, 'Id');
+                        selFiles.(['i' categories{iCat}]) = sFuncFile.Id;
                     end
                 end
                 if hasSelFiles
