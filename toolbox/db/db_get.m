@@ -19,26 +19,33 @@ function varargout = db_get(varargin)
 %    - db_get('SubjectFromFunctionalFile', FileId)        : Find Subject for FunctionalFile with FileID 
 %    - db_get('SubjectFromFunctionalFile', FileName)      : Find Subject for FunctionalFile with FileID 
 %
+% ====== ANATOMY FILES =================================================================
+%    - db_get('FilesWithSubject')  :                        :
+%    - db_get('AnatomyFile', FileIDs,   Fields) : Find anatomy file(s) by ID(s) 
+%    - db_get('AnatomyFile', FileNames, Fields) : Find anatomy file(s) by FileName(s)
+%    - db_get('AnatomyFile', CondQuery, Fields) : Find anatomy file(s) with a Query
+%
 % ====== STUDIES =======================================================================
 %    - db_get('StudiesFromSubject', SubjectID,   Fields, 'intra_subject', 'default_study') : Find Studies for Subject with SubjectID (with intra_subject and default_study)
 %    - db_get('StudiesFromSubject', SubjectID,   Fields) : Find Studies for Subject with SubjectID (w/o intra_subject and default_study)
 %    - db_get('StudiesFromSubject', SubjectName, Fields) : Find Studies for Subject with SubjectName (w/o intra_subject and default_study)
 %    - db_get('DefaultStudy', iSubject, Fields)
-%    - db_get('Study', StudyID) : Find Study by ID
-%    - db_get('Studies', Fields) : Get all Studies in current protocol
-%    - db_get('Studies')         : Get all Studies in current protocol
+%    - db_get('Study', StudyIDs,         Fields) : Get study(s) by ID(s)
+%    - db_get('Study', StudyFileNames,   Fields) : Get study(s) by FileName(s)
+%    - db_get('Study', CondQuery,        Fields) : Get study(s) with a Query
+%    - db_get('Study', '@inter',         Fields) : Get @inter study
+%    - db_get('Study', '@default_study', Fields) : Get @default_study study
+%    - db_get('Study');                          : Get current subject in current protocol
+%    - db_get('Studies')             : Get all studies in current protocol, exclude @inter and global @default_study
+%    - db_get('Studies', 0, Fields)  : Get all studies in current protocol, exclude @inter and global @default_study
+%    - db_get('Studies', 1, Fields)  : Get all studies in current protocol, include @inter and global @default_studyInclude @inter and global @default_study
 %
-% ====== ANATOMY AND FUNCTIONAL FILES ==================================================
-%    - db_get('FilesWithSubject')  :                        :
-%    - db_get('FilesWithStudy')    :                       :
-%    - db_get('AnatomyFile', FileIDs,   Fields) : Find anatomy file(s) by ID(s) 
-%    - db_get('AnatomyFile', FileNames, Fields) : Find anatomy file(s) by FileName(s)
-%    - db_get('AnatomyFile', CondQuery, Fields) : Find anatomy file(s) with a Query
-%    - db_get('FunctionalFile', FileIDs,   Fields) : Find functional file(s) by ID(s) 
-%    - db_get('FunctionalFile', FileNames, Fields) : Find functional file(s) by FileName(s)
-%    - db_get('FunctionalFile', CondQuery, Fields) : Find functional file(s) with a Query
+% ====== FUNCTIONAL FILES ==============================================================
+%    - db_get('FilesWithStudy', StudyID, FunctionalFileType, Fields) Get all functional files for study with ID
+%    - db_get('FunctionalFile', FileIDs,   Fields) : Get functional file(s) by ID(s) 
+%    - db_get('FunctionalFile', FileNames, Fields) : Get functional file(s) by FileName(s)
+%    - db_get('FunctionalFile', CondQuery, Fields) : Get functional file(s) with a Query
 %    - db_get('ChannelFromStudy', StudyID) : Find current Channel for Study with StudyID  
-%
 %
 % SEE ALSO db_set
 %

@@ -12,17 +12,26 @@ function varargout = db_set(varargin)
 % ====== SUBJECTS ======================================================================
 %
 %
-% ====== STUDIES =======================================================================
 %
-%
-% ====== ANATOMY AND FUNCTIONAL FILES ==================================================
+% ====== ANATOMY FILES =================================================================
 %    - db_set('FilesWithSubject', FileType, db_template('anatomy/surface'), SubjectID, selectedAnat/Surf)
-%    - db_set('FilesWithStudy', FileType, db_template('data/timefreq/etc'), StudyID)
-%    - db_set('FilesWithStudy', sStudy, [selectedChannel/HeadModel])
-%    - db_set('FunctionalFile', 'insert', db_template('FunctionalFile'))
-%    - db_set('FunctionalFile', 'update', db_template('FunctionalFile'), struct('Id', 1))
-%    - db_set('ParentCount', ParentFile, modifier, count)    
 %
+% ====== STUDIES =======================================================================
+%    - db_set('Study', 'Delete')            : Delete all Studies
+%    - db_set('Study', 'Delete', StudyId)   : Delete Study by ID
+%    - db_set('Study', 'Delete', CondQuery) : Delete Study with Query
+%    - db_set('Study', Study)               : Insert Study
+%    - db_set('Study', Study, StudyId)      : Update Study by ID
+%
+% ====== FUNCTIONAL FILES ==============================================================
+%    - db_set('FilesWithStudy', 'Delete' , StudyID)        : Delete All FunctionalFiles from StudyID
+%    - db_set('FilesWithStudy', sFunctionalFiles, StudyID) : Insert FunctionalFiles with StudyID
+%    - db_set('FunctionalFile', 'Delete')                         : Delete all FunctionalFiles
+%    - db_set('FunctionalFile', 'Delete', FunctionalFileId)       : Delete FunctionalFile by ID 
+%    - db_set('FunctionalFile', 'Delete', CondQuery)              : Delete FunctionalFile with Query
+%    - db_set('FunctionalFile', FunctionalFile)                   : Insert FunctionalFile
+%    - db_set('FunctionalFile', FunctionalFile, FunctionalFileId) : Update FunctionalFile by ID
+%    - db_set('ParentCount', ParentFile, modifier, count)    
 %
 % SEE ALSO db_get
 %
@@ -239,7 +248,7 @@ switch contextName
 
 %% ==== STUDY ====
     % [Success]          db_set('Study', 'Delete')
-    % [Success]          db_set('Study', 'Delete', SubjectId)
+    % [Success]          db_set('Study', 'Delete', StudyId)
     % [Success]          db_set('Study', 'Delete', CondQuery)
     % [StudyId, Study] = db_set('Study', Study)
     % [StudyId, Study] = db_set('Study', Study, StudyId)
