@@ -259,7 +259,7 @@ switch contextName
             sExistingSubject.Id = db_set(sqlConn, 'Subject', sSubject, sExistingSubject.Id);
             if sExistingSubject.Id
                 iSubject = sExistingSubject.Id;
-                argout1(end + 1) = iSubject;
+                argout1 = iSubject;
             else
                 iSubject = [];
             end
@@ -268,7 +268,7 @@ switch contextName
             sSubject.Id = [];
             iSubject = db_set(sqlConn, 'Subject', sSubject);
             if ~isempty(iSubject)
-                argout1(end + 1) = iSubject;
+                argout1 = iSubject;
             end
         end
         
