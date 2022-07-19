@@ -120,7 +120,7 @@ switch contextName
             if isempty(iSubject)
                 % Insert Subject row
                 sSubject.Id = []; 
-                iSubject = sql_query(sqlConn, 'insert', 'subject', sSubject);
+                iSubject = sql_query(sqlConn, 'INSERT', 'Subject', sSubject);
                 varargout{1} = iSubject;
             else
                 % Update Subject row
@@ -184,7 +184,7 @@ switch contextName
             if isempty(iAnatomyFile)
                 % Insert AnatomyFile row
                 sAnatomyFile.Id = []; 
-                iAnatomyFile = sql_query(sqlConn, 'insert', 'anatomyfile', sAnatomyFile);
+                iAnatomyFile = sql_query(sqlConn, 'INSERT', 'AnatomyFile', sAnatomyFile);
                 varargout{1} = iAnatomyFile;
             else
                 % Update iAnatomyFile row
@@ -278,7 +278,7 @@ switch contextName
                 end
                 % Insert Study row
                 sStudy.Id = [];
-                iStudy = sql_query(sqlConn, 'insert', 'study', sStudy);
+                iStudy = sql_query(sqlConn, 'INSERT', 'Study', sStudy);
                 varargout{1} = iStudy;
             else
                 % Update Study row
@@ -404,7 +404,7 @@ switch contextName
                     otherwise
                         % Do nothing
                 end
-                iFunctionalFile = sql_query(sqlConn, 'insert', 'functionalfile', sFuncFile);
+                iFunctionalFile = sql_query(sqlConn, 'INSERT', 'FunctionalFile', sFuncFile);
                 varargout{1} = iFunctionalFile;
                 % Increase the number of children in parent or list
                 if ~isempty(sFuncFile.ParentFile) && sFuncFile.ParentFile > 0
