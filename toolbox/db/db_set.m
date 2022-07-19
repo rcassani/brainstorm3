@@ -102,6 +102,8 @@ switch contextName
             if isempty(iSubject)
                 % Delete all rows in Subject table
                 delResult = sql_query(sqlConn, 'DELETE', 'Subject');
+                % Reset auto-increment
+                sql_query(sqlConn, 'RESET-AUTOINCREMENT', 'Subject');
             else
                 if isstruct(iSubject)
                     % Delete using the CondQuery
@@ -166,6 +168,8 @@ switch contextName
             if isempty(iAnatomyFile)
                 % Delete all rows in AnatomyFile table
                 delResult = sql_query(sqlConn, 'DELETE', 'AnatomyFile');
+                % Reset auto-increment
+                sql_query(sqlConn, 'RESET-AUTOINCREMENT', 'AnatomyFile');
             else
                 if isstruct(iAnatomyFile)
                     % Delete using the CondQuery
@@ -255,6 +259,8 @@ switch contextName
             if isempty(iStudy)
                 % Delete all rows in Study table
                 delResult = sql_query(sqlConn, 'DELETE', 'Study');
+                % Reset auto-increment
+                sql_query(sqlConn, 'RESET-AUTOINCREMENT', 'Study');
             else
                 if isstruct(iStudy)
                     % Delete using the CondQuery
@@ -351,6 +357,8 @@ switch contextName
             if isempty(iFunctionalFile)
                 % Delete all rows in FunctionalFile table
                 delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile');
+                % Reset auto-increment
+                sql_query(sqlConn, 'RESET-AUTOINCREMENT', 'FunctionalFile');
             else
                 if isstruct(iFunctionalFile)
                     % Delete using the CondQuery
