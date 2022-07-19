@@ -231,7 +231,7 @@ switch contextName
 %% ==== SUBJECTS COUNT ====
     % nSubjects = db_get('SubjectCount')
     case 'SubjectCount'
-        varargout{1} = sql_query(sqlConn, 'count', 'subject', [], [], 'AND Name <> "@default_subject"');
+        varargout{1} = sql_query(sqlConn, 'COUNT', 'Subject', [], [], 'AND Name <> "@default_subject"');
 
 
 %% ==== FILES WITH SUBJECT ====
