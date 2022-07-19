@@ -101,14 +101,14 @@ switch contextName
         if ischar(sSubject) && strcmpi(sSubject, 'delete')
             if isempty(iSubject)
                 % Delete all rows in Subject table
-                delResult = sql_query(sqlConn, 'delete', 'subject');
+                delResult = sql_query(sqlConn, 'DELETE', 'Subject');
             else
                 if isstruct(iSubject)
                     % Delete using the CondQuery
-                    delResult = sql_query(sqlConn, 'delete', 'subject', iSubject);                    
+                    delResult = sql_query(sqlConn, 'DELETE', 'Subject', iSubject);
                 elseif isnumeric(iSubject)
                     % Delete using iSubject
-                    delResult = sql_query(sqlConn, 'delete', 'subject', struct('Id', iSubject));  
+                    delResult = sql_query(sqlConn, 'DELETE', 'Subject', struct('Id', iSubject));
                 end
             end
             if delResult > 0
@@ -165,14 +165,14 @@ switch contextName
         if ischar(sAnatomyFile) && strcmpi(sAnatomyFile, 'delete')
             if isempty(iAnatomyFile)
                 % Delete all rows in AnatomyFile table
-                delResult = sql_query(sqlConn, 'delete', 'anatomyfile');
+                delResult = sql_query(sqlConn, 'DELETE', 'AnatomyFile');
             else
                 if isstruct(iAnatomyFile)
                     % Delete using the CondQuery
-                    delResult = sql_query(sqlConn, 'delete', 'anatomyfile', iAnatomyFile);                    
+                    delResult = sql_query(sqlConn, 'DELETE', 'AnatomyFile', iAnatomyFile);
                 elseif isnumeric(iAnatomyFile)
                     % Delete using iAnatomyFile
-                    delResult = sql_query(sqlConn, 'delete', 'anatomyfile', struct('Id', iAnatomyFile));  
+                    delResult = sql_query(sqlConn, 'DELETE', 'AnatomyFile', struct('Id', iAnatomyFile));
                 end
             end
             if delResult > 0
@@ -214,7 +214,7 @@ switch contextName
         
         % Delete all AnatomyFiles with SubjectID
         if ischar(sAnatFiles) && strcmpi(sAnatFiles, 'delete')
-            delResult = sql_query(sqlConn, 'delete', 'anatomyfile', struct('Subject', iSubject));
+            delResult = sql_query(sqlConn, 'DELETE', 'AnatomyFile', struct('Subject', iSubject));
             varargout{1} = 1;
         % Insert AnatomyFiles to SubjectID
         elseif isstruct(sAnatFiles)
@@ -254,14 +254,14 @@ switch contextName
         if ischar(sStudy) && strcmpi(sStudy, 'delete')
             if isempty(iStudy)
                 % Delete all rows in Study table
-                delResult = sql_query(sqlConn, 'delete', 'study');
+                delResult = sql_query(sqlConn, 'DELETE', 'Study');
             else
                 if isstruct(iStudy)
                     % Delete using the CondQuery
-                    delResult = sql_query(sqlConn, 'delete', 'study', iStudy);
+                    delResult = sql_query(sqlConn, 'DELETE', 'Study', iStudy);
                 elseif isnumeric(iStudy)
                     % Delete using iStudy
-                    delResult = sql_query(sqlConn, 'delete', 'study', struct('Id', iStudy));
+                    delResult = sql_query(sqlConn, 'DELETE', 'Study', struct('Id', iStudy));
                 end
             end
             if delResult > 0
@@ -309,7 +309,7 @@ switch contextName
         
         % Delete all FunctionalFiles with StudyID
         if ischar(sFuncFiles) && strcmpi(sFuncFiles, 'delete')
-            delResult = sql_query(sqlConn, 'delete', 'functionalfile', struct('Study', iStudy));
+            delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', struct('Study', iStudy));
             varargout{1} = 1;
 
         % Insert FunctionalFiles to StudyID
@@ -350,16 +350,16 @@ switch contextName
         if ischar(sFuncFile) && strcmpi(sFuncFile, 'delete')
             if isempty(iFunctionalFile)
                 % Delete all rows in FunctionalFile table
-                delResult = sql_query(sqlConn, 'delete', 'functionalfile');
+                delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile');
             else
                 if isstruct(iFunctionalFile)
                     % Delete using the CondQuery
-                    delResult = sql_query(sqlConn, 'delete', 'functionalfile', iFunctionalFile);
+                    delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', iFunctionalFile);
                 elseif isnumeric(iFunctionalFile)
                     % Get Id for parent of FunctionalFile to delete
                     parent = db_get(sqlConn, 'FunctionalFile', iFunctionalFile, 'ParentFile');
                     % Delete using iFunctionalFile
-                    delResult = sql_query(sqlConn, 'delete', 'functionalfile', struct('Id', iFunctionalFile));
+                    delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', struct('Id', iFunctionalFile));
                     % Reduce the number of children in parent
                     if ~isempty(parent) && ~isempty(parent.ParentFile)
                        db_set(sqlConn, 'ParentCount', parent.ParentFile, '-', 1);
