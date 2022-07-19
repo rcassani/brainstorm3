@@ -125,7 +125,7 @@ switch contextName
             else
                 % Update Subject row
                 if ~isfield(sSubject, 'Id') || isempty(sSubject.Id) || sSubject.Id == iSubject
-                    resUpdate = sql_query(sqlConn, 'update', 'subject', sSubject, struct('Id', iSubject));
+                    resUpdate = sql_query(sqlConn, 'UPDATE', 'Subject', sSubject, struct('Id', iSubject));
                 else
                     error('Cannot update Subject, Ids do not match');
                 end
@@ -189,7 +189,7 @@ switch contextName
             else
                 % Update iAnatomyFile row
                 if ~isfield(sAnatomyFile, 'Id') || isempty(sAnatomyFile.Id) || sAnatomyFile.Id == iAnatomyFile
-                    resUpdate = sql_query(sqlConn, 'update', 'anatomyfile', sAnatomyFile, struct('Id', iAnatomyFile));
+                    resUpdate = sql_query(sqlConn, 'UPDATE', 'AnatomyFile', sAnatomyFile, struct('Id', iAnatomyFile));
                 else
                     error('Cannot update AnatomyFile, Ids do not match');
                 end
@@ -283,7 +283,7 @@ switch contextName
             else
                 % Update Study row
                 if ~isfield(sStudy, 'Id') || isempty(sStudy.Id) || sStudy.Id == iStudy
-                    resUpdate = sql_query(sqlConn, 'update', 'study', sStudy, struct('Id', iStudy));
+                    resUpdate = sql_query(sqlConn, 'UPDATE', 'Study', sStudy, struct('Id', iStudy));
                 else
                     error('Cannot update Study, Ids do not match');
                 end
@@ -414,7 +414,7 @@ switch contextName
             % Update FunctionalFile row
             else
                 if ~isfield(sFuncFile, 'Id') || isempty(sFuncFile.Id) || sFuncFile.Id == iFunctionalFile
-                    resUpdate = sql_query(sqlConn, 'update', 'functionalfile', sFuncFile, struct('Id', iFunctionalFile));
+                    resUpdate = sql_query(sqlConn, 'UPDATE', 'FunctionalFile', sFuncFile, struct('Id', iFunctionalFile));
                 else
                     error('Cannot update FunctionalFile, Ids do not match');
                 end
