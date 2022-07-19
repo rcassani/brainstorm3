@@ -383,9 +383,9 @@ switch contextName
                     case {'data', 'matrix'}
                         typeList = [sFuncFile.Type, 'list'];
                         cleanName = str_remove_parenth(sFuncFile.Name);
-                        list = sql_query(sqlConn, 'select', 'functionalfile', 'Id', ...
+                        list = sql_query(sqlConn, 'SELECT', 'FunctionalFile', ...
                                struct('Name', cleanName, 'Study', sFuncFile.Study), ...;
-                               [' AND Type == "' typeList '"']);
+                               'Id', ['AND Type = "' typeList '"']);
                         if ~isempty(list)
                             sFuncFile.ParentFile = list.Id;
                         end
@@ -393,9 +393,9 @@ switch contextName
                     case {'dipoles', 'result', 'results', 'timefreq'}
                         if ~isempty(sFuncFile.ExtraStr1) % Parent FileName
                             % Seach parent in database (ignore datalist and matrixlist functionalfiles)
-                            parent = sql_query(sqlConn, 'select', 'functionalfile', 'Id', ...
-                                     struct('FileName', sFuncFile.ExtraStr1), ...;
-                                     ' AND Type <> "datalist" AND Type <> "matrixlist"');
+                            parent = sql_query(sqlConn, 'SELECT', 'FunctionalFile', ...
+                                     struct('FileName', sFuncFile.ExtraStr1), ...
+                                     'Id', 'AND Type <> "datalist" AND Type <> "matrixlist"');
                             if ~isempty(parent)
                                 sFuncFile.ParentFile = parent.Id;
                             end
