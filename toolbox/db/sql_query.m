@@ -113,10 +113,7 @@ if nargs < 1
     end
     
     if debug
-        if dirQuery(end) ~= ';'
-            dirQuery = [dirQuery ';'];
-        end
-        disp(['Query: ' dirQuery]);
+        disp(['Query:  ' dirQuery]);
     end
     return;
 end
@@ -471,7 +468,7 @@ function query = toString(query, structures)
     for iQ = 1 : length(qMarks)
         if ischar(values{iQ})
             values{iQ} = ['"' values{iQ} '"'];
-        elseif isnumeric(values{iQ})
+        elseif isnumeric(values{iQ}) || islogical(values{iQ})
             values{iQ} = num2str(values{iQ});
         end
         % Find all the instances of '?'
