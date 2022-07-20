@@ -10,44 +10,53 @@ function varargout = db_get(varargin)
 %
 %
 % ====== SUBJECTS ======================================================================
-%    - db_get('Subject', SubjectIDs,       Fields, isRaw) : Find subject(s) by ID(s)
-%    - db_get('Subject', SubjectFileNames, Fields, isRaw) : Find subject(s) by FileName(s)
-%    - db_get('Subject', CondQuery,        Fields, isRaw) : Find subject(s) with a Query
-%    - db_get('Subject')                                  : Get current subject in current protocol 
-%    - db_get('Subjects')                                 : Get all subjects in current protocol, exclude @default_subject
-%    - db_get('Subjects', 0, Fields)                      : Get all subjects in current protocol, exclude @default_subject
-%    - db_get('Subjects', 1, Fields)                      : Get all subjects in current protocol, include @default_subject
-%    - db_get('SubjectFromStudy', StudyID)                : Find Subject for Study with StudyID  
-%    - db_get('SubjectFromFunctionalFile', FileId)        : Find Subject for FunctionalFile with FileID 
-%    - db_get('SubjectFromFunctionalFile', FileName)      : Find Subject for FunctionalFile with FileID 
+%    - db_get('Subject', SubjectIDs,         Fields, isRaw) : Get Subject(s) by ID(s)
+%    - db_get('Subject', SubjectFileNames,   Fields, isRaw) : Get Subject(s) by FileName(s)
+%    - db_get('Subject', CondQuery,          Fields, isRaw) : Get Subject(s) with a Query struct
+%    - db_get('Subject', '@default_subject', Fields)        : Get default Subject
+%    - db_get('Subject')                                    : Get current Subject in current protocol
+%    - db_get('Subjects')                                   : Get all Subjects in current protocol, exclude @default_subject
+%    - db_get('Subjects', 0, Fields)                        : Get all Subjects in current protocol, exclude @default_subject
+%    - db_get('Subjects', 1, Fields)                        : Get all Subjects in current protocol, include @default_subject
+%    - db_get('SubjectCount')                               : Get number of subjects in current protocol, exclude @default_subject
+%    - db_get('SubjectFromStudy', StudyID)                  : Find SubjectID for StudyID
+%    - db_get('SubjectFromStudy', StudyFileName)            : Find SubjectID for StudyFileName
+%    - db_get('SubjectFromStudy', CondQuery)                : Find SubjectID for Query struct
+%    - db_get('SubjectFromFunctionalFile', FileId)          : Find Subject for FunctionalFile with FileID
+%    - db_get('SubjectFromFunctionalFile', FileName)        : Find Subject for FunctionalFile with FileName
+%    - db_get('SubjectFromFunctionalFile', CondQuery)       : Find Subject for FunctionalFile with Query struct
 %
 % ====== ANATOMY FILES =================================================================
-%    - db_get('FilesWithSubject')  :                        :
-%    - db_get('AnatomyFile', FileIDs,   Fields) : Find anatomy file(s) by ID(s) 
-%    - db_get('AnatomyFile', FileNames, Fields) : Find anatomy file(s) by FileName(s)
-%    - db_get('AnatomyFile', CondQuery, Fields) : Find anatomy file(s) with a Query
+%    - db_get('FilesWithSubject', SubjectID, AnatomyFileType, Fields) : Get AnatomyFiles for SubjectID
+%    - db_get('AnatomyFile', FileIDs,   Fields) : Find AnatomyFile(s) by ID(s)
+%    - db_get('AnatomyFile', FileNames, Fields) : Find AnatomyFile(s) by FileName(s)
+%    - db_get('AnatomyFile', CondQuery, Fields) : Find AnatomyFile(s) with a Query
 %
 % ====== STUDIES =======================================================================
 %    - db_get('StudiesFromSubject', SubjectID,   Fields, 'intra_subject', 'default_study') : Find Studies for Subject with SubjectID (with intra_subject and default_study)
-%    - db_get('StudiesFromSubject', SubjectID,   Fields) : Find Studies for Subject with SubjectID (w/o intra_subject and default_study)
-%    - db_get('StudiesFromSubject', SubjectName, Fields) : Find Studies for Subject with SubjectName (w/o intra_subject and default_study)
-%    - db_get('DefaultStudy', iSubject, Fields)
+%    - db_get('StudiesFromSubject', SubjectID,   Fields) : Find Studies for Subject with SubjectID (w/o intra_subject study and default_study)
+%    - db_get('StudiesFromSubject', SubjectName, Fields) : Find Studies for Subject with SubjectName (w/o intra_subject study and default_study)
+%    - db_get('DefaultStudy', SubjectID, Fields)       : Get default study for SubjectID
+%    - db_get('DefaultStudy', SubjectFileName, Fields) : Get default study for SubjectFileName
+%    - db_get('DefaultStudy', CondQuery, Fields)       : Get default study for CondQuery
 %    - db_get('Study', StudyIDs,         Fields) : Get study(s) by ID(s)
 %    - db_get('Study', StudyFileNames,   Fields) : Get study(s) by FileName(s)
 %    - db_get('Study', CondQuery,        Fields) : Get study(s) with a Query
 %    - db_get('Study', '@inter',         Fields) : Get @inter study
-%    - db_get('Study', '@default_study', Fields) : Get @default_study study
-%    - db_get('Study');                          : Get current subject in current protocol
+%    - db_get('Study', '@default_study', Fields) : Get global @default_study study
+%    - db_get('Study');                          : Get current study in current protocol
 %    - db_get('Studies')             : Get all studies in current protocol, exclude @inter and global @default_study
 %    - db_get('Studies', 0, Fields)  : Get all studies in current protocol, exclude @inter and global @default_study
 %    - db_get('Studies', 1, Fields)  : Get all studies in current protocol, include @inter and global @default_study
 %
 % ====== FUNCTIONAL FILES ==============================================================
-%    - db_get('FilesWithStudy', StudyID, FunctionalFileType, Fields) Get all functional files for study with ID
-%    - db_get('FunctionalFile', FileIDs,   Fields) : Get functional file(s) by ID(s) 
-%    - db_get('FunctionalFile', FileNames, Fields) : Get functional file(s) by FileName(s)
-%    - db_get('FunctionalFile', CondQuery, Fields) : Get functional file(s) with a Query
-%    - db_get('ChannelFromStudy', StudyID) : Find current Channel for Study with StudyID  
+%    - db_get('FilesWithStudy', StudyID, FunctionalFileType, Fields) : Get FunctionalFiles for StudyID
+%    - db_get('FunctionalFile', FileIDs,   Fields) : Get FunctionalFile(s) by ID(s)
+%    - db_get('FunctionalFile', FileNames, Fields) : Get FunctionalFile(s) by FileName(s)
+%    - db_get('FunctionalFile', CondQuery, Fields) : Get FunctionalFile(s) with a Query
+%    - db_get('ChannelFromStudy', StudyID)       : Find current Channel for StudyID
+%    - db_get('ChannelFromStudy', StudyFileName) : Find current Channel for StudyFileName
+%    - db_get('ChannelFromStudy', CondQuery)     : Find current Channel for Query struct
 %
 % SEE ALSO db_set
 %
@@ -394,6 +403,8 @@ switch contextName
 
 %% ==== SUBJECT FROM STUDY ====
     % iSubject = db_get('SubjectFromStudy', StudyID)
+    %          = db_get('SubjectFromStudy', StudyFileName)
+    %          = db_get('SubjectFromStudy', CondQuery)
     case 'SubjectFromStudy'
         iStudy = args{1};
         sStudy = db_get(sqlConn, 'Study', iStudy, 'Subject');
@@ -409,6 +420,8 @@ switch contextName
 
 %% ==== CHANNEL FROM STUDY ====
     % iFile = db_get('ChannelFromStudy', StudyID)
+    %       = db_get('ChannelFromStudy', StudyFileName)
+    %       = db_get('ChannelFromStudy', CondQuery)
     case 'ChannelFromStudy'
         iStudy = args{1};
         varargout{1} = [];
@@ -456,8 +469,8 @@ switch contextName
 
 
 %% ==== STUDIES FROM SUBJECT ====        
-    % sStudies = db_get('StudiesFromSubject', iSubject,    Fields)                                   % Exclude 'intra_subject' and 'default_study')
-    %          = db_get('StudiesFromSubject', iSubject,    Fileds, 'intra_subject', 'default_study') % Include 'intra_subject' and 'default_study')
+    % sStudies = db_get('StudiesFromSubject', iSubject,    Fields)                                   % Exclude 'intra_subject' study and 'default_study')
+    %          = db_get('StudiesFromSubject', iSubject,    Fields, 'intra_subject', 'default_study') % Include 'intra_subject' study and 'default_study')
     %          = db_get('StudiesFromSubject', SubjectName, Fields)
     case 'StudiesFromSubject'
         iSubject = args{1};
