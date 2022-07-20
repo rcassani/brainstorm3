@@ -1218,14 +1218,13 @@ function destFile = CopyFile(iTarget, srcFile, srcType, iSrcStudy, sSubjectTarge
     isAnatomy = ismember(srcType, {'anatomy','cortex','scalp','innerskull','outerskull','fibers','fem','other'});
     % Get source subject
     if ~isAnatomy
-        iSubjectSrcRaw = db_get(sqlConn, 'SubjectFromStudy', iSrcStudy);
-        sSubjectSrcRaw = db_get(sqlConn, 'Subject', iSubjectSrcRaw);
+        sSubjectSrcRaw = db_get(sqlConn, 'SubjectFromStudy', iSrcStudy);
         % Check if the subject changes
-        UseDefaultAnatSrc    = (sSubjectSrcRaw.UseDefaultAnat == 1)    || (iSubjectSrcRaw == 0);
+        UseDefaultAnatSrc    = (sSubjectSrcRaw.UseDefaultAnat == 1)    || (sSubjectSrcRaw.Id == 0);
         UseDefaultAnatTarget = (sSubjectTargetRaw.UseDefaultAnat == 1) || (iSubjectTargetRaw == 0);
         isSameSubjAnat = file_compare(sSubjectTargetRaw.FileName, sSubjectSrcRaw.FileName) || (UseDefaultAnatSrc && UseDefaultAnatTarget);
         % Check if the channel study changes
-        UseDefaultChannelSrc    = (sSubjectSrcRaw.UseDefaultChannel == 2)    || (iSubjectSrcRaw == 0);
+        UseDefaultChannelSrc    = (sSubjectSrcRaw.UseDefaultChannel == 2)    || (sSubjectSrcRaw.Id == 0);
         UseDefaultChannelTarget = (sSubjectTargetRaw.UseDefaultChannel == 2) || (iSubjectTargetRaw == 0);
         isSameSubjChan = file_compare(sSubjectTargetRaw.FileName, sSubjectSrcRaw.FileName) || (UseDefaultChannelSrc && UseDefaultChannelTarget);
     else

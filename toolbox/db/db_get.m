@@ -19,9 +19,8 @@ function varargout = db_get(varargin)
 %    - db_get('Subjects', 0, Fields)                        : Get all Subjects in current protocol, exclude @default_subject
 %    - db_get('Subjects', 1, Fields)                        : Get all Subjects in current protocol, include @default_subject
 %    - db_get('SubjectCount')                               : Get number of subjects in current protocol, exclude @default_subject
-%    - db_get('SubjectFromStudy', StudyID)                  : Find SubjectID for StudyID
-%    - db_get('SubjectFromStudy', StudyFileName)            : Find SubjectID for StudyFileName
-%    - db_get('SubjectFromStudy', CondQuery)                : Find SubjectID for Query struct
+%    - db_get('SubjectFromStudy', StudyID, SubjectFields)       : Find SubjectID for StudyID
+%    - db_get('SubjectFromStudy', StudyFileName, SubjectFields) : Find SubjectID for StudyFileName
 %    - db_get('SubjectFromFunctionalFile', FileId)          : Find Subject for FunctionalFile with FileID
 %    - db_get('SubjectFromFunctionalFile', FileName)        : Find Subject for FunctionalFile with FileName
 %    - db_get('SubjectFromFunctionalFile', CondQuery)       : Find Subject for FunctionalFile with Query struct
@@ -402,20 +401,31 @@ switch contextName
 
 
 %% ==== SUBJECT FROM STUDY ====
-    % iSubject = db_get('SubjectFromStudy', StudyID)
-    %          = db_get('SubjectFromStudy', StudyFileName)
-    %          = db_get('SubjectFromStudy', CondQuery)
+    % sSubject = db_get('SubjectFromStudy', StudyID,       SubjectFields)
+    %          = db_get('SubjectFromStudy', StudyFileName, SubjectFields)
     case 'SubjectFromStudy'
-        iStudy = args{1};
-        sStudy = db_get(sqlConn, 'Study', iStudy, 'Subject');
-
-        if ~isempty(sStudy)
-            iSubject = sStudy.Subject;
-        else
-            iSubject = [];
+        fields = '*';
+        varargout{1} = [];
+        if length(args) > 1
+            fields = args{2};
         end
-
-        varargout{1} = iSubject;
+        if ischar(fields), fields = {fields}; end
+        % Prepend 'Subject.' to requested fields
+        if ~strcmp('*', fields{1})
+            fields = cellfun(@(x) ['Subject.' x], fields, 'UniformOutput', 0);
+        end
+        % Join query
+        joinQry = 'Subject LEFT JOIN Study ON Subject.Id = Study.Subject';
+        % Add query
+        addQuery = 'AND Study.';
+        % Complete query with FileName of FileID
+        if ischar(args{1})
+            addQuery = [addQuery 'FileName = "' args{1} '"'];
+        else
+            addQuery = [addQuery 'Id = ' num2str(args{1})];
+        end
+        % Select query
+        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
 
 
 %% ==== CHANNEL FROM STUDY ====
