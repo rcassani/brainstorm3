@@ -88,11 +88,11 @@ varargout = {};
 % Set required context structure
 switch contextName
 %% ==== SUBJECT ====
-    % [Success]              db_set('Subject', 'Delete')
-    % [Success]              db_set('Subject', 'Delete', SubjectId)
-    % [Success]              db_set('Subject', 'Delete', CondQuery)
+    % Success              = db_set('Subject', 'Delete')
+    %                      = db_set('Subject', 'Delete', SubjectId)
+    %                      = db_set('Subject', 'Delete', CondQuery)
     % [SubjectId, Subject] = db_set('Subject', Subject)
-    % [SubjectId, Subject] = db_set('Subject', Subject, SubjectId)
+    %                      = db_set('Subject', Subject, SubjectId)
     case 'Subject'
         % Default parameters
         iSubject = [];       
@@ -154,11 +154,11 @@ switch contextName
 
         
 %% ==== ANATOMY FILES ====
-    % [Success]                      db_set('AnatomyFile', 'Delete')
-    % [Success]                      db_set('AnatomyFile', 'Delete', AnatomyFileId)
-    % [Success]                      db_set('AnatomyFile', 'Delete', CondQuery)
+    % Success                      = db_set('AnatomyFile', 'Delete')
+    %                              = db_set('AnatomyFile', 'Delete', AnatomyFileId)
+    %                              = db_set('AnatomyFile', 'Delete', CondQuery)
     % [AnatomyFileId, AnatomyFile] = db_set('AnatomyFile', AnatomyFile)
-    % [AnatomyFileId, AnatomyFile] = db_set('AnatomyFile', AnatomyFile, AnatomyFileId)
+    %                              = db_set('AnatomyFile', AnatomyFile, AnatomyFileId)
     case 'AnatomyFile'
         % Default parameters
         iAnatFile = [];
@@ -219,8 +219,8 @@ switch contextName
         end
         
 %% ==== FILES WITH SUBJECT ====
-    % [Success]       = db_set('FilesWithSubject', 'Delete'     , SubjectID)
-    % [sAnatomyFiles] = db_set('FilesWithSubject', sAnatomyFiles, SubjectID)
+    % Success       = db_set('FilesWithSubject', 'Delete'     , SubjectID)
+    % sAnatomyFiles = db_set('FilesWithSubject', sAnatomyFiles, SubjectID)
     case 'FilesWithSubject'
         sAnatFiles = args{1};
         iSubject = args{2};
@@ -245,11 +245,11 @@ switch contextName
 
 
 %% ==== STUDY ====
-    % [Success]          db_set('Study', 'Delete')
-    % [Success]          db_set('Study', 'Delete', StudyId)
-    % [Success]          db_set('Study', 'Delete', CondQuery)
+    % Success          = db_set('Study', 'Delete')
+    %                  = db_set('Study', 'Delete', StudyId)
+    %                  = db_set('Study', 'Delete', CondQuery)
     % [StudyId, Study] = db_set('Study', Study)
-    % [StudyId, Study] = db_set('Study', Study, StudyId)
+    %                  = db_set('Study', Study, StudyId)
     case 'Study'
         % Default parameters
         iStudy = [];
@@ -316,8 +316,8 @@ switch contextName
 
 
 %% ==== FILES WITH STUDY ====
-    % [Success]          = db_set('FilesWithStudy', 'Delete'        , StudyID)
-    % [sFunctionalFiles] = db_set('FilesWithStudy', sFunctionalFiles, StudyID)
+    % Success          = db_set('FilesWithStudy', 'Delete'        , StudyID)
+    % sFunctionalFiles = db_set('FilesWithStudy', sFunctionalFiles, StudyID)
     case 'FilesWithStudy'
         sFuncFiles = args{1};
         iStudy = args{2};
@@ -343,11 +343,11 @@ switch contextName
 
         
 %% ==== FUNCTIONAL FILES ====
-    % [Success]                            db_set('FunctionalFile', 'Delete')
-    % [Success]                            db_set('FunctionalFile', 'Delete', FunctionalFileId)
-    % [Success]                            db_set('FunctionalFile', 'Delete', CondQuery)
-    % [FunctionalFileId, FunctionalFile] = db_set('FunctionalFile', FunctionalFile)
-    % [FunctionalFileId, FunctionalFile] = db_set('FunctionalFile', FunctionalFile, FunctionalFileId)
+    % Success                           = db_set('FunctionalFile', 'Delete')
+    %                                   = db_set('FunctionalFile', 'Delete', FunctionalFileId)
+    %                                   = db_set('FunctionalFile', 'Delete', CondQuery)
+    % FunctionalFileId, FunctionalFile] = db_set('FunctionalFile', FunctionalFile)
+    %                                   = db_set('FunctionalFile', FunctionalFile, FunctionalFileId)
     case 'FunctionalFile'
         % Default parameters
         iFuncFile = [];

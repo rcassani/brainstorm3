@@ -36,9 +36,9 @@ function varargout = db_get(varargin)
 %    - db_get('StudiesFromSubject', SubjectID,   Fields, 'intra_subject', 'default_study') : Find Studies for Subject with SubjectID (with intra_subject and default_study)
 %    - db_get('StudiesFromSubject', SubjectID,   Fields) : Find Studies for Subject with SubjectID (w/o intra_subject study and default_study)
 %    - db_get('StudiesFromSubject', SubjectName, Fields) : Find Studies for Subject with SubjectName (w/o intra_subject study and default_study)
-%    - db_get('DefaultStudy', SubjectID, Fields)       : Get default study for SubjectID
+%    - db_get('DefaultStudy', SubjectID,       Fields) : Get default study for SubjectID
 %    - db_get('DefaultStudy', SubjectFileName, Fields) : Get default study for SubjectFileName
-%    - db_get('DefaultStudy', CondQuery, Fields)       : Get default study for CondQuery
+%    - db_get('DefaultStudy', CondQuery,       Fields) : Get default study for CondQuery
 %    - db_get('Study', StudyIDs,         Fields) : Get study(s) by ID(s)
 %    - db_get('Study', StudyFileNames,   Fields) : Get study(s) by FileName(s)
 %    - db_get('Study', CondQuery,        Fields) : Get study(s) with a Query
@@ -514,9 +514,9 @@ switch contextName
 
 
 %% ==== DEFAULT STUDY ====       
-    % sStudy = db_get('DefaultStudy', SubjectID, Fields)
+    % sStudy = db_get('DefaultStudy', SubjectID,       Fields)
     %        = db_get('DefaultStudy', SubjectFileName, Fields)
-    %        = db_get('DefaultStudy', CondQuery, Fields)
+    %        = db_get('DefaultStudy', CondQuery,       Fields)
     case 'DefaultStudy'
         fields = '*';
         iSubject = args{1};
