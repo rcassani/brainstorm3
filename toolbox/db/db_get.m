@@ -655,9 +655,16 @@ switch contextName
 %% ==== SUBJECT FROM FUNCTIONAL FILE ====              
     % iSubject = db_get('SubjectFromFunctionalFile', FileId)
     %          = db_get('SubjectFromFunctionalFile', FileName)
+    %          = db_get('SubjectFromFunctionalFile', CondQuery)
     case 'SubjectFromFunctionalFile'
         qry = ['SELECT Subject FROM FunctionalFile ' ...
             'LEFT JOIN Study ON Study.Id = FunctionalFile.Study WHERE FunctionalFile.'];
+        % Get FileID if argument is CondQuery struct
+        if isstruct(args{1})
+            tmp = db_get(sqlConn, 'FunctionalFile', args{1}, 'Id');
+            args{1} = tmp.Id;
+        end
+        % Complete query with FileName of FileID
         if ischar(args{1})
             qry = [qry 'FileName = "' args{1} '"'];
         else
