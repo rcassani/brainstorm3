@@ -435,7 +435,7 @@ switch contextName
                 % If no channel file is defined in 'Analysis-intra' node: look in 
                 if isempty(sStudy.iChannel)
                     % Get global default study
-                    sStudy = db_get(sqlConn, 'DefaultStudy', 0, {'Id', 'Subject', 'iChannel'});
+                    sStudy = db_get(sqlConn, 'DefaultStudy', '@default_subject', {'Id', 'Subject', 'iChannel'});
                     iChanStudy = sStudy.Id;
                 end
             % === All other nodes ===
@@ -514,7 +514,9 @@ switch contextName
 
 
 %% ==== DEFAULT STUDY ====       
-    % sStudy = db_get('DefaultStudy', iSubject, Fields)
+    % sStudy = db_get('DefaultStudy', SubjectID, Fields)
+    %        = db_get('DefaultStudy', SubjectFileName, Fields)
+    %        = db_get('DefaultStudy', CondQuery, Fields)
     case 'DefaultStudy'
         fields = '*';
         iSubject = args{1};
@@ -523,25 +525,13 @@ switch contextName
             fields = args{2};
         end
         defaultStudy = bst_get('DirDefaultStudy');
-        
-        % === DEFAULT SUBJECT ===
-        % => Return global default study
-        if iSubject == 0
-            % Return Global default study
-        % === NORMAL SUBJECT ===
-        else
-            sSubject = db_get(sqlConn, 'Subject', iSubject, 'UseDefaultChannel');
-            % === GLOBAL DEFAULT STUDY ===
-            if sSubject.UseDefaultChannel == 2
-                % Return Global default study
-                iSubject = 0;
-            % === SUBJECT'S DEFAULT STUDY ===
-            elseif sSubject.UseDefaultChannel == 1
-                % Return subject's default study
-            end
+        % Get Subject
+        sSubject = db_get(sqlConn, 'Subject', iSubject, {'Id', 'UseDefaultChannel'});
+        % If UseDefaultChannel get default Subject
+        if sSubject.UseDefaultChannel == 1
+            sSubject = db_get('Subject', '@default_subject', 'Id');
         end
-        
-        sStudy = db_get(sqlConn, 'Study', struct('Subject', iSubject, 'Name', defaultStudy), fields);
+        sStudy = db_get(sqlConn, 'Study', struct('Subject', sSubject.Id, 'Name', defaultStudy), fields);
         if ~isempty(sStudy)
             varargout{1} = sStudy;
         end
