@@ -428,9 +428,9 @@ switch contextName
 
 
 %% ==== CHANNEL FROM STUDY ====
-    % iFile = db_get('ChannelFromStudy', StudyID)
-    %       = db_get('ChannelFromStudy', StudyFileName)
-    %       = db_get('ChannelFromStudy', CondQuery)
+    % [iFile, iStudy] = db_get('ChannelFromStudy', StudyID)
+    %                 = db_get('ChannelFromStudy', StudyFileName)
+    %                 = db_get('ChannelFromStudy', CondQuery)
     case 'ChannelFromStudy'
         iStudy = args{1};
         varargout{1} = [];
