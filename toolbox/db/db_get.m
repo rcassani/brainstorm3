@@ -21,9 +21,8 @@ function varargout = db_get(varargin)
 %    - db_get('SubjectCount')                               : Get number of subjects in current protocol, exclude @default_subject
 %    - db_get('SubjectFromStudy', StudyID, SubjectFields)       : Find SubjectID for StudyID
 %    - db_get('SubjectFromStudy', StudyFileName, SubjectFields) : Find SubjectID for StudyFileName
-%    - db_get('SubjectFromFunctionalFile', FileId)          : Find Subject for FunctionalFile with FileID
-%    - db_get('SubjectFromFunctionalFile', FileName)        : Find Subject for FunctionalFile with FileName
-%    - db_get('SubjectFromFunctionalFile', CondQuery)       : Find Subject for FunctionalFile with Query struct
+%    - db_get('SubjectFromFunctionalFile', FileId, SubjectFields)   : Find Subject for FunctionalFile with FileID
+%    - db_get('SubjectFromFunctionalFile', FileName, SubjectFields) : Find Subject for FunctionalFile with FileName
 %
 % ====== ANATOMY FILES =================================================================
 %    - db_get('FilesWithSubject', SubjectID, AnatomyFileType, Fields) : Get AnatomyFiles for SubjectID
@@ -653,30 +652,32 @@ switch contextName
 
 
 %% ==== SUBJECT FROM FUNCTIONAL FILE ====              
-    % iSubject = db_get('SubjectFromFunctionalFile', FileId)
-    %          = db_get('SubjectFromFunctionalFile', FileName)
-    %          = db_get('SubjectFromFunctionalFile', CondQuery)
+    % sSubject = db_get('SubjectFromFunctionalFile', FileId,   SubjectFields)
+    %          = db_get('SubjectFromFunctionalFile', FileName, SubjectFields)
     case 'SubjectFromFunctionalFile'
-        qry = ['SELECT Subject FROM FunctionalFile ' ...
-            'LEFT JOIN Study ON Study.Id = FunctionalFile.Study WHERE FunctionalFile.'];
-        % Get FileID if argument is CondQuery struct
-        if isstruct(args{1})
-            tmp = db_get(sqlConn, 'FunctionalFile', args{1}, 'Id');
-            args{1} = tmp.Id;
+        fields = '*';
+        varargout{1} = [];
+        if length(args) > 1
+            fields = args{2};
         end
+        if ischar(fields), fields = {fields}; end
+        % Prepend 'Subject.' to requested fields
+        if ~strcmp('*', fields{1})
+            fields = cellfun(@(x) ['Subject.' x], fields, 'UniformOutput', 0);
+        end
+        % Join query
+        joinQry = ['Subject LEFT JOIN Study ON Subject.Id = Study.Subject ' ...
+                   'LEFT JOIN FunctionalFile ON Study.Id = FunctionalFile.Study'];
+        % Add query
+        addQuery = 'AND FunctionalFile.';
         % Complete query with FileName of FileID
         if ischar(args{1})
-            qry = [qry 'FileName = "' args{1} '"'];
+            addQuery = [addQuery 'FileName = "' args{1} '"'];
         else
-            qry = [qry 'Id = ' num2str(args{1})];
+            addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
-        result = sql_query(sqlConn, qry);
-        if result.next()
-            varargout{1} = result.getInt('Subject');
-        else
-            varargout{1} = [];
-        end
-        result.close();
+        % Select query
+        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
 
 
 %% ==== ERROR ====      
