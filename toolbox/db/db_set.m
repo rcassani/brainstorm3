@@ -161,31 +161,31 @@ switch contextName
     % [AnatomyFileId, AnatomyFile] = db_set('AnatomyFile', AnatomyFile, AnatomyFileId)
     case 'AnatomyFile'
         % Default parameters
-        iAnatomyFile = [];       
+        iAnatFile = [];
         varargout{1} = [];
         
         if length(args) < 1
             error('Error in number of arguments')
         end
         
-        sAnatomyFile = args{1};
+        sAnatFile = args{1};
         if length(args) > 1
-            iAnatomyFile = args{2};
+            iAnatFile = args{2};
         end
         % Delete 
-        if ischar(sAnatomyFile) && strcmpi(sAnatomyFile, 'delete')
-            if isempty(iAnatomyFile)
+        if ischar(sAnatFile) && strcmpi(sAnatFile, 'delete')
+            if isempty(iAnatFile)
                 % Delete all rows in AnatomyFile table
                 delResult = sql_query(sqlConn, 'DELETE', 'AnatomyFile');
                 % Reset auto-increment
                 sql_query(sqlConn, 'RESET-AUTOINCREMENT', 'AnatomyFile');
             else
-                if isstruct(iAnatomyFile)
+                if isstruct(iAnatFile)
                     % Delete using the CondQuery
-                    delResult = sql_query(sqlConn, 'DELETE', 'AnatomyFile', iAnatomyFile);
-                elseif isnumeric(iAnatomyFile)
+                    delResult = sql_query(sqlConn, 'DELETE', 'AnatomyFile', iAnatFile);
+                elseif isnumeric(iAnatFile)
                     % Delete using iAnatomyFile
-                    delResult = sql_query(sqlConn, 'DELETE', 'AnatomyFile', struct('Id', iAnatomyFile));
+                    delResult = sql_query(sqlConn, 'DELETE', 'AnatomyFile', struct('Id', iAnatFile));
                 end
             end
             if delResult > 0
@@ -193,26 +193,26 @@ switch contextName
             end
             
         % Insert or Update    
-        elseif isstruct(sAnatomyFile)
-            if isempty(iAnatomyFile)
+        elseif isstruct(sAnatFile)
+            if isempty(iAnatFile)
                 % Insert AnatomyFile row
-                sAnatomyFile.Id = []; 
-                iAnatomyFile = sql_query(sqlConn, 'INSERT', 'AnatomyFile', sAnatomyFile);
-                varargout{1} = iAnatomyFile;
+                sAnatFile.Id = [];
+                iAnatFile = sql_query(sqlConn, 'INSERT', 'AnatomyFile', sAnatFile);
+                varargout{1} = iAnatFile;
             else
                 % Update iAnatomyFile row
-                if ~isfield(sAnatomyFile, 'Id') || isempty(sAnatomyFile.Id) || sAnatomyFile.Id == iAnatomyFile
-                    resUpdate = sql_query(sqlConn, 'UPDATE', 'AnatomyFile', sAnatomyFile, struct('Id', iAnatomyFile));
+                if ~isfield(sAnatFile, 'Id') || isempty(sAnatFile.Id) || sAnatFile.Id == iAnatFile
+                    resUpdate = sql_query(sqlConn, 'UPDATE', 'AnatomyFile', sAnatFile, struct('Id', iAnatFile));
                 else
                     error('Cannot update AnatomyFile, Ids do not match');
                 end
                 if resUpdate>0
-                    varargout{1} = iAnatomyFile;
+                    varargout{1} = iAnatFile;
                 end
             end
             % If requested, get the inserted or updated row
             if nargout > 1
-                varargout{2} = db_get(sqlConn, 'AnatomyFile', iAnatomyFile);
+                varargout{2} = db_get(sqlConn, 'AnatomyFile', iAnatFile);
             end
         else
             % No action
@@ -350,7 +350,7 @@ switch contextName
     % [FunctionalFileId, FunctionalFile] = db_set('FunctionalFile', FunctionalFile, FunctionalFileId)
     case 'FunctionalFile'
         % Default parameters
-        iFunctionalFile = [];
+        iFuncFile = [];
         varargout{1} = [];
 
         if length(args) < 1
@@ -359,24 +359,24 @@ switch contextName
         
         sFuncFile = args{1};
         if length(args) > 1
-            iFunctionalFile = args{2};
+            iFuncFile = args{2};
         end
         % Delete
         if ischar(sFuncFile) && strcmpi(sFuncFile, 'delete')
-            if isempty(iFunctionalFile)
+            if isempty(iFuncFile)
                 % Delete all rows in FunctionalFile table
                 delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile');
                 % Reset auto-increment
                 sql_query(sqlConn, 'RESET-AUTOINCREMENT', 'FunctionalFile');
             else
-                if isstruct(iFunctionalFile)
+                if isstruct(iFuncFile)
                     % Delete using the CondQuery
-                    delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', iFunctionalFile);
-                elseif isnumeric(iFunctionalFile)
+                    delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', iFuncFile);
+                elseif isnumeric(iFuncFile)
                     % Get Id for parent of FunctionalFile to delete
-                    parent = db_get(sqlConn, 'FunctionalFile', iFunctionalFile, 'ParentFile');
+                    parent = db_get(sqlConn, 'FunctionalFile', iFuncFile, 'ParentFile');
                     % Delete using iFunctionalFile
-                    delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', struct('Id', iFunctionalFile));
+                    delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', struct('Id', iFuncFile));
                     % Reduce the number of children in parent
                     if ~isempty(parent) && ~isempty(parent.ParentFile)
                        db_set(sqlConn, 'ParentCount', parent.ParentFile, '-', 1);
@@ -393,7 +393,7 @@ switch contextName
             sFuncFile.LastModified = bst_get('CurrentUnixTime');
 
             % Insert FunctionalFile row
-            if isempty(iFunctionalFile)
+            if isempty(iFuncFile)
                 sFuncFile.Id = [];
                 switch sFuncFile.Type
                     % If data or matrix, check for 'datalist' and 'matrixlist'
@@ -421,27 +421,27 @@ switch contextName
                     otherwise
                         % Do nothing
                 end
-                iFunctionalFile = sql_query(sqlConn, 'INSERT', 'FunctionalFile', sFuncFile);
-                varargout{1} = iFunctionalFile;
+                iFuncFile = sql_query(sqlConn, 'INSERT', 'FunctionalFile', sFuncFile);
+                varargout{1} = iFuncFile;
                 % Increase the number of children in parent or list
                 if ~isempty(sFuncFile.ParentFile) && sFuncFile.ParentFile > 0
                    db_set(sqlConn, 'ParentCount', sFuncFile.ParentFile, '+', 1);
                 end
 
-            % Update FunctionalFile row
+            % Update iFunctionalFile row
             else
-                if ~isfield(sFuncFile, 'Id') || isempty(sFuncFile.Id) || sFuncFile.Id == iFunctionalFile
-                    resUpdate = sql_query(sqlConn, 'UPDATE', 'FunctionalFile', sFuncFile, struct('Id', iFunctionalFile));
+                if ~isfield(sFuncFile, 'Id') || isempty(sFuncFile.Id) || sFuncFile.Id == iFuncFile
+                    resUpdate = sql_query(sqlConn, 'UPDATE', 'FunctionalFile', sFuncFile, struct('Id', iFuncFile));
                 else
                     error('Cannot update FunctionalFile, Ids do not match');
                 end
                 if resUpdate > 0
-                    varargout{1} = iFunctionalFile;
+                    varargout{1} = iFuncFile;
                 end
             end
             % If requested, get the inserted or updated row
             if nargout > 1
-                varargout{2} = db_get(sqlConn, 'FunctionalFile', iFunctionalFile);
+                varargout{2} = db_get(sqlConn, 'FunctionalFile', iFuncFile);
             end
         else
             % No action
