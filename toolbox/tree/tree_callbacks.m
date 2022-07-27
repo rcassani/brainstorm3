@@ -2987,14 +2987,15 @@ function SurfaceCheckAlignment_Callback(bstNode)
     bst_progress('start', 'Check surface alignment', 'Loading MRI and surface...');
     % Get subject information 
     iSubject = bstNode.getStudyIndex();
-    sSubject = bst_get('Subject', iSubject);
+    sSubject = db_get('Subject', iSubject, 'iAnatomy');
     % If no MRI is defined : cannot check alignment
     if isempty(sSubject.iAnatomy)
         bst_error('You must define a default MRI before checking alignment.', 'Check alignment MRI/surface', 0);
         return;
     end
     % Get default MRI and target surface
-    MriFile     = sSubject.Anatomy(sSubject.iAnatomy).FileName;
+    sAnatFile   = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+    MriFile     = sAnatFile.FileName;
     SurfaceFile = char(bstNode.getFileName());
     % Load MRI
     sMri = bst_memory('LoadMri', MriFile);
