@@ -146,7 +146,7 @@ switch contextName
                 end
                 % Verify requested fields
                 if ~all(isfield(templateStruct, fields))
-                    error('Invalid Fields requested in db_get()');
+                    error('Invalid Fields requested in db_get(''Subject'')');
                 else
                     resultStruct = [];
                     for i = 1 : length(fields)
@@ -301,7 +301,7 @@ switch contextName
                 end
                 % Verify requested fields
                 if ~all(isfield(templateStruct, fields))
-                    error('Invalid Fields requested in db_get()');
+                    error('Invalid Fields requested in db_get(''AnatomyFile'')');
                 else
                     resultStruct = [];
                     for i = 1 : length(fields)
@@ -365,7 +365,7 @@ switch contextName
                 end
                 % Verify requested fields
                 if ~all(isfield(templateStruct, fields))
-                    error('Invalid Fields requested in db_get()');
+                    error('Invalid Fields requested in db_get(''FunctionalFile'')');
                 else
                     resultStruct = [];
                     for i = 1 : length(fields)
@@ -593,7 +593,7 @@ switch contextName
                 end
                 % Verify requested fields
                 if ~all(isfield(templateStruct, fields))
-                    error('Invalid Fields requested in db_get()');
+                    error('Invalid Fields requested in db_get(''Study'')');
                 else
                     resultStruct = [];
                     for i = 1 : length(fields)
