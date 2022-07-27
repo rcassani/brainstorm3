@@ -1020,7 +1020,8 @@ switch (lower(action))
                         if ~bstNodes(1).isMarked()
                             % Get subject structure
                             sSubject = bst_get('MriFile', filenameRelative);
-                            MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
+                            sAnatFile = db_get('AnatomyFile', iAnatomy, 'FileName');
+                            MriFile = sAnatFile.FileName;
                             % Overlay menus
                             gui_component('MenuItem', jMenuDisplay, [], 'Overlay on default MRI (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(MriFile, filenameRelative));
                             gui_component('MenuItem', jMenuDisplay, [], 'Overlay on default MRI (3D)',         IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri_3d(MriFile, filenameRelative));
