@@ -178,9 +178,10 @@ switch contextName
                     else
                         entryStr = ['Id "', num2str(iSubjects(i)), '"'];
                     end
-                    error(['Subject with ', entryStr, ' was not found in database.']);
+                    warning(['Subject with ', entryStr, ' was not found in database.']);
+                else
+                    sSubjects(i) = result;
                 end
-                sSubjects(i) = result;
             end
         else % Input is struct query
             sSubjects = sql_query(sqlConn, 'SELECT', 'Subject', condQuery(1), fields);
@@ -327,9 +328,10 @@ switch contextName
                     else
                         entryStr = ['Id "', num2str(iFiles(i)), '"'];
                     end
-                    error(['AnatomyFile with ', entryStr, ' was not found in database.']);
+                    warning(['AnatomyFile with ', entryStr, ' was not found in database.']);
+                else
+                    sFiles(i) = result;
                 end
-                sFiles(i) = result;            
             end
         else % Input is struct query
             sFiles = sql_query(sqlConn, 'SELECT', 'AnatomyFile', condQuery(1), fields);
@@ -390,9 +392,10 @@ switch contextName
                     else
                         entryStr = ['Id "', num2str(iFiles(i)), '"'];
                     end
-                    error(['FunctionalFile with ', entryStr, ' was not found in database.']);
+                    warning(['FunctionalFile with ', entryStr, ' was not found in database.']);
+                else
+                    sFiles(i) = result;
                 end
-                sFiles(i) = result;  
             end
         else % Input is struct query
             sFiles = sql_query(sqlConn, 'SELECT', 'FunctionalFile', condQuery(1), fields);
