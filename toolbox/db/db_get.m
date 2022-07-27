@@ -498,7 +498,7 @@ switch contextName
             fields = cellfun(@(x) ['Study.' x], fields, 'UniformOutput', 0);
         end
         % Join query
-        joinQry = 'Study LEFT JOIN Subject On Study.Subject = Subject.Id';
+        joinQry = 'Study LEFT JOIN Subject ON Study.Subject = Subject.Id';
         % Add query
         addQuery = 'AND Subject.';
         % Complete query with FileName of FileID
