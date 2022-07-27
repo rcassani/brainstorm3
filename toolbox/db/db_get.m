@@ -167,7 +167,7 @@ switch contextName
             sSubjects = repmat(resultStruct, 1, nSubjects);
             for i = 1:nSubjects
                 if iscell(iSubjects)
-                    condQuery.FileName = iSubjects{i};
+                    condQuery.FileName = file_short(iSubjects{i});
                 else
                     condQuery.Id = iSubjects(i);
                 end
@@ -316,7 +316,7 @@ switch contextName
             sFiles = repmat(resultStruct, 1, nFiles);
             for i = 1:nFiles
                 if iscell(iFiles)
-                    condQuery.FileName = iFiles{i};
+                    condQuery.FileName = file_short(iFiles{i});
                 else
                     condQuery.Id = iFiles(i);
                 end
@@ -379,7 +379,7 @@ switch contextName
             sFiles = repmat(resultStruct, 1, nFiles);
             for i = 1:nFiles
                 if iscell(iFiles)
-                    condQuery.FileName = iFiles{i};
+                    condQuery.FileName = file_short(iFiles{i});
                 else
                     condQuery.Id = iFiles(i);
                 end
@@ -420,7 +420,7 @@ switch contextName
         addQuery = 'AND Study.';
         % Complete query with FileName of FileID
         if ischar(args{1})
-            addQuery = [addQuery 'FileName = "' args{1} '"'];
+            addQuery = [addQuery 'FileName = "' file_short(args{1}) '"'];
         else
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
@@ -500,6 +500,7 @@ switch contextName
         addQuery = 'AND Subject.';
         % Complete query with FileName of FileID
         if ischar(args{1})
+            args{1} = file_short(args{1});
             [~, ~, fExt] = bst_fileparts(args{1});
             % Argument is not a Matlab .mat filename, assume it is a directory
             if ~strcmpi(fExt, '.mat')
@@ -604,7 +605,7 @@ switch contextName
             sStudies = repmat(resultStruct, 0);
             for i = 1:length(iStudies)
                 if iscell(iStudies)
-                    condQuery.FileName = iStudies{i};
+                    condQuery.FileName = file_short(iStudies{i});
                 else
                     condQuery.Id = iStudies(i);
                 end
@@ -670,7 +671,7 @@ switch contextName
         addQuery = 'AND FunctionalFile.';
         % Complete query with FileName of FileID
         if ischar(args{1})
-            addQuery = [addQuery 'FileName = "' args{1} '"'];
+            addQuery = [addQuery 'FileName = "' file_short(args{1}) '"'];
         else
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
