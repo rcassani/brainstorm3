@@ -23,6 +23,8 @@ function varargout = db_get(varargin)
 %    - db_get('SubjectFromStudy', StudyFileName, SubjectFields) : Find SubjectID for StudyFileName
 %    - db_get('SubjectFromFunctionalFile', FileId, SubjectFields)   : Find Subject for FunctionalFile with FileID
 %    - db_get('SubjectFromFunctionalFile', FileName, SubjectFields) : Find Subject for FunctionalFile with FileName
+%    - db_get('SubjectFromAnatomyFile', FileId, SubjectFields)   : Find Subject for AnatomyFile with FileID
+%    - db_get('SubjectFromAnatomyFile', FileName, SubjectFields) : Find Subject for AnatomyFile with FileName
 %
 % ====== ANATOMY FILES =================================================================
 %    - db_get('FilesWithSubject', SubjectID, AnatomyFileType, Fields) : Get AnatomyFiles for SubjectID
@@ -672,6 +674,34 @@ switch contextName
                    'LEFT JOIN FunctionalFile ON Study.Id = FunctionalFile.Study'];
         % Add query
         addQuery = 'AND FunctionalFile.';
+        % Complete query with FileName of FileID
+        if ischar(args{1})
+            addQuery = [addQuery 'FileName = "' file_short(args{1}) '"'];
+        else
+            addQuery = [addQuery 'Id = ' num2str(args{1})];
+        end
+        % Select query
+        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+
+
+%% ==== SUBJECT FROM ANATOMY FILE ====
+    % sSubject = db_get('SubjectFromAnatomyFile', FileId,   SubjectFields)
+    %          = db_get('SubjectFromAnatomyFile', FileName, SubjectFields)
+    case 'SubjectFromAnatomyFile'
+        fields = '*';
+        varargout{1} = [];
+        if length(args) > 1
+            fields = args{2};
+        end
+        if ischar(fields), fields = {fields}; end
+        % Prepend 'Subject.' to requested fields
+        if ~strcmp('*', fields{1})
+            fields = cellfun(@(x) ['Subject.' x], fields, 'UniformOutput', 0);
+        end
+        % Join query
+        joinQry = 'Subject LEFT JOIN AnatomyFile ON Subject.Id = AnatomyFile.Subject ';
+        % Add query
+        addQuery = 'AND AnatomyFile.';
         % Complete query with FileName of FileID
         if ischar(args{1})
             addQuery = [addQuery 'FileName = "' file_short(args{1}) '"'];
