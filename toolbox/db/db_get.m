@@ -59,6 +59,10 @@ function varargout = db_get(varargin)
 %    - db_get('ChannelFromStudy', StudyFileName) : Find current Channel for StudyFileName
 %    - db_get('ChannelFromStudy', CondQuery)     : Find current Channel for Query struct
 %
+% ====== ANY FILE ======================================================================
+%    - db_get('AnyFile', FileName)         : Get any file by FileName
+%    - db_get('AnyFile', FileName, Fields) : Get any file by FileName. Fields must be valid for the FileName
+%
 % SEE ALSO db_set
 %
 % @=============================================================================
@@ -710,6 +714,44 @@ switch contextName
         end
         % Select query
         varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+
+
+%% ==== ANY FILE ====
+    % [sItem, itemTable] = db_get('AnyFile', FileName)
+    % [sItem, itemTable] = db_get('AnyFile', FileName, Fields)
+    case 'AnyFile'
+        fields = '*';
+        varargout{1} = [];
+        varargout{2} = '';
+        if length(args) > 1
+            fields = args{2};
+        end
+        % Get data format
+        fileName = file_short(args{1});
+        fileType = file_gettype(fileName);
+        if isempty(fileType)
+            error('File type is not recognized in db_get(''AnyFile'').');
+        end
+        % Table according fileType
+        switch fileType
+            % Subject
+            case 'brainstormsubject'
+                table = 'Subject';
+            % Study
+            case 'brainstormstudy'
+                table = 'Study';
+            % Anatomy file
+            case {'cortex','scalp','innerskull','outerskull','tess','fibers','fem', 'subjectimage'}
+                table = 'AnatomyFile';
+            % Functional file
+            case {'channel', 'headmodel', 'noisecov', 'ndatacov', ...
+                  'data', 'results', 'link', ...
+                  'presults', 'pdata','ptimefreq','pmatrix', ...
+                  'dipoles', 'timefreq', 'matrix', 'image', 'video', 'videolink'}
+                table = 'FunctionalFile';
+        end
+        varargout{1} = db_get(sqlConn, table, fileName, fields);
+        varargout{2} = table;
 
 
 %% ==== ERROR ====      
