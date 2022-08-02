@@ -1494,28 +1494,22 @@ switch contextName
     case 'DataForDataList'
         iStudy = varargin{2};
         dataListName = varargin{3};
-        % Get Id of datalist
+        % Get data files of datalist
         condQuery = struct('Name', dataListName, 'Type', 'datalist', 'Study', iStudy);
-        sFunctFile = db_get('FunctionalFile', condQuery, 'Id');
-        % Get All children of the list
-        condQuery = struct('ParentFile', sFunctFile.Id, 'Type', 'data', 'Study', iStudy);
-        sFunctFiles = db_get('FunctionalFile', condQuery, 'Id');
+        sFuncFiles = db_get('FilesInFileList', condQuery, 'Id');
         % Return found data files
-        argout1 = [sFunctFiles.Id];
+        argout1 = [sFuncFiles.Id];
 
 %% ==== MATRIX FOR MATRIX LIST ====
     % Usage: [iFoundMatrix] = bst_get('MatrixForMatrixList', iStudy, MatrixListName)
     case 'MatrixForMatrixList'
         iStudy = varargin{2};
         matrixListName = varargin{3};
-        % Get Id of matrix list
+        % Get matrix files of matrixlist
         condQuery = struct('Name', matrixListName, 'Type', 'matrixlist', 'Study', iStudy);
-        sFunctFile = db_get('FunctionalFile', condQuery, 'Id');
-        % Get All children of the list
-        condQuery = struct('ParentFile', sFunctFile.Id, 'Type', 'matrix', 'Study', iStudy);
-        sFunctFiles = db_get('FunctionalFile', condQuery, 'Id');
-        % Return found matrix files
-        argout1 = [sFunctFiles.Id];
+        sFuncFiles = db_get('FilesInFileList', condQuery, 'Id');
+        % Return found data files
+        argout1 = [sFuncFiles.Id];
         
 %% ==== DATA FOR STUDY (INCLUDING SHARED STUDIES) ====
     % Usage: [iStudies, iDatas] = bst_get('DataForStudy', iStudy)
