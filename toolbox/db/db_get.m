@@ -60,6 +60,9 @@ function varargout = db_get(varargin)
 %    - db_get('ChannelFromStudy', StudyID)       : Find current Channel for StudyID
 %    - db_get('ChannelFromStudy', StudyFileName) : Find current Channel for StudyFileName
 %    - db_get('ChannelFromStudy', CondQuery)     : Find current Channel for Query struct
+%    - db_get('FilesInFileList', ListFileID, Fields)   : Get FunctionalFile belonging to a list with ID
+%    - db_get('FilesInFileList', ListFileName, Fields) : Get FunctionalFile belonging to a list with FileName
+%    - db_get('FilesInFileList', CondQuery, Fields)   : Get FunctionalFile belonging to a list with Query
 %
 % ====== ANY FILE ======================================================================
 %    - db_get('AnyFile', FileName)         : Get any file by FileName
@@ -416,6 +419,23 @@ switch contextName
             sFiles = sql_query(sqlConn, 'SELECT', 'FunctionalFile', condQuery(1), fields);
         end
         varargout{1} = sFiles;
+
+
+%% ==== FUNCTIONAL FILE ====
+    % sFunctionalFiles = db_get('FilesInFileList', ListFileID,   Fields)
+    %                  = db_get('FilesInFileList', ListFileName, Fields)
+    %                  = db_get('FilesInFileList', CondQuery,    Fields)
+    case 'FilesInFileList'
+        iFileList = args{1};
+        fields = '*';
+        if length(args) > 1
+            fields = args{2};
+        end
+        % Get fileListID and Type
+        sFuncFile = db_get(sqlConn, 'FunctionalFile', iFileList, {'Id', 'Type', 'Study'});
+        % Get all children files of the list
+        condQuery = struct('ParentFile', sFuncFile.Id, 'Type', strrep(sFuncFile.Type, 'list', ''), 'Study', sFuncFile.Study);
+        varargout{1} = db_get(sqlConn, 'FunctionalFile', condQuery, fields);
 
 
 %% ==== SUBJECT FROM STUDY ====
