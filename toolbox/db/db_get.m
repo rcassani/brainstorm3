@@ -421,7 +421,7 @@ switch contextName
         varargout{1} = sFiles;
 
 
-%% ==== FUNCTIONAL FILE ====
+%% ==== FUNCTIONAL FILES IN FILE LIST ====
     % sFunctionalFiles = db_get('FilesInFileList', ListFileID,   Fields)
     %                  = db_get('FilesInFileList', ListFileName, Fields)
     %                  = db_get('FilesInFileList', CondQuery,    Fields)
