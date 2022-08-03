@@ -246,13 +246,7 @@ end
 bst_save(OutputFileFull, sMat, matVer);
 % Add to database
 if isAnatomy
-    sFile = db_template('AnatomyFile');
-    sFile.Subject = iTarget;
-    sFile.Type = fileType;
-    sFile.FileName = OutputFile;
-    sFile.Name = sMat.Comment;
-    %TODO: sFile.SurfaceType
-    db_set(sqlConn, 'AnatomyFile', sFile);
+    db_add_anatomyfile(iTarget, OutputFile);
 else
     sFile = db_template('FunctionalFile');
     sFile.Study = iTarget;
