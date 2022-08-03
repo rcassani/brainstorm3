@@ -126,38 +126,8 @@ switch (lower(nodeType{1}))
         iModifiedStudies  = -1;
 
 
-%% ===== ANATOMY =====
-    case 'anatomy'
-        bst_progress('start', 'Delete nodes', 'Deleting files...');
-        % Full file names
-        FullFilesList = cellfun(@(f)fullfile(ProtocolInfo.SUBJECTS,f), FileName', 'UniformOutput',0);
-        % Delete file
-        if (file_delete(FullFilesList, ~isUserConfirm) == 1)
-            uniqueSubject = unique(iItem);
-            for i = 1:length(uniqueSubject)
-                % Get indices
-                iSubject = uniqueSubject(i);
-                iAnatomies = iSubItem(iItem == iSubject);
-                % Delete surface
-                if (iSubject == 0)
-                    ProtocolSubjects.DefaultSubject.Anatomy(iAnatomies) = [];
-                else
-                    ProtocolSubjects.Subject(iSubject).Anatomy(iAnatomies) = [];
-                end
-                % Update default surfaces
-                bst_set('ProtocolSubjects', ProtocolSubjects);
-                db_surface_default(iSubject, 'Anatomy', [], 0);
-                drawnow;
-                ProtocolSubjects = bst_get('ProtocolSubjects');
-                % Subject was modified
-                iModifiedSubjects = [iModifiedSubjects iSubject];
-            end
-            drawnow;
-        end 
-
-
-%% ===== SURFACES =====
-    case {'scalp', 'outerskull', 'innerskull', 'cortex', 'fibers', 'fem', 'other'}
+%% ===== ANATOMY and SURFACES =====
+    case {'anatomy', 'scalp', 'outerskull', 'innerskull', 'cortex', 'fibers', 'fem', 'other'}
         bst_progress('start', 'Delete nodes', 'Deleting surfaces...');
         % Full file names
         FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.SUBJECTS,f), FileName', 'UniformOutput',0);
@@ -181,22 +151,16 @@ switch (lower(nodeType{1}))
         if (file_delete(FullFilesList, ~isUserConfirm) == 1)
             uniqueSubject = unique(iItem);
             for i = 1:length(uniqueSubject)
-                % Get indices
+                % Delete surface files per subject
                 iSubject = uniqueSubject(i);
-                iSurfaces = iSubItem(iItem == iSubject);
-                % Delete surface
-                if (iSubject == 0)
-                    ProtocolSubjects.DefaultSubject.Surface(iSurfaces) = [];
-                else
-                    ProtocolSubjects.Subject(iSubject).Surface(iSurfaces) = [];
+                for j = 1 : length(iSubItem)
+                    db_set('AnatomyFile', 'Delete', struct('Id', iSubItem(j), 'Subject', iSubject));
                 end
-                % Update default surfaces
-                bst_set('ProtocolSubjects', ProtocolSubjects);
-                for SurfType = {'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'}
+                % Update default anatomy and surfaces
+                for SurfType = {'Anatomy', 'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'}
                     db_surface_default(iSubject, SurfType{1}, [], 0);
                 end
                 drawnow;
-                ProtocolSubjects = bst_get('ProtocolSubjects');
                 % Subject was modified
                 iModifiedSubjects = [iModifiedSubjects iSubject];
             end
