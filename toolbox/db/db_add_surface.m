@@ -31,6 +31,12 @@ function [ iSurface ] = db_add_surface( iSubject, FileName, Comment, SurfaceType
 %
 % Authors: Francois Tadel, 2008-2019
 
+% Find @default_subject Id
+if iSubject == 0
+    sSubject = db_get('Subject', '@default_subject', 'Id');
+    iSubject = sSubject.Id;
+end
+
 % If surface type is not defined : detect it
 if (nargin < 4)
     % Get surface type 
