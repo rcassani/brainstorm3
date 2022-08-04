@@ -28,7 +28,6 @@ if (nargin < 2) || isempty(isUserConfirm)
 end
 % Get protocol description
 ProtocolInfo     = bst_get('ProtocolInfo');
-ProtocolSubjects = bst_get('ProtocolSubjects');
 iModifiedStudies  = [];
 iModifiedSubjects = [];
 isTreeUpdateModel = 0;
@@ -110,14 +109,16 @@ switch (lower(nodeType{1}))
             end
         end
         bst_progress('start', 'Delete nodes', 'Deleting conditions...');
+        % Studies that cannot be deleted : DefaultStudy and AnalysisStudy
+        sStudyInter = db_get('Study', '@inter', 'Id');
+        sStudyDef   = db_get('Study', '@default_study', 'Id');
+        iStudyKeep  = [sStudyInter.Id, sStudyDef.Id];
         % For each condition
         for iFile = 1:length(FileName)
             % Get all the studies related to this condition
-            [sStudies, iStudies] = bst_get('StudyWithCondition', FileName{iFile});
-            % Remove from the list the studies that cannot be deleted : DefaultStudy and AnalysisStudy
-            iAnalysisStudy = -2;
-            iDefaultStudy  = -3;
-            iStudies = setdiff(iStudies, [iAnalysisStudy, iDefaultStudy]);
+            sStudies = db_get('StudyWithCondition', bst_fileparts(FileName{iFile}), 'Id');
+            % Remove studies that cannot be deleted
+            iStudies = setdiff([sStudies.Id], iStudyKeep);
             % Delete them
             if ~isempty(iStudies)
                 db_delete_studies(iStudies);
@@ -541,11 +542,11 @@ end
 % If some studies were modified
 if ~isempty(iModifiedStudies)
     % Update default study
-    nbStudies = bst_get('StudyCount');
-    if (ProtocolInfo.iStudy > nbStudies)
-        ProtocolInfo.iStudy = [];
-        bst_set('ProtocolInfo', ProtocolInfo);
-    end
+%     nbStudies = bst_get('StudyCount');
+%     if (ProtocolInfo.iStudy > nbStudies)
+%         ProtocolInfo.iStudy = [];
+%         bst_set('ProtocolInfo', ProtocolInfo);
+%     end
 end
 
 %% ===== UPDATE TREE =====
