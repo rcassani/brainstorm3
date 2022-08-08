@@ -150,10 +150,10 @@ switch (lower(nodeType{1}))
         end
         % Delete files
         if (file_delete(FullFilesList, ~isUserConfirm) == 1)
-            uniqueSubject = unique(iItem);
-            for i = 1:length(uniqueSubject)
+            uniqueSubjects = unique(iItem);
+            for i = 1:length(uniqueSubjects)
                 % Delete surface files per subject
-                iSubject = uniqueSubject(i);
+                iSubject = uniqueSubjects(i);
                 for j = 1 : length(iSubItem)
                     db_set('AnatomyFile', 'Delete', struct('Id', iSubItem(j), 'Subject', iSubject));
                 end
@@ -167,6 +167,27 @@ switch (lower(nodeType{1}))
             end
         end
 
+%% ===== NOISECOV, NADATACOV, STAT  =====
+    case {'noisecov', 'ndatacov', 'pdata', 'presults', 'ptimefreq', 'pspectrum', 'pmatrix', 'dipoles', ...
+          'timefreq', 'spectrum', 'image','video'}
+        bst_progress('start', 'Delete nodes', 'Deleting files...');
+        % Get full filenames
+        FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.STUDIES,f), FileName', 'UniformOutput',0);             
+        % Delete files
+        if (file_delete(FullFilesList, ~isUserConfirm) == 1)
+            iUniqueStudies = unique(iItem);
+            for i = 1:length(iUniqueStudies)                              
+                % Delete functional files per study
+                iStudy = iUniqueStudies(i);
+                for j = 1 : length(iSubItem)
+                    db_set('FunctionalFile', 'Delete', struct('Id', iSubItem(j), 'Study', iStudy));
+                end
+                drawnow;
+                % Study was modified
+                iModifiedStudies = [iModifiedStudies iStudy];
+            end
+        end        
+        
 %% ===== CHANNEL FILE =====
     case 'channel'
         iStudies = iItem;
@@ -189,37 +210,37 @@ switch (lower(nodeType{1}))
         end
 
 %% ===== NOISECOV =====
-    case {'noisecov', 'ndatacov'}
-        iStudies = iItem;
-        iNoiseCov = iSubItem;
-        % Get full filenames
-        FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.STUDIES,f), FileName', 'UniformOutput',0);
-        % Delete file
-        if (file_delete(FullFilesList, ~isUserConfirm) == 1)
-            % Process each study
-            for i = 1:length(iStudies)
-                % Find file in DataBase  
-                iStudy = iStudies(i);
-                sStudy = bst_get('Study', iStudy);                
-                % Remove file description from database
-                if (iNoiseCov(i) == 1)
-                    if (length(sStudy.NoiseCov) >= 2)
-                        sStudy.NoiseCov(1) = db_template('noisecov');
-                    else
-                        sStudy.NoiseCov = repmat(db_template('noisecov'),0);
-                    end
-                elseif (iNoiseCov(i) == 2)
-                    if ~isempty(sStudy.NoiseCov(1).FileName)
-                        sStudy.NoiseCov(2) = [];
-                    else
-                        sStudy.NoiseCov = repmat(db_template('noisecov'),0);
-                    end
-                end
-                % Study was modified
-                bst_set('Study', iStudy, sStudy);
-            end
-            iModifiedStudies = iStudies;
-        end
+%     case {'noisecov', 'ndatacov'}
+%         iStudies = iItem;
+%         iNoiseCov = iSubItem;
+%         % Get full filenames
+%         FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.STUDIES,f), FileName', 'UniformOutput',0);
+%         % Delete file
+%         if (file_delete(FullFilesList, ~isUserConfirm) == 1)
+%             % Process each study
+%             for i = 1:length(iStudies)
+%                 % Find file in DataBase  
+%                 iStudy = iStudies(i);
+%                 sStudy = bst_get('Study', iStudy);                
+%                 % Remove file description from database
+%                 if (iNoiseCov(i) == 1)
+%                     if (length(sStudy.NoiseCov) >= 2)
+%                         sStudy.NoiseCov(1) = db_template('noisecov');
+%                     else
+%                         sStudy.NoiseCov = repmat(db_template('noisecov'),0);
+%                     end
+%                 elseif (iNoiseCov(i) == 2)
+%                     if ~isempty(sStudy.NoiseCov(1).FileName)
+%                         sStudy.NoiseCov(2) = [];
+%                     else
+%                         sStudy.NoiseCov = repmat(db_template('noisecov'),0);
+%                     end
+%                 end
+%                 % Study was modified
+%                 bst_set('Study', iStudy, sStudy);
+%             end
+%             iModifiedStudies = iStudies;
+%         end
 
 %% ===== HEAD MODEL =====
     case 'headmodel'
@@ -418,23 +439,23 @@ switch (lower(nodeType{1}))
 
         
 %% ===== STAT FILE =====
-    case {'pdata', 'presults', 'ptimefreq', 'pspectrum', 'pmatrix'}
-        bst_progress('start', 'Delete nodes', 'Deleting files...');
-        % Delete file
-        FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.STUDIES,f), FileName', 'UniformOutput',0);
-        if (file_delete(FullFilesList, ~isUserConfirm) == 1)
-            iUniqueStudy = unique(iItem);
-            for i=1:length(iUniqueStudy)
-                iStudy = iUniqueStudy(i);
-                iStats = iSubItem(iItem == iStudy);
-                sStudy = bst_get('Study', iStudy);
-                % Remove file description from database
-                sStudy.Stat(iStats) = [];
-                % Study was modified
-                bst_set('Study', iStudy, sStudy);
-            end
-            iModifiedStudies = unique(iItem);
-        end
+%     case {'pdata', 'presults', 'ptimefreq', 'pspectrum', 'pmatrix'}
+%         bst_progress('start', 'Delete nodes', 'Deleting files...');
+%         % Delete file
+%         FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.STUDIES,f), FileName', 'UniformOutput',0);
+%         if (file_delete(FullFilesList, ~isUserConfirm) == 1)
+%             iUniqueStudy = unique(iItem);
+%             for i=1:length(iUniqueStudy)
+%                 iStudy = iUniqueStudy(i);
+%                 iStats = iSubItem(iItem == iStudy);
+%                 sStudy = bst_get('Study', iStudy);
+%                 % Remove file description from database
+%                 sStudy.Stat(iStats) = [];
+%                 % Study was modified
+%                 bst_set('Study', iStudy, sStudy);
+%             end
+%             iModifiedStudies = unique(iItem);
+%         end
 
 %% ===== MATRIX =====
     case {'matrix', 'matrixlist'}
@@ -477,61 +498,61 @@ switch (lower(nodeType{1}))
         end
         
 %% ===== DIPOLES FILE =====
-    case 'dipoles'
-        bst_progress('start', 'Delete nodes', 'Deleting files...');
-        % Delete file
-        FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.STUDIES,f), FileName', 'UniformOutput',0);
-        if (file_delete(FullFilesList, ~isUserConfirm) == 1)
-            iUniqueStudy = unique(iItem);
-            for i=1:length(iUniqueStudy)
-                iStudy = iUniqueStudy(i);
-                iDipoles = iSubItem(iItem == iStudy);
-                sStudy = bst_get('Study', iStudy);
-                % Remove file description from database
-                sStudy.Dipoles(iDipoles) = [];
-                % Study was modified
-                bst_set('Study', iStudy, sStudy);
-            end
-            iModifiedStudies = unique(iItem);
-        end
+%     case 'dipoles'
+%         bst_progress('start', 'Delete nodes', 'Deleting files...');
+%         % Delete file
+%         FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.STUDIES,f), FileName', 'UniformOutput',0);
+%         if (file_delete(FullFilesList, ~isUserConfirm) == 1)
+%             iUniqueStudy = unique(iItem);
+%             for i=1:length(iUniqueStudy)
+%                 iStudy = iUniqueStudy(i);
+%                 iDipoles = iSubItem(iItem == iStudy);
+%                 sStudy = bst_get('Study', iStudy);
+%                 % Remove file description from database
+%                 sStudy.Dipoles(iDipoles) = [];
+%                 % Study was modified
+%                 bst_set('Study', iStudy, sStudy);
+%             end
+%             iModifiedStudies = unique(iItem);
+%         end
         
 %% ===== TIMEFREQ FILE =====
-    case {'timefreq', 'spectrum'}
-        bst_progress('start', 'Delete nodes', 'Deleting files...');
-        % Delete file
-        FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.STUDIES,f), FileName', 'UniformOutput',0);
-        if (file_delete(FullFilesList, ~isUserConfirm) == 1)
-            iUniqueStudy = unique(iItem);
-            for i=1:length(iUniqueStudy)
-                iStudy = iUniqueStudy(i);
-                iTimefreq = iSubItem(iItem == iStudy);
-                sStudy = bst_get('Study', iStudy);
-                % Remove file description from database
-                sStudy.Timefreq(iTimefreq) = [];
-                % Study was modified
-                bst_set('Study', iStudy, sStudy);
-            end
-            iModifiedStudies = unique(iItem);
-        end
+%     case {'timefreq', 'spectrum'}
+%         bst_progress('start', 'Delete nodes', 'Deleting files...');
+%         % Delete file
+%         FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.STUDIES,f), FileName', 'UniformOutput',0);
+%         if (file_delete(FullFilesList, ~isUserConfirm) == 1)
+%             iUniqueStudy = unique(iItem);
+%             for i=1:length(iUniqueStudy)
+%                 iStudy = iUniqueStudy(i);
+%                 iTimefreq = iSubItem(iItem == iStudy);
+%                 sStudy = bst_get('Study', iStudy);
+%                 % Remove file description from database
+%                 sStudy.Timefreq(iTimefreq) = [];
+%                 % Study was modified
+%                 bst_set('Study', iStudy, sStudy);
+%             end
+%             iModifiedStudies = unique(iItem);
+%         end
 
 %% ===== IMAGE FILE =====
-    case {'image','video'}
-        bst_progress('start', 'Delete nodes', 'Deleting files...');
-        % Delete file
-        FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.STUDIES,f), FileName', 'UniformOutput',0);
-        if (file_delete(FullFilesList, ~isUserConfirm) == 1)
-            iUniqueStudy = unique(iItem);
-            for i=1:length(iUniqueStudy)
-                iStudy = iUniqueStudy(i);
-                iImages = iSubItem(iItem == iStudy);
-                sStudy = bst_get('Study', iStudy);
-                % Remove file description from database
-                sStudy.Image(iImages) = [];
-                % Study was modified
-                bst_set('Study', iStudy, sStudy);
-            end
-            iModifiedStudies = iUniqueStudy;
-        end
+%     case {'image','video'}
+%         bst_progress('start', 'Delete nodes', 'Deleting files...');
+%         % Delete file
+%         FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.STUDIES,f), FileName', 'UniformOutput',0);
+%         if (file_delete(FullFilesList, ~isUserConfirm) == 1)
+%             iUniqueStudy = unique(iItem);
+%             for i=1:length(iUniqueStudy)
+%                 iStudy = iUniqueStudy(i);
+%                 iImages = iSubItem(iItem == iStudy);
+%                 sStudy = bst_get('Study', iStudy);
+%                 % Remove file description from database
+%                 sStudy.Image(iImages) = [];
+%                 % Study was modified
+%                 bst_set('Study', iStudy, sStudy);
+%             end
+%             iModifiedStudies = iUniqueStudy;
+%         end
     otherwise
         % Node that cannot be deleted
         return
