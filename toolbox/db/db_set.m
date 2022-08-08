@@ -40,6 +40,7 @@ function varargout = db_set(varargin)
 %    - db_set('FunctionalFile', sFunctionalFile, FunctionalFileId) : Update FunctionalFile by ID
 %    - db_set('FilesWithStudy', 'Delete' , StudyID)                : Delete All FunctionalFiles from StudyID
 %    - db_set('FilesWithStudy', sFunctionalFiles, StudyID)         : Insert FunctionalFiles with StudyID
+%    - db_set('FilesWithStudy', sFunctionalFiles)                  : Update FunctionalFiles
 %    - db_set('ParentCount', ParentFileID, modifier, count)        : Update NumChildren field in ParentFileID
 %
 % SEE ALSO db_get
@@ -317,25 +318,49 @@ switch contextName
 
 %% ==== FILES WITH STUDY ====
     % Success          = db_set('FilesWithStudy', 'Delete'        , StudyID)
-    % sFunctionalFiles = db_set('FilesWithStudy', sFunctionalFiles, StudyID)
+    % sFunctionalFiles = db_set('FilesWithStudy', sFunctionalFiles, StudyID) % Insert
+    % sFunctionalFiles = db_set('FilesWithStudy', sFunctionalFiles)          % Update
     case 'FilesWithStudy'
         sFuncFiles = args{1};
-        iStudy = args{2};
+        iStudy = [];
+        if length(args) > 1
+            iStudy = args{2};
+        end
         
         % Delete all FunctionalFiles with StudyID
-        if ischar(sFuncFiles) && strcmpi(sFuncFiles, 'delete')
+        if ischar(sFuncFiles) && strcmpi(sFuncFiles, 'delete') && ~isempty(iStudy)
             delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', struct('Study', iStudy));
             varargout{1} = 1;
+        end
 
-        % Insert FunctionalFiles to StudyID
-        elseif isstruct(sFuncFiles)
+        % Insert or Update FunctionalFiles
+        if isstruct(sFuncFiles) && ~isempty(iStudy)
+            % Sort FunctionalFiles
+            % Note: Order important here, as potential parent files (Data, Matrix, Result)
+            % should be inserted or updated before potential child files (Result, Timefreq, Dipoles)
+            ix_sorted = [];
+            types_db = {'channel', 'headmodel', 'datalist', 'matrixlist', 'data', 'matrix', 'result', ...
+                     'stat', 'image', 'noisecov', 'ndatacov', 'dipoles', 'timefreq'};
+            for iType = 1:length(types_db)
+                ix_sorted = [ix_sorted, find(strcmpi(types_db{iType}, {sFuncFiles.Type}))];
+            end
+            sFuncFiles = sFuncFiles(ix_sorted);
             nFunctionalFiles = length(sFuncFiles);
             insertedIds = zeros(1, nFunctionalFiles);
-            for ix = 1 : nFunctionalFiles
-                sFuncFiles(ix).Study = iStudy;
-                insertedIds(ix) = db_set(sqlConn, 'FunctionalFile', sFuncFiles(ix));
+
+            % Insert FunctionalFiles to StudyID
+            if ~isempty(iStudy)
+                for ix = 1 : nFunctionalFiles
+                    sFuncFiles(ix).Study = iStudy;
+                    insertedIds(ix) = db_set(sqlConn, 'FunctionalFile', sFuncFiles(ix));
+                end
+            % Update FunctionalFiles
+            else
+                for ix = 1 : nFunctionalFiles
+                    insertedIds(ix) = db_set(sqlConn, 'FunctionalFile', sFuncFiles(ix), insertedIds(ix));
+                end
             end
-            % If requested get all the inserted FunctionalFiles
+            % If requested get all the inserted or updated FunctionalFiles
             if nargout > 0
                 varargout{1} = db_get(sqlConn, 'FunctionalFile', insertedIds);
             end
