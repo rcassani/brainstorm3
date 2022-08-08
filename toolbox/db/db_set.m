@@ -398,13 +398,19 @@ switch contextName
                     % Delete using the CondQuery
                     delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', iFuncFile);
                 elseif isnumeric(iFuncFile)
-                    % Get Id for parent of FunctionalFile to delete
-                    parent = db_get(sqlConn, 'FunctionalFile', iFuncFile, 'ParentFile');
+                    % Get Parent of FunctionalFile to delete
+                    sParentFuncFile = db_get(sqlConn, 'ParentFromFunctionalFile', iFuncFile);
                     % Delete using iFunctionalFile
                     delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', struct('Id', iFuncFile));
-                    % Reduce the number of children in parent
-                    if ~isempty(parent) && ~isempty(parent.ParentFile)
-                       db_set(sqlConn, 'ParentCount', parent.ParentFile, '-', 1);
+                    % Handle children count
+                    if ~isempty(sParentFuncFile)
+                        % Delete list if it had 2 or less items before removing one children
+                        if ismember(sParentFuncFile.Type, {'datalist', 'matrixlist'}) && sParentFuncFile.NumChildren <= 2
+                            db_set(sqlConn, 'FunctionalFile', 'Delete', sParentFuncFile.Id);
+                        % Decrement number of children in parent
+                        else
+                            db_set(sqlConn, 'ParentCount', sParentFuncFile.Id, '-', 1);
+                        end
                     end
                 end
             end
@@ -416,35 +422,67 @@ switch contextName
         elseif isstruct(sFuncFile)
             % Modify UNIX time
             sFuncFile.LastModified = bst_get('CurrentUnixTime');
+            % Check for parent files
+            if ismember(sFuncFile.Type, {'dipoles', 'result', 'results', 'timefreq'})
+                % There is parent FileName but not ParentFile
+                if ~isempty(sFuncFile.ExtraStr1) && ( isempty(sFuncFile.ParentFile) || sFuncFile.ParentFile == 0)
+                    % Search parent in database (ignore 'datalist' and 'matrixlist' FunctionalFiles)
+                    parent = sql_query(sqlConn, 'SELECT', 'FunctionalFile', ...
+                             struct('FileName', sFuncFile.ExtraStr1), ...
+                             'Id', 'AND Type <> "datalist" AND Type <> "matrixlist"');
+                    if ~isempty(parent)
+                        sFuncFile.ParentFile = parent.Id;
+                    end
+                end
+            end
 
             % Insert FunctionalFile row
             if isempty(iFuncFile)
                 sFuncFile.Id = [];
-                switch sFuncFile.Type
-                    % If data or matrix, check for 'datalist' and 'matrixlist'
-                    case {'data', 'matrix'}
-                        typeList = [sFuncFile.Type, 'list'];
-                        cleanName = str_remove_parenth(sFuncFile.Name);
-                        list = sql_query(sqlConn, 'SELECT', 'FunctionalFile', ...
-                               struct('Name', cleanName, 'Study', sFuncFile.Study), ...;
-                               'Id', ['AND Type = "' typeList '"']);
-                        if ~isempty(list)
-                            sFuncFile.ParentFile = list.Id;
-                        end
-                    % Check for parent files
-                    case {'dipoles', 'result', 'results', 'timefreq'}
-                        if ~isempty(sFuncFile.ExtraStr1) % Parent FileName
-                            % Search parent in database (ignore 'datalist' and 'matrixlist' FunctionalFiles)
-                            parent = sql_query(sqlConn, 'SELECT', 'FunctionalFile', ...
-                                     struct('FileName', sFuncFile.ExtraStr1), ...
-                                     'Id', 'AND Type <> "datalist" AND Type <> "matrixlist"');
-                            if ~isempty(parent)
-                                sFuncFile.ParentFile = parent.Id;
+                % Handle list for data and matrix
+                if ismember(sFuncFile.Type, {'data', 'matrix'})
+                    % Clean name for list
+                    cleanName = str_remove_parenth(sFuncFile.Name);
+                    % Search for a list for this clean name
+                    list = sql_query(sqlConn, 'SELECT', 'FunctionalFile', ...
+                           struct('Name', cleanName, 'Study', sFuncFile.Study), ...;
+                           'Id', ['AND Type = "' [sFuncFile.Type, 'list'] '"']);
+                    % If list exists, use it
+                    if ~isempty(list)
+                        sFuncFile.ParentFile = list.Id;
+                    % If list does not exist, check if it's needed
+                    else
+                        % Get names of functional files of the same type in the same study
+                        sFuncFiles = db_get('FilesWithStudy', sFuncFile.Study, sFuncFile.Type, {'Id', 'Name', 'FileName'});
+                        if ~isempty(sFuncFiles)
+                            % Clean names in DB
+                            cleanNames = cellfun(@(x) str_remove_parenth(x), {sFuncFiles.Name}, 'UniformOutput', false);
+                            [uniqueCleanNames, ia, ic] = unique(cleanNames);
+                            % FunctionalFiles in DB with same cleanName
+                            ix = find(strcmp(cleanName, uniqueCleanNames));
+                            if ~isempty(ix)
+                                ids = sFuncFiles(ic == ix).Id;
+                                % If there is at least 1 file, create list for 2 items (1 in DB and 1 to insert)
+                                if length(ids) >= 1
+                                    % Make the functional file for the list
+                                    listFunctionalFile = db_template('FunctionalFile');
+                                    listFunctionalFile.Study = sFuncFile.Study;
+                                    listFunctionalFile.Type = [sFuncFile.Type 'list'];
+                                    listFunctionalFile.FileName = [sFuncFiles(1).FileName(1:end-4), '.lst']; % Avoids duplicate FileName
+                                    listFunctionalFile.Name = cleanName;
+                                    listFunctionalFile.NumChildren = length(ids);
+                                    % Insert List
+                                    iListFuncFile = db_set(sqlConn, 'FunctionalFile', listFunctionalFile);
+                                    % Update the ParentFile in FunctionalFiles in DB with same cleanName
+                                    for id = ids
+                                        sql_query(sqlConn, 'UPDATE', 'FunctionalFile', struct('ParentFile', iListFuncFile), struct('Id', id));
+                                    end
+                                    % Update Parent in FunctionalFile to insert
+                                    sFuncFile.ParentFile = iListFuncFile;
+                                end
                             end
                         end
-                    % Other types
-                    otherwise
-                        % Do nothing
+                    end
                 end
                 iFuncFile = sql_query(sqlConn, 'INSERT', 'FunctionalFile', sFuncFile);
                 varargout{1} = iFuncFile;
