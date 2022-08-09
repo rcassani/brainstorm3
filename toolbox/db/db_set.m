@@ -404,12 +404,15 @@ switch contextName
                     delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', struct('Id', iFuncFile));
                     % Handle children count
                     if ~isempty(sParentFuncFile)
-                        % Delete list if it had 2 or less items before removing one children
-                        if ismember(sParentFuncFile.Type, {'datalist', 'matrixlist'}) && sParentFuncFile.NumChildren <= 2
-                            db_set(sqlConn, 'FunctionalFile', 'Delete', sParentFuncFile.Id);
                         % Decrement number of children in parent
-                        else
-                            db_set(sqlConn, 'ParentCount', sParentFuncFile.Id, '-', 1);
+                        db_set(sqlConn, 'ParentCount', sParentFuncFile.Id, '-', 1);
+                        % If list and it had 2 or less items before removing one children
+                        if ismember(sParentFuncFile.Type, {'datalist', 'matrixlist'}) && sParentFuncFile.NumChildren <= 2
+                            % Delete list
+                            db_set(sqlConn, 'FunctionalFile', 'Delete', sParentFuncFile.Id);
+                            % Remove ParentFile in former child
+                            sChildFuncFile = db_get(sqlConn, 'FunctionalFile', struct('ParentFile', sParentFuncFile.Id), 'Id');
+                            sql_query(sqlConn, ['UPDATE FunctionalFile Set ParentFile = NULL WHERE Id = ', num2str(sChildFuncFile. Id)]);
                         end
                     end
                 end
