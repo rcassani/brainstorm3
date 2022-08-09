@@ -374,6 +374,9 @@ switch contextName
     % FunctionalFileId, FunctionalFile] = db_set('FunctionalFile', FunctionalFile)
     %                                   = db_set('FunctionalFile', FunctionalFile, FunctionalFileId)
     case 'FunctionalFile'
+        % Minimum number of data (or matrix) files to create a datalist (or matrixlist)
+        minListChildren = 2;
+
         % Default parameters
         iFuncFile = [];
         varargout{1} = [];
@@ -407,12 +410,14 @@ switch contextName
                         % Decrement number of children in parent
                         db_set(sqlConn, 'ParentCount', sParentFuncFile.Id, '-', 1);
                         % If list and it had 2 or less items before removing one children
-                        if ismember(sParentFuncFile.Type, {'datalist', 'matrixlist'}) && sParentFuncFile.NumChildren <= 2
+                        if ismember(sParentFuncFile.Type, {'datalist', 'matrixlist'}) && sParentFuncFile.NumChildren <= minListChildren
                             % Delete list
                             db_set(sqlConn, 'FunctionalFile', 'Delete', sParentFuncFile.Id);
-                            % Remove ParentFile in former child
-                            sChildFuncFile = db_get(sqlConn, 'FunctionalFile', struct('ParentFile', sParentFuncFile.Id), 'Id');
-                            sql_query(sqlConn, ['UPDATE FunctionalFile Set ParentFile = NULL WHERE Id = ', num2str(sChildFuncFile. Id)]);
+                            % Remove ParentFile in former children
+                            sChildrenFuncFiles = db_get(sqlConn, 'FunctionalFile', struct('ParentFile', sParentFuncFile.Id), 'Id');
+                            for ix = 1 : length(sChildrenFuncFiles)
+                                sql_query(sqlConn, ['UPDATE FunctionalFile Set ParentFile = NULL WHERE Id = ', num2str(sChildrenFuncFiles(ix). Id)]);
+                            end
                         end
                     end
                 end
@@ -464,14 +469,15 @@ switch contextName
                             % FunctionalFiles in DB with same cleanName
                             ix = find(strcmp(cleanName, uniqueCleanNames));
                             if ~isempty(ix)
-                                ids = sFuncFiles(ic == ix).Id;
-                                % If there is at least 1 file, create list for 2 items (1 in DB and 1 to insert)
-                                if length(ids) >= 1
+                                ids = [sFuncFiles(ic == ix).Id];
+                                % Create list for minListChildren items
+                                % if there is at least (minListChildren - 1) items in DB (+1 item to be inserted)
+                                if length(ids) >= minListChildren - 1
                                     % Make the functional file for the list
                                     listFunctionalFile = db_template('FunctionalFile');
                                     listFunctionalFile.Study = sFuncFile.Study;
                                     listFunctionalFile.Type = [sFuncFile.Type 'list'];
-                                    listFunctionalFile.FileName = [sFuncFiles(1).FileName(1:end-4), '.lst']; % Avoids duplicate FileName
+                                    listFunctionalFile.FileName = [sFuncFiles(1).FileName(1:end-4), '.lst']; % Avoid duplicate FileName
                                     listFunctionalFile.Name = cleanName;
                                     listFunctionalFile.NumChildren = length(ids);
                                     % Insert List
