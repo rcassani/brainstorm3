@@ -26,11 +26,12 @@ function varargout = db_set(varargin)
 %    - db_set('FilesWithSubject', sAnatomyFiles, SubjectID) : Insert AnatomyFiles with SubjectID
 %
 % ====== STUDIES =======================================================================
-%    - db_set('Study', 'Delete')            : Delete all Studies
-%    - db_set('Study', 'Delete', StudyId)   : Delete Study by ID
-%    - db_set('Study', 'Delete', CondQuery) : Delete Study with Query
-%    - db_set('Study', sStudy)              : Insert Study
-%    - db_set('Study', sStudy, StudyId)     : Update Study by ID
+%    - db_set('Study', 'Delete')                     : Delete all Studies
+%    - db_set('Study', 'Delete', StudyId)            : Delete Study by ID
+%    - db_set('Study', 'Delete', CondQuery)          : Delete Study with Query
+%    - db_set('Study', sStudy)                       : Insert Study
+%    - db_set('Study', sStudy, StudyId)              : Update Study by ID
+%    - db_set('Study', 'ClearField', StudyId, Field) : Set to NULL a given Field in FunctionalFileId
 %
 % ====== FUNCTIONAL FILES ==============================================================
 %    - db_set('FunctionalFile', 'Delete')                              : Delete all FunctionalFiles
@@ -250,6 +251,7 @@ switch contextName
     % Success          = db_set('Study', 'Delete')
     %                  = db_set('Study', 'Delete', StudyId)
     %                  = db_set('Study', 'Delete', CondQuery)
+    %                  = db_set('Study', 'ClearField', StudyId, Field)
     % [StudyId, Study] = db_set('Study', Study)
     %                  = db_set('Study', Study, StudyId)
     case 'Study'
@@ -283,6 +285,12 @@ switch contextName
             end
             if delResult > 0
                 varargout{1} = 1;
+            end
+
+        % Set to NULL the specified Field for a StudyId
+        elseif ischar(sStudy) && strcmpi(sStudy, 'clearfield')
+            if length(args) > 2 && ~isempty(args{3}) && ischar(args{3})
+                sql_query(sqlConn, ['UPDATE Study Set ', args{3}, ' = NULL WHERE Id = ', num2str(iStudy)]);
             end
 
         % Insert or Update
