@@ -263,8 +263,7 @@ else
     end
     %TODO, get rest of metadata from file (see db_parse_study)
     db_set(sqlConn, 'FunctionalFile', sFile);
-    % Update count of parent file
-    db_set(sqlConn, 'ParentCount', ParentFile, '+', 1);
+    % Update count of parent file is done in db_set('FunctionalFile')
 end
 sql_close(sqlConn);
 
