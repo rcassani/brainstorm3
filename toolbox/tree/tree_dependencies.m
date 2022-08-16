@@ -281,7 +281,7 @@ try
                             if sql_query('EXIST', 'FunctionalFile', struct('Type', 'result', 'Study', iStudy), 'AND ParentFile IS NOT NULL AND ExtraStr1 IS NOT NULL')
                                 for id = 1:length(iFoundData)
                                     % Find the results associated with this data node
-                                    sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), 'result', {'Id', 'FileName', 'Name'});
+                                    sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), 'result', {'Id', 'FileName', 'Name', 'ExtraNum'});
                                     iFoundResults = [sFuncFiles.Id];
                                     ResultsFiles = {sFuncFiles.FileName};
                                     ResultsComment = {sFuncFiles.Name};
@@ -323,7 +323,7 @@ try
                                 sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), 'dipoles', {'Id', 'FileName', 'Name'});
                                 iFoundDip = [sFuncFiles.Id];
                                 DipolesFiles = {sFuncFiles.FileName};
-                                DipolesComments = {sFuncFiles.Comment};
+                                DipolesComments = {sFuncFiles.Name};
                                 % The files that were found
                                 if ~isempty(iFoundDip)
                                     % === Check file filters ===
