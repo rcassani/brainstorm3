@@ -10,11 +10,12 @@ function varargout = db_set(varargin)
 %
 %
 % ====== SUBJECTS ======================================================================
-%    - db_set('Subject', 'Delete')            : Delete all Subjects
-%    - db_set('Subject', 'Delete', SubjectId) : Delete Subject by ID
-%    - db_set('Subject', 'Delete', CondQuery) : Delete Subject with Query
-%    - db_set('Subject', sSubject)            : Insert Subject
-%    - db_set('Subject', sSubject, SubjectId) : Update Subject by ID
+%    - db_set('Subject', 'Delete')                       : Delete all Subjects
+%    - db_set('Subject', 'Delete', SubjectId)            : Delete Subject by ID
+%    - db_set('Subject', 'Delete', CondQuery)            : Delete Subject with Query
+%    - db_set('Subject', 'ClearField', SubjectId, Field) : Set to NULL a given Field in SubjectID
+%    - db_set('Subject', sSubject)                       : Insert Subject
+%    - db_set('Subject', sSubject, SubjectId)            : Update Subject by ID
 %
 % ====== ANATOMY FILES =================================================================
 %    - db_set('AnatomyFile', 'Delete')                      : Delete all AnatomyFiles
@@ -29,9 +30,9 @@ function varargout = db_set(varargin)
 %    - db_set('Study', 'Delete')                     : Delete all Studies
 %    - db_set('Study', 'Delete', StudyId)            : Delete Study by ID
 %    - db_set('Study', 'Delete', CondQuery)          : Delete Study with Query
+%    - db_set('Study', 'ClearField', StudyId, Field) : Set to NULL a given Field in StudyId
 %    - db_set('Study', sStudy)                       : Insert Study
 %    - db_set('Study', sStudy, StudyId)              : Update Study by ID
-%    - db_set('Study', 'ClearField', StudyId, Field) : Set to NULL a given Field in FunctionalFileId
 %
 % ====== FUNCTIONAL FILES ==============================================================
 %    - db_set('FunctionalFile', 'Delete')                              : Delete all FunctionalFiles
@@ -66,7 +67,7 @@ function varargout = db_set(varargin)
 % =============================================================================@
 %
 % Authors: Martin Cousineau, 2020
-%          Raymundo Cassani, 2021
+%          Raymundo Cassani, 2021-2022
 
 %% ==== PARSE INPUTS ====
 if (nargin > 1) && isjava(varargin{1})
@@ -94,6 +95,7 @@ switch contextName
     % Success              = db_set('Subject', 'Delete')
     %                      = db_set('Subject', 'Delete', SubjectId)
     %                      = db_set('Subject', 'Delete', CondQuery)
+    %                      = db_set('Subject', 'ClearField', SubjectId, Field)
     % [SubjectId, Subject] = db_set('Subject', Subject)
     %                      = db_set('Subject', Subject, SubjectId)
     case 'Subject'
@@ -129,6 +131,12 @@ switch contextName
                 varargout{1} = 1;
             end
             
+        % Set to NULL the specified Field for a SubjectId
+        elseif ischar(sSubject) && strcmpi(sSubject, 'clearfield')
+            if length(args) > 2 && ~isempty(args{3}) && ischar(args{3})
+                sql_query(sqlConn, ['UPDATE Subject Set ', args{3}, ' = NULL WHERE Id = ', num2str(iSubject)]);
+            end
+
         % Insert or Update    
         elseif isstruct(sSubject)
             if isempty(iSubject)
