@@ -183,8 +183,6 @@ switch lower(nodeType)
             if isempty(newComment), return, end
             % Remove parenthesis
             newComment = str_remove_parenth(newComment);
-            % Update list name in Brainstorm database
-            db_set(sqlConn, 'FunctionalFile', struct('Name', newComment), iSubItem);
             % Rename all child files
             for i = 1:length(iFoundData)
                 % Build file comment
