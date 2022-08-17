@@ -209,12 +209,10 @@ else
     end
     
     % Get names of other files in same folder to ensure it's unique
+    extraQry = '';
     qryCond = struct('Study', iTarget, 'Type', fileType);
-    if isempty(ParentFile)
-        extraQry = 'AND ParentFile IS NULL';
-    else
+    if ~isempty(ParentFile)
         qryCond.ParentFile = ParentFile;
-        extraQry = '';
     end
     % Special case: only check result files with same parent data file
     if strcmpi(fileType, 'results')
