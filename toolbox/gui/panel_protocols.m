@@ -1190,6 +1190,10 @@ function destFile = PasteNode( targetNode )
             bst_progress('inc', 1);
         end
     end
+    % Redo links for target study
+    if ismember(firstSrcType, {'data'})
+        db_links('Study', iTarget);
+    end
     % If moving files instead of copying    
     if isCut
         % Delete source file
