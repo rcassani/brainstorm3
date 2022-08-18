@@ -1197,8 +1197,7 @@ function destFile = PasteNode( targetNode )
     % If moving files instead of copying    
     if isCut
         % Delete source file
-        %TODO: Implement node_delete
-        %node_delete(srcNodes, 0);
+        node_delete(srcNodes, 0);
         % Empty clipboard after moving
         bst_set('Clipboard', []);
     end
