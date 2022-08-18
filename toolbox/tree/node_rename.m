@@ -229,7 +229,7 @@ if ~isempty(iModifiedStudies)
     panel_protocols('UpdateNode', 'Study', iModifiedStudies);
     % Update results links
     if isUpdateLinks
-        sStudy = db('Study', iStudy, {'Name', 'Subject'});
+        sStudy = db_get('Study', iStudy, {'Name', 'Subject'});
         % Check if default study
         isDefaultStudy = strcmpi(sStudy.Name, bst_get('DirDefaultStudy'));
         % If added to a 'default_study' node: need to update results links 
