@@ -66,8 +66,8 @@ if sSubject.UseDefaultAnat && ~strcmpi(sSubject.Name, bst_get('DirDefaultSubject
 % ==== Individual anatomy ====
 else
     sqlConn = sql_connect();
-    anatomies = db_get(sqlConn, 'FilesWithSubject', iSubject, 'anatomy');
-    surfaces  = db_get(sqlConn, 'FilesWithSubject', iSubject, 'surface');
+    anatomies = db_get(sqlConn, 'AnatomyFilesWithSubject', iSubject, 'anatomy');
+    surfaces  = db_get(sqlConn, 'AnatomyFilesWithSubject', iSubject, 'surface');
     sql_close(sqlConn);
     % Sort by Id
     [~, ixs] = sort([anatomies.Id]);

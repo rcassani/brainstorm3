@@ -28,7 +28,9 @@ function varargout = db_get(varargin)
 %    - db_get('SubjectFromAnatomyFile', FileName, SubjectFields) : Find Subject for AnatomyFile with FileName
 %
 % ====== ANATOMY FILES =================================================================
-%    - db_get('FilesWithSubject', SubjectID, AnatomyFileType, Fields) : Get AnatomyFiles for SubjectID
+%    - db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields)       : Get AnatomyFiles for SubjectID
+%    - db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, Fields) : Get AnatomyFiles for SubjectFileName
+%    - db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType, Fields)     : Get AnatomyFiles for SubjectName
 %    - db_get('AnatomyFile', FileIDs,   Fields) : Find AnatomyFile(s) by ID(s)
 %    - db_get('AnatomyFile', FileNames, Fields) : Find AnatomyFile(s) by FileName(s)
 %    - db_get('AnatomyFile', CondQuery, Fields) : Find AnatomyFile(s) with a Query
@@ -53,7 +55,8 @@ function varargout = db_get(varargin)
 %    - db_get('StudyWithCondition', ConditionPath, Fields) : Get studies for a given condition path
 %
 % ====== FUNCTIONAL FILES ==============================================================
-%    - db_get('FilesWithStudy', StudyID, FunctionalFileType, Fields) : Get FunctionalFiles for StudyID
+%    - db_get('FunctionalFilesWithStudy', StudyID, FunctionalFileType, Fields)       : Get FunctionalFiles for StudyID
+%    - db_get('FunctionalFilesWithStudy', StudyFileName, FunctionalFileType, Fields) : Get FunctionalFiles for StudyFileName
 %    - db_get('FunctionalFile', FileIDs,   Fields) : Get FunctionalFile(s) by ID(s)
 %    - db_get('FunctionalFile', FileNames, Fields) : Get FunctionalFile(s) by FileName(s)
 %    - db_get('FunctionalFile', CondQuery, Fields) : Get FunctionalFile(s) with a Query
@@ -267,36 +270,93 @@ switch contextName
         varargout{1} = sql_query(sqlConn, 'COUNT', 'Subject', [], [], 'AND Name <> "@default_subject"');
 
 
-%% ==== FILES WITH SUBJECT ====
-    % sAnatomyFiles = db_get('FilesWithSubject', SubjectID, AnatomyFileType, Fields)
-    %               = db_get('FilesWithSubject', SubjectID, AnatomyFileType)
-    %               = db_get('FilesWithSubject', SubjectID)
-    case 'FilesWithSubject'
-        condQuery.Subject = args{1};
+%% ==== ANATOMY FILES WITH SUBJECT ====
+    % sAnatomyFiles = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields)
+    %               = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType)
+    %               = db_get('AnatomyFilesWithSubject', SubjectID)
+    %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, Fields)
+    %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType)
+    %               = db_get('AnatomyFilesWithSubject', SubjectFileName)
+    %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType, Fields)
+    %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType)
+    %               = db_get('AnatomyFilesWithSubject', SubjectName)
+    case 'AnatomyFilesWithSubject'
+        fileType = '';
         fields = '*';
-        if length(args) > 1 
-            condQuery.Type = lower(args{2});
-            if length(args) > 2
-                fields = args{3};
-            end
-        end
-        varargout{1} = db_get(sqlConn, 'AnatomyFile', condQuery, fields);
-
-
-%% ==== FILES WITH STUDY ====
-    % sFunctionalFiles = db_get('FilesWithStudy', StudyID, FunctionalFileType, Fields)
-    %                  = db_get('FilesWithStudy', StudyID, FunctionalFileType)
-    %                  = db_get('FilesWithStudy', StudyID)
-    case 'FilesWithStudy'
-        condQuery.Study = args{1};
-        fields = '*';
+        varargout{1} = [];
         if length(args) > 1
-            condQuery.Type = lower(args{2});
+            fileType = lower(args{2});
             if length(args) > 2
                 fields = args{3};
             end
         end
-        varargout{1} = db_get(sqlConn, 'FunctionalFile', condQuery, fields);
+        if ischar(fields), fields = {fields}; end
+        % Prepend 'AnatomyFile.' to requested fields
+        if ~strcmp('*', fields{1})
+            fields = cellfun(@(x) ['AnatomyFile.' x], fields, 'UniformOutput', 0);
+        end
+        % Join query
+        joinQry = 'AnatomyFile LEFT JOIN Subject ON AnatomyFile.Subject = Subject.Id';
+        % Add query
+        addQuery = '';
+        if ~isempty(fileType)
+            addQuery = ['AND AnatomyFile.Type = "' fileType '" '];
+        end
+        addQuery = [addQuery, 'AND Subject.'];
+        % Complete query with FileName of FileID
+        if ischar(args{1})
+            args{1} = file_short(args{1});
+            [~, ~, fExt] = bst_fileparts(args{1});
+            % Argument is not a Matlab .mat filename, assume it is a directory
+            if ~strcmpi(fExt, '.mat')
+                args{1} = bst_fullfile(file_standardize(args{1}), 'brainstormsubject.mat');
+            end
+            addQuery = [addQuery 'FileName = "' args{1} '"'];
+        else
+            addQuery = [addQuery 'Id = ' num2str(args{1})];
+        end
+        % Select query
+        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+
+
+%% ==== FUNCTIONAL FILES WITH STUDY ====
+    % sFunctionalFiles = db_get('FunctionalFilesWithStudy', StudyID, FunctionalFileType, Fields)
+    %                  = db_get('FunctionalFilesWithStudy', StudyID, FunctionalFileType)
+    %                  = db_get('FunctionalFilesWithStudy', StudyID)
+    % sFunctionalFiles = db_get('FunctionalFilesWithStudy', StudyFileName, FunctionalFileType, Fields)
+    %                  = db_get('FunctionalFilesWithStudy', StudyFileName, FunctionalFileType)
+    %                  = db_get('FunctionalFilesWithStudy', StudyFileName)
+    case 'FunctionalFilesWithStudy'
+        fileType = '';
+        fields = '*';
+        varargout{1} = [];
+        if length(args) > 1
+            fileType = lower(args{2});
+            if length(args) > 2
+                fields = args{3};
+            end
+        end
+        if ischar(fields), fields = {fields}; end
+        % Prepend 'FunctionalFile.' to requested fields
+        if ~strcmp('*', fields{1})
+            fields = cellfun(@(x) ['FunctionalFile.' x], fields, 'UniformOutput', 0);
+        end
+        % Join query
+        joinQry = 'FunctionalFile LEFT JOIN Study ON FunctionalFile.Study = Study.Id';
+        % Add query
+        addQuery = '';
+        if ~isempty(fileType)
+            addQuery = ['AND FunctionalFile.Type = "' fileType '" '];
+        end
+        addQuery = [addQuery, 'AND Study.'];
+        % Complete query with FileName of FileID
+        if ischar(args{1})
+            addQuery = [addQuery 'FileName = "' args{1} '"'];
+        else
+            addQuery = [addQuery 'Id = ' num2str(args{1})];
+        end
+        % Select query
+        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
 
 
 %% ==== ANATOMY FILE ====

@@ -23,8 +23,8 @@ function varargout = db_set(varargin)
 %    - db_set('AnatomyFile', 'Delete', CondQuery)           : Delete AnatomyFile with Query
 %    - db_set('AnatomyFile', sAnatomyFile)                  : Insert AnatomyFile
 %    - db_set('AnatomyFile', sAnatomyFile, AnatomyFileId)   : Update AnatomyFile by ID
-%    - db_set('FilesWithSubject', 'Delete' , SubjectID)     : Delete all AnatomyFiles from SubjectID
-%    - db_set('FilesWithSubject', sAnatomyFiles, SubjectID) : Insert AnatomyFiles with SubjectID
+%    - db_set('AnatomyFilesWithSubject', 'Delete' , SubjectID)     : Delete all AnatomyFiles from SubjectID
+%    - db_set('AnatomyFilesWithSubject', sAnatomyFiles, SubjectID) : Insert AnatomyFiles with SubjectID
 %
 % ====== STUDIES =======================================================================
 %    - db_set('Study', 'Delete')                     : Delete all Studies
@@ -41,9 +41,9 @@ function varargout = db_set(varargin)
 %    - db_set('FunctionalFile', 'ClearField', FunctionalFileId, Field) : Set to NULL a given Field in FunctionalFileId
 %    - db_set('FunctionalFile', sFunctionalFile)                       : Insert FunctionalFile
 %    - db_set('FunctionalFile', sFunctionalFile, FunctionalFileId)     : Update FunctionalFile by ID
-%    - db_set('FilesWithStudy', 'Delete' , StudyID)                    : Delete All FunctionalFiles from StudyID
-%    - db_set('FilesWithStudy', sFunctionalFiles, StudyID)             : Insert FunctionalFiles with StudyID
-%    - db_set('FilesWithStudy', sFunctionalFiles)                      : Update FunctionalFiles
+%    - db_set('FunctionalFilesWithStudy', 'Delete' , StudyID)          : Delete All FunctionalFiles from StudyID
+%    - db_set('FunctionalFilesWithStudy', sFunctionalFiles, StudyID)   : Insert FunctionalFiles with StudyID
+%    - db_set('FunctionalFilesWithStudy', sFunctionalFiles)            : Update FunctionalFiles
 %    - db_set('ParentCount', ParentFileID, modifier, count)            : Update NumChildren field in ParentFileID
 %
 % SEE ALSO db_get
@@ -229,10 +229,10 @@ switch contextName
             % No action
         end
         
-%% ==== FILES WITH SUBJECT ====
-    % Success       = db_set('FilesWithSubject', 'Delete'     , SubjectID)
-    % sAnatomyFiles = db_set('FilesWithSubject', sAnatomyFiles, SubjectID)
-    case 'FilesWithSubject'
+%% ==== ANATOMY FILES WITH SUBJECT ====
+    % Success       = db_set('AnatomyFilesWithSubject', 'Delete'     , SubjectID)
+    % sAnatomyFiles = db_set('AnatomyFilesWithSubject', sAnatomyFiles, SubjectID)
+    case 'AnatomyFilesWithSubject'
         sAnatFiles = args{1};
         iSubject = args{2};
         
@@ -334,10 +334,10 @@ switch contextName
 
 
 %% ==== FILES WITH STUDY ====
-    % Success          = db_set('FilesWithStudy', 'Delete'        , StudyID)
-    % sFunctionalFiles = db_set('FilesWithStudy', sFunctionalFiles, StudyID) % Insert
-    % sFunctionalFiles = db_set('FilesWithStudy', sFunctionalFiles)          % Update
-    case 'FilesWithStudy'
+    % Success          = db_set('FunctionalFilesWithStudy', 'Delete'        , StudyID)
+    % sFunctionalFiles = db_set('FunctionalFilesWithStudy', sFunctionalFiles, StudyID) % Insert
+    % sFunctionalFiles = db_set('FunctionalFilesWithStudy', sFunctionalFiles)          % Update
+    case 'FunctionalFilesWithStudy'
         sFuncFiles = args{1};
         iStudy = [];
         if length(args) > 1
@@ -509,7 +509,7 @@ switch contextName
             % Handle lists
             if ~isempty(list_names) && (length(unique(list_names)) == length(list_names))
                 % Get all files in Study and Type ('Id', 'Name', 'FileName')
-                sFuncFiles = db_get('FilesWithStudy', list_study, list_type, {'Id', 'Name', 'FileName'});
+                sFuncFiles = db_get('FunctionalFilesWithStudy', list_study, list_type, {'Id', 'Name', 'FileName'});
                 cleanNames = cellfun(@(x) str_remove_parenth(x), {sFuncFiles.Name}, 'UniformOutput', false);
                 for i = 1 : length(list_names)
                     % Search for a list for this clean name

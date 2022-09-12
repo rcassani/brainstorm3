@@ -576,7 +576,7 @@ if ~isempty(iTargetStudies)
             case 'results'
                 % Get all results of this study that ARE NOT SHARED KERNELS (imaging kernel not attched to a datafile)
                 % === Check file filters ===
-                sFuncFiles = db_get(sqlConn, 'FilesWithStudy', iStudies(i), 'result', {'Id', 'FileName', 'Name', 'ExtraNum', 'ExtraStr1'});
+                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), 'result', {'Id', 'FileName', 'Name', 'ExtraNum', 'ExtraStr1'});
                 ResultsFiles = {sFuncFiles.FileName};
                 ResultsComments = {sFuncFiles.Name};
                 ResultsTypes = {'results', 'link'};
@@ -606,7 +606,7 @@ if ~isempty(iTargetStudies)
                 
             case 'timefreq'
                 % Get all timefreq files of this study
-                sFuncFiles = db_get(sqlConn, 'FilesWithStudy', iStudies(i), 'timefreq', {'Id', 'FileName', 'Name'});
+                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), 'timefreq', {'Id', 'FileName', 'Name'});
                 if ~isempty(sFuncFiles)
                     iFoundTf = [sFuncFiles.Id];
                     % Check file filters
@@ -657,7 +657,7 @@ if ~isempty(iTargetStudies)
 
             case 'matrix'
                 % Get all "matrix" files of this study
-                sFuncFiles = db_get(sqlConn, 'FilesWithStudy', iStudies(i), 'matrix', {'Id', 'FileName', 'Name'});
+                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), 'matrix', {'Id', 'FileName', 'Name'});
                 iFoundMat = [sFuncFiles.Id];
                 if ~isempty(iFoundMat)
                     % === Check file filters ===

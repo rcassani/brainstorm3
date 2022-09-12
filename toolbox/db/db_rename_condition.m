@@ -118,7 +118,7 @@ if isUpdateStudyPath
 end
 
 % Update functional files
-sFunctFiles = db_get(sqlConn, 'FilesWithStudy', sStudy.Id);
+sFunctFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', sStudy.Id);
 for ix = 1 : length(sFunctFiles)
     sFunctFile = sFunctFiles(ix);
     switch sFunctFile.Type

@@ -48,7 +48,7 @@ for iStudy = iStudies
         % Remove Study from DB
         db_set(sqlConn, 'Study', 'Delete', iStudy);
         % Remove FunctionalFiles for Study from DB
-        db_set(sqlConn, 'FilesWithStudy', 'Delete', iStudy);
+        db_set(sqlConn, 'FunctionalFilesWithStudy', 'Delete', iStudy);
         save_db = 1;
     end
 %     % Try to remove all the parents dirs until STUDIES dir, if they are empty

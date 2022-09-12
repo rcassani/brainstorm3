@@ -691,7 +691,7 @@ switch contextName
                 end
                 
                 % === Populate functional files data
-                sFuncFiles = db_get(sqlConn, 'FilesWithStudy', iStudy);
+                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudy);
                 % Names of fields in sStudy for types of functional files
                 types = {'Channel', 'Data', 'HeadModel', 'Result', 'Stat', ...
                          'Image', 'NoiseCov', 'Dipoles', 'Timefreq', 'Matrix'};
@@ -1076,9 +1076,9 @@ switch contextName
         else                 
             % Populate Surface & Anatomy files
             sSubject.Anatomy = [repmat(db_template('Anatomy'), 0), ...
-                db_convert_anatomyfile(db_get(sqlConn, 'FilesWithSubject', sSubject.Id, 'anatomy'))]; 
+                db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'anatomy'))];
             sSubject.Surface = [repmat(db_template('Surface'), 0), ...
-                db_convert_anatomyfile(db_get(sqlConn, 'FilesWithSubject', sSubject.Id, 'surface'))]; 
+                db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'surface'))];
             
             argout1 = sSubject;
             argout2 = sSubject.Id;

@@ -63,7 +63,7 @@ for i = 1:length(iSubjects)
     % Remove Subject from DB
     db_set(sqlConn, 'Subject', 'Delete', sSubject.Id);
     % Remove AnatomyFiles for Subject from DB
-    db_set(sqlConn, 'FilesWithSubject', 'Delete', sSubject.Id);
+    db_set(sqlConn, 'AnatomyFilesWithSubject', 'Delete', sSubject.Id);
     save_db = 1;
 end
 % If something was deleted, save database

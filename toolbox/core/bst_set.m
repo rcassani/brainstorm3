@@ -275,12 +275,12 @@ switch contextName
         
         if ~isempty(iSubject)
             % Delete existing anatomy files
-            db_set(sqlConn, 'FilesWithSubject', 'Delete', iSubject);
+            db_set(sqlConn, 'AnatomyFilesWithSubject', 'Delete', iSubject);
                        
             % Convert Anatomy & Surface files to AnatomyFiles and insert
             sAnatFiles = [db_convert_anatomyfile(sSubject.Anatomy, 'anatomy'), ...
                           db_convert_anatomyfile(sSubject.Surface, 'surface')];
-            db_set(sqlConn, 'FilesWithSubject', sAnatFiles, iSubject);
+            db_set(sqlConn, 'AnatomyFilesWithSubject', sAnatFiles, iSubject);
 
             % Set selected Anatomy and Surface files
             hasSelFiles = 0;
@@ -367,7 +367,7 @@ switch contextName
             
             if ~isempty(iStudy)
                 % Delete existing functional files for this study
-                db_set(sqlConn, 'FilesWithStudy', 'Delete', iStudy);
+                db_set(sqlConn, 'FunctionalFilesWithStudy', 'Delete', iStudy);
                 sFuncFiles = [];
                 % Order is not relevant
                 types = {'Channel', 'HeadModel', 'Data', 'Matrix', 'Result', ...
@@ -387,7 +387,7 @@ switch contextName
                     sFuncFiles = [sFuncFiles, sTypeFuncFiles];
                 end
                 % Insert FunctionalFiles in database
-                db_set(sqlConn, 'FilesWithStudy', sFuncFiles, iStudy);
+                db_set(sqlConn, 'FunctionalFilesWithStudy', sFuncFiles, iStudy);
 
                 % Set selected Channel and HeadModel files
                 hasSelFiles = 0;
