@@ -632,7 +632,6 @@ switch contextName
     case 'DefaultStudy'
         fields = '*';
         iSubject = args{1};
-        varargout{1} = [];
         if length(args) > 1
             fields = args{2};
         end
@@ -641,12 +640,10 @@ switch contextName
         sSubject = db_get(sqlConn, 'Subject', iSubject, {'Id', 'UseDefaultChannel'});
         % If UseDefaultChannel get default Subject
         if sSubject.UseDefaultChannel == 1
-            sSubject = db_get('Subject', '@default_subject', 'Id');
+            sSubject = db_get(sqlConn, 'Subject', '@default_subject', 'Id');
         end
         sStudy = db_get(sqlConn, 'Study', struct('Subject', sSubject.Id, 'Name', defaultStudy), fields);
-        if ~isempty(sStudy)
-            varargout{1} = sStudy;
-        end
+        varargout{1} = sStudy;
 
 
 %% ==== STUDY ====   
