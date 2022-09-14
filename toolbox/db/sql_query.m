@@ -134,7 +134,7 @@ end
 % Argument 2
 % Condition or Data structures
 if nargs > 1 && ~isempty(args{2}) && isstruct(args{2})
-    args{2} = removeEmptyValues(args{2});
+    args{2} = removeNotNullEmptyValues(args{2}, tableCond);
     args{2} = removeSkippedValues(args{2}, tableCond);
 else
     args{2} = struct(); % Default
@@ -144,7 +144,7 @@ end
 % Fields strings, Additional query string or Condition structure
 if nargs > 2 && ~isempty(args{3})
     if isstruct(args{3})
-        args{3} = removeEmptyValues(args{3});
+        args{3} = removeNotNullEmptyValues(args{3}, tableCond);
         args{3} = removeSkippedValues(args{3}, tableCond);
     end
 else
@@ -398,7 +398,9 @@ function addParams(pstmt, structure, offset)
     structFields = fieldnames(structure);
     for i = 1 : length(structFields)
         value = structure.(structFields{i});
-        if ischar(value)
+        if isempty(value)
+            pstmt.setNull(i + offset, java.sql.Types.NULL);
+        elseif ischar(value)
             pstmt.setString(i + offset, value);
         elseif iscell(value)
             pstmt.setString(i + offset, value{1});
@@ -408,12 +410,13 @@ function addParams(pstmt, structure, offset)
     end
 end
 
-%% Remove fields with empty values
-function values = removeEmptyValues(values)
+%% Remove non-null fields with empty values
+function values = removeNotNullEmptyValues(values, table)
+    fieldsNotNull = db_template(table, 'notnull');
     fields = fieldnames(values);
     toDel = {};
     for iField = 1:length(fields)
-        if isempty(values.(fields{iField}))
+        if isempty(values.(fields{iField})) && fieldsNotNull.(fields{iField})
             toDel{end + 1} = fields{iField};
         end
     end
@@ -477,7 +480,9 @@ function query = toString(query, structures)
     end
     % Replace values in query
     for iQ = 1 : length(qMarks)
-        if ischar(values{iQ})
+        if isempty(values{iQ})
+            values{iQ} = ['NULL'];
+        elseif ischar(values{iQ})
             values{iQ} = ['"' values{iQ} '"'];
         elseif isnumeric(values{iQ}) || islogical(values{iQ})
             values{iQ} = num2str(values{iQ});
