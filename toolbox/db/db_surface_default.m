@@ -29,7 +29,7 @@ ProtocolInfo = bst_get('ProtocolInfo');
 sqlConn = sql_connect();
 sSubject = db_get(sqlConn, 'Subject', iSubject);
 % Lock Subject
-LockId = lock_acquire(sqlConn, mfilename, iSubject);
+LockId = lock_acquire(sqlConn, mfilename, sSubject.Id);
 
 % ===== GET DEFAULT SURFACE =====
 % By default: update tree
@@ -80,15 +80,10 @@ DefaultFile = file_win2unix(DefaultFile);
 
 % ===== UPDATE DATABASE =====
 % Save in database selected file
-if isempty(iSurface)
-    db_set(sqlConn, 'Subject', 'ClearField', iSubject, ['i' SurfaceType]);
-else
-    sSubject.(['i' SurfaceType]) = iSurface;
-    db_set(sqlConn, 'Subject', sSubject, iSubject);
-end
+db_set(sqlConn, 'Subject', struct(['i' SurfaceType], iSurface), sSubject.Id);
+
 % Unlock Subject
 lock_release(sqlConn, LockId);
-sql_close(sqlConn);
 
 % Update SubjectFile
 matUpdate.(SurfaceType) = DefaultFile;
@@ -98,23 +93,25 @@ bst_save(bst_fullfile(ProtocolInfo.SUBJECTS, sSubject.FileName), matUpdate, 'v7'
 if isUpdate
     % Try to find the tree node associated to this surface
     if ~isempty(iSurface)
-        surfNode = panel_protocols('SelectNode', [], lower(SurfaceType), iSubject, iSurface );
+        surfNode = panel_protocols('SelectNode', [], lower(SurfaceType), sSubject.Id, iSurface );
         % If node was found in this display
         if ~isempty(surfNode)
             % Select node (and unselect all the others)
             panel_protocols('MarkUniqueNode', surfNode);
         end
     else
-        panel_protocols('UpdateNode', 'Subject', iSubject);
+        panel_protocols('UpdateNode', 'Subject', sSubject.Id);
     end
 end
 
 % ===== REMOVE INTERPOLATIONS =====
 % If the default MRI changes, all the surface-MRI interpolations saved in the surface files must be updated
 if strcmpi(SurfaceType, 'Anatomy')
-    for i = 1:length(sSubject.Surface)
+    % Surfaces for Subject
+    sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'surface', 'FileName');
+    for i = 1:length(sAnatFiles)
         % Load surface
-        TessFile = file_fullpath(sSubject.Surface(i).FileName);
+        TessFile = file_fullpath(sAnatFiles(i).FileName);
         TessMat = in_tess_bst(TessFile, 0);
         % If there is an interpolation
         if isfield(TessMat, 'tess2mri_interp') && ~isempty(TessMat.tess2mri_interp)
@@ -127,6 +124,7 @@ if strcmpi(SurfaceType, 'Anatomy')
         end
     end
 end
+sql_close(sqlConn);
 
 
 

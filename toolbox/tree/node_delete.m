@@ -193,12 +193,11 @@ switch (lower(nodeType{1}))
                     sStudyHeadModels = db_get(sqlConn, 'FunctionalFile', struct('Study', iStudy, 'Type', 'headmodel'), 'Id');
                     % Update default headmodel
                     if isempty(sStudyHeadModels)
-                        db_set(sqlConn, 'Study', 'ClearField', iStudy, 'iHeadModel');
+                        db_set(sqlConn, 'Study', strcut('iHeadModel', []), iStudy);
                     else
                         sStudy = db_get(sqlConn, 'Study', iStudy, 'iHeadModel');
                         if ~ismember(sStudy.iHeadmodel, [sStudyHeadModels.Id])
-                            sStudy.iHeadmodel = sStudyHeadModels(end).Id;
-                            db_set(sqlConn, 'Study', sStudy, iStudy);
+                            db_set(sqlConn, 'Study', strcut('iHeadModel', sStudyHeadModels(end).Id), iStudy);
                         end
                     end
                 end
@@ -206,7 +205,7 @@ switch (lower(nodeType{1}))
                 if strcmpi(nodeType{1}, 'channel')
                     sStudyChannel = db_get(sqlConn, 'FunctionalFile', struct('Study', iStudy, 'Type', 'channel'), 'Id');
                     if isempty(sStudyChannel)
-                        db_set(sqlConn, 'Study', 'ClearField', iStudy, 'iChannel');
+                        db_set(sqlConn, 'Study', struct('iChannel', []), iStudy);
                     end
                 end
                 drawnow;
