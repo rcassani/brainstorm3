@@ -32,10 +32,13 @@ function db_reload_subjects( iSubjects )
 
 % Get protocol information
 ProtocolInfo     = bst_get('ProtocolInfo');
-ProtocolSubjects = bst_get('ProtocolSubjects');
 % Check input subject index
-if isempty(ProtocolSubjects) || any(iSubjects < 0) || any(iSubjects > length(ProtocolSubjects.Subject))
-    error('Invalid subject indices');
+sqlConn = sql_connect();
+for ix = 1 : length(iSubjects)
+    if ~sql_query(sqlConn, 'EXIST', 'Subject', struct('Id', iSubjects(ix)))
+        sql_close(sqlConn);
+        error('Invalid subject indices');
+    end
 end
 
 % If no progressbar is visible: create one
@@ -45,13 +48,9 @@ if isProgressBar
 end
 % Loop on all subjects
 for i = 1:length(iSubjects)
-    iSubject = iSubjects(i);
-    % Get subject directory (for default subject or regular subject)
-    if (iSubject == 0)
-        subjectSubDir = bst_fileparts(ProtocolSubjects.DefaultSubject.FileName);
-    else
-        subjectSubDir = bst_fileparts(ProtocolSubjects.Subject(iSubject).FileName);
-    end
+    % Get raw subject directory
+    sSubject = db_get(sqlConn, 'Subject', iSubjects(i), 'FileName', 1);
+    subjectSubDir = bst_fileparts(sSubject.FileName);
     % Check the existance of the subject's directory
     if ~file_exist(bst_fullfile(ProtocolInfo.SUBJECTS, subjectSubDir))
         db_fix_protocol();
@@ -66,16 +65,11 @@ for i = 1:length(iSubjects)
         bst_progress('stop');
         return
     end
-    % Else subject was reloaded: update in ProtocolSubjects structure
-    if (iSubject == 0)
-        ProtocolSubjects.DefaultSubject = sSubject;
-    else
-        ProtocolSubjects.Subject(iSubject) = sSubject;
-    end
+    % Else subject was reloaded: update in database
+    bst_set('Subject', iSubjects(i), sSubject);
 end
+sql_close(sqlConn);
 
-% Update Brainstorm database
-bst_set('ProtocolSubjects', ProtocolSubjects);
 % Update display
 panel_protocols('UpdateNode', 'Subject', iSubjects);
 % Save database

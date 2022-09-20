@@ -729,7 +729,7 @@ function UpdateNode(category, indices, isExpandTrials)
                         % Node is found: update node
                         if ~isempty(nodeStudy)
                             % Update node name
-                            nodeStudy.setComment(ProtocolSubjects.Subject(iSubject).Name);
+                            nodeStudy.setComment(sSubject.Name);
                             % Refresh node display
                             treeModel.reload(nodeStudy);
                         % Node was not found: update whole tree
