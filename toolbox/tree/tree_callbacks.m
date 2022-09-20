@@ -183,9 +183,6 @@ switch (lower(action))
             % ===== ANATOMY =====
             % Mark/unmark (items selected : 1)
             case 'anatomy'
-                % Get subject
-                iSubject = bstNodes(1).getStudyIndex();
-                sSubject = bst_get('Subject', iSubject);
                 % MRI: Display in MRI viewer
                 view_mri(filenameRelative);
                 
@@ -194,10 +191,11 @@ switch (lower(action))
                 % Get subject
                 iSubject = bstNodes(1).getStudyIndex();
                 iAnatomy = bstNodes(1).getItemIndex();
-                sSubject = bst_get('Subject', iSubject);
+                sSubject = db_get('Subject', iSubject, 'iAnatomy');
                 % Atlas: display as overlay on the default MRI
                 if (iAnatomy ~= sSubject.iAnatomy)
-                    view_mri(sSubject.Anatomy(sSubject.iAnatomy).FileName, filenameRelative);
+                    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                    view_mri(sAnatFile.FileName, filenameRelative);
                 else
                     view_mri(filenameRelative);
                 end
@@ -1024,7 +1022,7 @@ switch (lower(action))
 %% ===== POPUP: ANATOMY =====
             case {'anatomy', 'volatlas'}
                 iSubject = bstNodes(1).getStudyIndex();
-                sSubject = bst_get('Subject', iSubject);
+                sSubject = db_get('Subject', iSubject);
                 iAnatomy = [];
                 for iFile = 1:length(bstNodes)
                     iAnatomy(iFile) = bstNodes(iFile).getItemIndex();
@@ -1042,8 +1040,8 @@ switch (lower(action))
                         % Display as overlay
                         if ~bstNodes(1).isMarked()
                             % Get subject structure
-                            sSubject = bst_get('MriFile', filenameRelative);
-                            sAnatFile = db_get('AnatomyFile', iAnatomy, 'FileName');
+                            sSubject = db_get('SubjectFromAnatomyFile', filenameRelative, 'iAnatomy');
+                            sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
                             MriFile = sAnatFile.FileName;
                             % Overlay menus
                             gui_component('MenuItem', jMenuDisplay, [], 'Overlay on default MRI (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(MriFile, filenameRelative));
@@ -3101,7 +3099,7 @@ function fcnMriSegment(jPopup, sSubject, iSubject, iAnatomy, isAtlas)
           
     % === TISSUE SEGMENTATION ===
     elseif (length(iAnatomy) == 1) && ~isempty(strfind(sAnatFile.Name, 'tissues'))
-        gui_component('MenuItem', jPopup, [], 'Generate triangular meshes', IconLoader.ICON_SURFACE_SCALP, [], @(h,ev)bst_call(@tess_meshlayer, sSubject.Anatomy(iAnatomy).FileName));
+        gui_component('MenuItem', jPopup, [], 'Generate triangular meshes', IconLoader.ICON_SURFACE_SCALP, [], @(h,ev)bst_call(@tess_meshlayer, sAnatFile.FileName));
         gui_component('MenuItem', jPopup, [], 'Generate hexa mesh (FieldTrip)', IconLoader.ICON_FEM, [], @(h,ev)bst_call(@process_ft_prepare_mesh_hexa, 'ComputeInteractive', iSubject, iAnatomy));
     end
 end
