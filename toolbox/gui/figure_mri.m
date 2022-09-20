@@ -2447,9 +2447,12 @@ function SetFiducial(hFig, FidCategory, FidName)
     % Get MRI
     [sMri,TessInfo,iTess,iMri] = panel_surface('GetSurfaceMri', hFig);
     % Get the file in the database
-    [sSubject, iSubject, iAnatomy] = bst_get('MriFile', sMri.FileName);
+    sqlConn = sql_connect();
+    sAnatFile  = db_get(sqlConn, 'AnatomyFile', sMri.FileName, {'Id', 'Subject'});
+    sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sAnatFile.Subject, 'anatomy', 'Id');
+    sql_close(sqlConn);
     % If it is not the first MRI: can't edit the fiducuials
-    if (iAnatomy > 1)
+    if (sAnatFile.Id ~= sAnatFiles(1).Id)
         bst_error('The fiducials should be edited only in the first MRI file.', 'Set fiducials', 0);
     end
     % Get Handles
@@ -2569,7 +2572,7 @@ function [isCloseAccepted, MriFile] = SaveMri(hFig)
 
     % ==== GET REFERENCIAL CHANGES ====
     % Get subject in database, with subject directory
-    [sSubject, iSubject, iAnatomy] = bst_get('MriFile', sMri.FileName);
+    sSubject = db_get('SubjectFromAnatomyFile', sMri.FileName, 'Id');
     % Load the previous MRI fiducials
     warning('off', 'MATLAB:load:variableNotFound');
     sMriOld = load(MriFileFull, 'SCS');
@@ -2606,7 +2609,8 @@ function [isCloseAccepted, MriFile] = SaveMri(hFig)
     
     % ==== REALIGN SURFACES ====
     if ~isempty(sMriOld)
-        UpdateSurfaceCS({sSubject.Surface.FileName}, sMriOld, sMri);
+        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'surfaces', 'FileName');
+        UpdateSurfaceCS({sAnatFiles.FileName}, sMriOld, sMri);
     end
 end
 
