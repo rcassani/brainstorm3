@@ -32,7 +32,7 @@ ProtocolInfo = bst_get('ProtocolInfo');
 save_db = 0;
 
 % Get @default_subject Id
-sSubjectDef = db_get(sqlConn, 'Subject', '@defaul_subject', 'Id');
+sSubjectDef = db_get(sqlConn, 'Subject', bst_get('DirDefaultSubject'), 'Id');
 
 % Cannot delete default subject
 iInvalid = find(iSubjects == sSubjectDef.Id);
