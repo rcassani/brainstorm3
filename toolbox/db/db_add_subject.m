@@ -36,7 +36,7 @@ function [sSubject, iSubject] = db_add_subject( varargin )
 % Authors: Francois Tadel, 2008-2011
 
 % Get protocol description
-ProtocolInfo     = bst_get('ProtocolInfo');
+ProtocolInfo = bst_get('ProtocolInfo');
 
 %% ===== PARSE INPUTS =====
 % CALL: db_add_subject( sSubject )
@@ -63,22 +63,28 @@ if (nargin >= 3)
     sSubject.UseDefaultChannel = varargin{3};
 end
 
-
 %% ===== UPDATE DATABASE =====
 sqlConn = sql_connect();
 
-% Check the subject unicity
-if sql_query(sqlConn, 'EXIST', 'Subject', struct('Name', sSubject.Name))
-    % A subject with the same Name is found : display an error box and return to 'Subject editor' window
-    bst_error(sprintf('Subject "%s" already exists in protocol.', sSubject.Name), 'Subject editor', 0);
-    sSubject = [];
-    iSubject = [];
-    sql_close(sqlConn);
-    return
+% Add or Update subject in database
+if isempty(sSubject.Id)
+    % Check the subject unicity
+    if sql_query(sqlConn, 'EXIST', 'Subject', struct('Name', sSubject.Name))
+        % A subject with the same Name is found : display an error box and return to 'Subject editor' window
+        bst_error(sprintf('Subject "%s" already exists in protocol.', sSubject.Name), 'Subject editor', 0);
+        sSubject = [];
+        iSubject = [];
+        sql_close(sqlConn);
+        return
+    end
+    % Add subject to database
+    iSubject = db_set(sqlConn, 'Subject', sSubject);
+else
+    % Update subject in database
+    iSubject = db_set(sqlConn, 'Subject', sSubject, sSubject.Id);
 end
-
-% Add subject to database
-db_set(sqlConn, 'Subject', sSubject);
+% Get Subject from DB
+sSubject = db_get(sqlConn, 'Subject', iSubject);
 sql_close(sqlConn);
 
 %% ===== SAVE SUBJECT FILE =====
@@ -101,11 +107,8 @@ catch
     return
 end
 
-iSubject = sSubject.Id;
-
 % === Create extra system conditions ===
 % Add conditions: analysis_intra and default_study
-%TODO: Implement folders
-%db_add_condition(sSubject.Name, bst_get('DirAnalysisIntra'), 0);
-%db_add_condition(sSubject.Name, bst_get('DirDefaultStudy'),  0);
+db_add_condition(sSubject.Name, bst_get('DirAnalysisIntra'), 0);
+db_add_condition(sSubject.Name, bst_get('DirDefaultStudy'),  0);
 

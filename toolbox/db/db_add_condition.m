@@ -63,42 +63,37 @@ iStudies = [];
 isModified = 0;
 
 
+sqlConn = sql_connect();
 %% ===== GET SUBJECTS =====
-% If SubjectDir starts with '*' : get all subjects
+subjectFields = {'Id', 'FileName', 'Name'};
+% If SubjectDir starts with '*' : get all subjects except @default_subject
 if ischar(SubjectName) && (SubjectName(1) == '*')
-    iSubjectsList = 1:length(ProtocolSubjects.Subject);
+    sSubjects = db_get(sqlConn, 'Subjects', 0, subjectFields);
 % Else: Look for subject
-elseif ischar(SubjectName)
-    [tmp__, iSubjectsList] = bst_get('Subject', SubjectName, 1);
-elseif isnumeric(SubjectName)
-    [tmp__, iSubjectsList] = bst_get('Subject', SubjectName, 1);
+else
+    sSubjects = db_get(sqlConn, 'Subject', SubjectName, subjectFields, 1);
 end
 % No subject found
-if isempty(iSubjectsList)
+if isempty(sSubjects)
     bst_error('Invalid subject.', 'Add condition', 0);
     return;
 end
 
 
 %% ===== CREATE STUDIES =====
-sqlConn = sql_connect();
-for iSubject = iSubjectsList
+for ix = 1 : length(sSubjects)
     % Cannot add study to default anatomy
-    if (iSubject == 0)
+    if strcmp(sSubjects(ix).Name, bst_get('DirDefaultSubject'))
         error('Cannot add folders to the default anatomy.');
     end
-    % Get subject definition
-    sSubject = db_get(sqlConn, 'Subject', iSubject, {'FileName', 'Name'});
-    SubjectFile = sSubject.FileName;
-    SubjectName = sSubject.Name;
-    % Get conditions for this subject
-    [sSubjStudies, iSubjStudies] = bst_get('StudyWithSubject', SubjectFile,'intra_subject', 'default_study');
+    % Get conditions for subject
+    sStudies = db_get(sqlConn, 'StudiesFromSubject', sSubjects(ix).Id, {'Id', 'Condition'}, 'intra_subject', 'default_study');
     
     % If condition already exists for this subject: return it
-    iExistStudy = find(strcmpi([sSubjStudies.Condition], ConditionName));
+    iExistStudy = find(strcmpi({sStudies.Condition}, ConditionName));
     if ~isempty(iExistStudy)
-        disp(['BST> Condition "' ConditionName '" already exists for subject "' SubjectName '".']);
-        iStudies(end+1) = iSubjStudies(iExistStudy);
+        disp(['BST> Condition "' ConditionName '" already exists for subject "' sSubjects(ix).Name '".']);
+        iStudies(end+1) = sStudies(iExistStudy).Id;
         continue
     end
     
@@ -108,7 +103,7 @@ for iSubject = iSubjectsList
     StudyMat.Name = ConditionName;
     StudyMat.DateOfStudy = DateOfStudy;
     % Filename : STUDIES/dirSubject/ConditionName/brainstormstudy.mat
-    StudyFile = bst_fullfile(bst_fileparts(SubjectFile), ConditionName, 'brainstormstudy.mat');
+    StudyFile = bst_fullfile(bst_fileparts(sSubjects(ix).FileName), ConditionName, 'brainstormstudy.mat');
     StudyFileFull = bst_fullfile(ProtocolInfo.STUDIES, StudyFile);
     % Create folder
     if ~file_exist(bst_fileparts(StudyFileFull))
@@ -119,7 +114,7 @@ for iSubject = iSubjectsList
 
     % === Create Study db structure ===
     sNewStudy = db_template('Study');
-    sNewStudy.Subject           = iSubject;
+    sNewStudy.Subject           = sSubjects(ix).Id;
     sNewStudy.Name              = StudyMat.Name;
     sNewStudy.FileName          = file_win2unix(StudyFile);
     sNewStudy.DateOfStudy       = StudyMat.DateOfStudy;
