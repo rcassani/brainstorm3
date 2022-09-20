@@ -115,16 +115,16 @@ switch lower(FileType)
 end
 % Get Subject that holds this MRI
 if ~isempty(MriFile)
-    sSubject = bst_get('MriFile', MriFile);
+    sSubject = db_get('SubjectFromAnatomyFile', MriFile, 'FileName');
 % If MRI is not provided: get default one
 elseif isempty(OverlayFile) || isempty(SubjectFile)
     error('Missing input file.');
 else
-    sSubject = bst_get('Subject', SubjectFile);
-    if isempty(sSubject) || isempty(sSubject.Anatomy)
+    sAnatFiles = db_get('AnatomyFilesWithSubject', SubjectFile, 'anatomy', 'FileName');
+    if isempty(sAnatFiles)
         error('No MRI available.');
     end
-    MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
+    MriFile = sAnatFiles(1).FileName;
 end
 
 % If subject not available yet
@@ -222,8 +222,8 @@ if ~isOverlay || isempty(TessInfo.OverlayLabels)
     figure_mri('SetVolumeAtlas', hFig);
 % If the overlay is an atlas: simply set the atlas name in the figure
 elseif isOverlay && ~isempty(TessInfo.OverlayLabels) && strcmpi(file_gettype(OverlayFile), 'subjectimage') && ~isempty(strfind(OverlayFile, '_volatlas'))
-    [sSubject, iSubject, iAnatomy] = bst_get('MriFile', OverlayFile);
-    setappdata(hFig, 'AnatAtlas', sSubject.Anatomy(iAnatomy).Comment);
+    sAnatFile = db_get('AnatomyFile', OverlayFile, 'Name');
+    setappdata(hFig, 'AnatAtlas', sAnatFile.Name);
 end
 % Configure the operations that are allowed
 figure_mri('SetFigureStatus', hFig, isEditFiducials, isEditVolume, isOverlay, 0, 1);

@@ -521,9 +521,13 @@ function SetFigureStatus(hFig, isEditFiducials, isEditVolume, isOverlay, isEeg, 
     end
     % Warning if surfaces or recordings
     SubjectFile = getappdata(hFig, 'SubjectFile');
-    sSubject = bst_get('Subject', SubjectFile);
-    sStudies = bst_get('StudyWithSubject', SubjectFile);
-    if ((~isempty(isEditFiducials) && isEditFiducials) || (~isempty(isEditVolume) && isEditVolume)) && ((~isempty(sSubject) && ~isempty(sSubject.Surface)) || (~isempty(sStudies) && any(~cellfun(@isempty, {sStudies.Channel}))))
+    sqlConn = sql_connect();
+    sSubject = db_get(sqlConn, 'Subject', SubjectFile, 'Name');
+    sSurfaceFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', SubjectFile, 'surface', 'Id');
+    sStudies = db_get(sqlConn, 'StudiesFromSubject', SubjectFile, 'iChannel');
+    sChannelFiles = db_get(sqlConn, 'FunctionalFile', [sStudies.iChannel], 'Id');
+    sql_close(sqlConn);
+    if ((~isempty(isEditFiducials) && isEditFiducials) || (~isempty(isEditVolume) && isEditVolume)) && ((~isempty(sSubject) && ~isempty(sSurfaceFiles)) || (~isempty(sStudies) && ~isempty([sChannelFiles.Id])))
         isConfirm = java_dialog('confirm', [...
             'Surfaces or MEG/EEG recordings have already been imported for subject "' sSubject.Name '".' 10 10 ...
             'Editing the MRI orientation or the position of the NAS/LPA/RPA anatomical fiducials' 10 ...
@@ -3074,20 +3078,20 @@ function [AtlasNames, AtlasFiles, iAtlas] = GetVolumeAtlases(hFig)
     iAtlas = [];
     % Get subject info
     SubjectFile = getappdata(hFig, 'SubjectFile');
-    sSubject = bst_get('Subject', SubjectFile);
+    sAnatFiles  = db_get('AnatomyFilesWithSubject', SubjectFile, 'anatomy', {'Name', 'FileName'});
     % Find atlases based on the volume names
     iAllAtlases = [];
-    for iAnat = 1:length(sSubject.Anatomy)
-        if any(~cellfun(@(c)isempty(strfind(sSubject.Anatomy(iAnat).Comment, c)), {'aseg', 'svreg', 'tissues'})) || ...
-           ~isempty(strfind(sSubject.Anatomy(iAnat).FileName, '_volatlas'))
+    for iAnat = 1:length(sAnatFiles)
+        if any(~cellfun(@(c)isempty(strfind(sAnatFiles(iAnat).Name, c)), {'aseg', 'svreg', 'tissues'})) || ...
+           ~isempty(strfind(sAnatFiles(iAnat).FileName, '_volatlas'))
             iAllAtlases(end+1) = iAnat;
         end
     end
     if isempty(iAllAtlases)
         return;
     end
-    AtlasNames = {sSubject.Anatomy(iAllAtlases).Comment};
-    AtlasFiles = {sSubject.Anatomy(iAllAtlases).FileName};
+    AtlasNames = {sAnatFiles(iAllAtlases).Name};
+    AtlasFiles = {sAnatFiles(iAllAtlases).FileName};
     % Add an empty atlas
     if ~isempty(AtlasNames)
         AtlasNames{end+1} = 'none';

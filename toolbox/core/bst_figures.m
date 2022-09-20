@@ -448,9 +448,8 @@ function UpdateFigureName(hFig)
             if isempty(TessInfo) || ~isempty(TessInfo.OverlayCube) || ~isempty(TessInfo.DataSource.FileName)
                 figureName = [figureNameModality  'MriViewer: ' figureName];
             else
-                [sSubject, iSubject, iAnatomy] = bst_get('MriFile', TessInfo.SurfaceFile);
-                if ~isempty(iAnatomy)
-                    sAnatFile = db_get('AnatomyFile', iAnatomy, 'Name');
+                sAnatFile = db_get('AnatomyFile', TessInfo.SurfaceFile, 'Name');
+                if ~isempty(sAnatFile)
                     figureName = [figureNameModality  'MriViewer: ' figureName, '/', sAnatFile.Name];
                 else
                     figureName = [figureNameModality  'MriViewer: ' figureName];
