@@ -244,7 +244,7 @@ end
 
 
 %% ===== DIPOLES =====
-iDipoles = find(strcmp('dipole', allTypes));
+iDipoles = find(strcmp('dipoles', allTypes));
 % Display dipoles
 for i = 1:length(iDipoles)
     iDipole = iDipoles(i);
