@@ -75,12 +75,13 @@ end
 bst_progress('text', 'Envelope: Loading surface...');
 % Get MRI file
 if isempty(MriFile)
-    sSubject = bst_get('SurfaceFile', SurfaceFile);
+    sSubject = db_get('SubjectFromAnatomyFile', SurfaceFile, 'iAnatomy');
     if isempty(sSubject.iAnatomy)
         bst_error('Please define all the fiducials (AC,PC,IH) in the MRI volume.', 'Surface envelope', 0);
         return;
     end
-    MriFile = file_fullpath(sSubject.Anatomy(sSubject.iAnatomy).FileName);
+    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+    MriFile = file_fullpath(sAnatFile.FileName);
 end
 % Load surface
 sSurface = in_tess_bst(SurfaceFile, 0);

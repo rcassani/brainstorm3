@@ -93,13 +93,13 @@ function OutputFiles = Run(sProcess, sInputs) %#ok<DEFNU>
       
     % ===== GET SUBJECT =====
     % Get subject 
-    [sSubject, iSubject] = bst_get('Subject', SubjectName);
-    if isempty(iSubject)
+    sSubject = db_get('Subject', SubjectName);
+    if isempty(sSubject)
         bst_report('Error', sProcess, [], ['Subject "' SubjectName '" does not exist.']);
         return
     end
     % Check if a MRI and cortex surface are available for the subject
-    if isempty(sSubject.Anatomy) || isempty(sSubject.iCortex)
+    if isempty(sSubject.iAnatomy) || isempty(sSubject.iCortex)
         bst_report('Error', sProcess, [], ['No MRI or cortex surface available for subject "' SubjectName '".']);
         return
     end
@@ -109,7 +109,7 @@ function OutputFiles = Run(sProcess, sInputs) %#ok<DEFNU>
     BemOptions.nvert     = [nScalp, nOuter, nInner];
     BemOptions.thickness = [7 skullThickness 3]; 
     % Generate BEM layers for Subject01
-    isOk = tess_bem(iSubject, BemOptions);
+    isOk = tess_bem(sSubject.Id, BemOptions);
     if ~isOk
         bst_report('Error', sProcess, [], 'An error occurred in tess_bem function.');
         return
@@ -141,7 +141,7 @@ function isOk = ComputeInteractive(iSubject, iMri) %#ok<DEFNU>
     switch (Method)
         case 'brainstorm'
             % Get subject
-            sSubject = bst_get('Subject', iSubject);
+            sSubject = db_get('Subject', iSubject);
             % If there are no scalp and no cortex: Only FieldTrip available
             if isempty(sSubject.iCortex) || isempty(sSubject.iScalp)
                 bst_error('The selected method requires the cortex and scalp surfaces.', 'Generate BEM surfaces', 0);
