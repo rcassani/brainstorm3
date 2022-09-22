@@ -72,7 +72,7 @@ end
 sAnatFile = db_template('AnatomyFile');
 sAnatFile.Subject = iSubject;
 sAnatFile.Type = anatFileType;
-sAnatFile.FileName = FileName;
+sAnatFile.FileName = file_short(FileName);
 sAnatFile.Name = Comment;
 sAnatFile.SurfaceType = SurfaceType;
 
