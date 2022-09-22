@@ -65,8 +65,9 @@ if isstruct(MriFileSrc)
 elseif ischar(MriFileSrc)
     % Get the default MRI for this subject
     if isempty(MriFileRef)
-        sSubject = bst_get('MriFile', MriFileSrc);
-        MriFileRef = sSubject.Anatomy(sSubject.iAnatomy).FileName;
+        sSubject = db_get('SubjectFromAnatomyFile', MriFileSrc, 'iAnatomy');
+        sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+        MriFileRef = sAnatFile.FileName;
     end
     % Load MRI volumes
     sMriSrc = in_mri_bst(MriFileSrc);
@@ -269,10 +270,12 @@ sMriReg.Comment = [sMriSrc.Comment, fileTag];
 % Save output
 if ~isempty(MriFileSrc)
     bst_progress('text', 'Saving new file...');
-    % Get subject
-    [sSubject, iSubject, iMri] = bst_get('MriFile', MriFileSrc);
+    % Get subject and anatomies
+    sSubject = db_get('SubjectFromAnatomyFile', MriFileSrc, {'Id', 'iAnatomy'});
+    iSubject = sSubject.Id;
+    sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'anatomy', 'Name');
     % Update comment
-    sMriReg.Comment = file_unique(sMriReg.Comment, {sSubject.Anatomy.Comment});
+    sMriReg.Comment = file_unique(sMriReg.Comment, {sAnatFiles.Name});
     % Add history entry
     sMriReg = bst_history('add', sMriReg, 'resample', ['MRI co-registered on default file: ' MriFileRef]);
     % Save new file
@@ -282,12 +285,7 @@ if ~isempty(MriFileSrc)
     sMriReg = out_mri_bst(sMriReg, MriFileRegFull);
 
     % Register new MRI
-    iAnatomy = length(sSubject.Anatomy) + 1;
-    sSubject.Anatomy(iAnatomy) = db_template('Anatomy');
-    sSubject.Anatomy(iAnatomy).FileName = MriFileReg;
-    sSubject.Anatomy(iAnatomy).Comment  = sMriReg.Comment;
-    % Update subject structure
-    bst_set('Subject', iSubject, sSubject);
+    iAnatomy = db_add_anatomyfile(iSubject, MriFileReg, sMriReg.Comment);
     % Refresh tree
     panel_protocols('UpdateNode', 'Subject', iSubject);
     panel_protocols('SelectNode', [], 'anatomy', iSubject, iAnatomy);
