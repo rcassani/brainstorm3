@@ -61,14 +61,16 @@ sMri = [];
 Messages = [];
 % Get Protocol information
 ProtocolInfo     = bst_get('ProtocolInfo');
-ProtocolSubjects = bst_get('ProtocolSubjects');
 % Default subject
 if (iSubject == 0)
-	sSubject = ProtocolSubjects.DefaultSubject;
+	sSubject = db_get('Subject', '@default_subject');
+    iSubject = sSubject.Id;
 % Normal subject 
 else
-    sSubject = ProtocolSubjects.Subject(iSubject);
+    sSubject = db_get('Subject', iSubject);
 end
+% Current anatomy files
+sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'anatomy');
 
 %% ===== SELECT MRI FILE =====
 % If MRI file to load was not defined : open a dialog box to select it
@@ -120,7 +122,7 @@ if iscell(MriFile) && (length(MriFile) == 1)
     MriFile = MriFile{1};
 elseif iscell(MriFile) && ~strcmpi(FileFormat, 'SPM-TPM')
     % Only allow multiple import if there is already a MRI
-    if isempty(sSubject.Anatomy)
+    if isempty(sAnatFiles)
         error(['You must import the first MRI in the subject folder separately.' 10 'Please select only one volume at a time.']);
     end
     % Initialize returned values
@@ -192,11 +194,11 @@ end
 %% ===== MANAGE MULTIPLE MRI =====
 fileTag = '';
 % Add new anatomy
-iAnatomy = length(sSubject.Anatomy) + 1;   
+ix = length(sAnatFiles) + 1;
 % If add an extra MRI: read the first one to check that they are compatible
-if (iAnatomy > 1) && (isInteractive || isAutoAdjust)
+if ( ix > 1) && (isInteractive || isAutoAdjust)
     % Load the reference MRI (the first one)
-    refMriFile = sSubject.Anatomy(1).FileName;
+    refMriFile = sAnatFiles(1).FileName;
     sMriRef = in_mri_bst(refMriFile);
     % Adding an MNI volume to an existing subject
     if isMni
@@ -335,13 +337,13 @@ else
         sMri.Comment = 'MRI';
     end
     % Use filename as comment
-    if (iAnatomy > 1) || isInteractive || ~isAutoAdjust
+    if (ix > 1) || isInteractive || ~isAutoAdjust
         [fPath, fBase, fExt] = bst_fileparts(MriFile);
         fBase = strrep(fBase, '.nii', '');
         if isMni
-            sMri.Comment = file_unique(fBase, {sSubject.Anatomy.Comment});
+            sMri.Comment = file_unique(fBase, {sAnatFiles.Name});
         else
-            sMri.Comment = file_unique([fBase, fileTag], {sSubject.Anatomy.Comment});
+            sMri.Comment = file_unique([fBase, fileTag], {sAnatFiles.Name});
         end
     end
     % Add MNI tag
@@ -376,24 +378,14 @@ sMri = out_mri_bst(sMri, BstMriFile);
 
 %% ===== REFERENCE NEW MRI IN DATABASE ======
 % New anatomy structure
-sSubject.Anatomy(iAnatomy) = db_template('Anatomy');
-sSubject.Anatomy(iAnatomy).FileName = file_short(BstMriFile);
-sSubject.Anatomy(iAnatomy).Comment  = sMri.Comment;
+iAnatFile = db_add_anatomyfile(iSubject, BstMriFile, Comment);
 % Default anatomy: do not change
 if isempty(sSubject.iAnatomy)
-    sSubject.iAnatomy = iAnatomy;
+    db_set('Subject', struct('iAnatomy', iAnatFile), iSubject);
 end
-% Default subject
-if (iSubject == 0)
-	ProtocolSubjects.DefaultSubject = sSubject;
-% Normal subject 
-else
-    ProtocolSubjects.Subject(iSubject) = sSubject;
-end
-bst_set('ProtocolSubjects', ProtocolSubjects);
 % Save first MRI as permanent default
-if (iAnatomy == 1)
-    db_surface_default(iSubject, 'Anatomy', iAnatomy, 0);
+if (ix == 1)
+    db_surface_default(iSubject, 'Anatomy', iAnatFile, 0);
 end
 
 %% ===== UPDATE GUI =====
@@ -409,7 +401,7 @@ bst_memory('UnloadMri', BstMriFile);
 %% ===== MRI VIEWER =====
 if isInteractive
     % First MRI: Edit fiducials
-    if (iAnatomy == 1)
+    if (ix == 1)
         % MRI Visualization and selection of fiducials (in order to align surfaces/MRI)
         hFig = view_mri(BstMriFile, 'EditMri');
         drawnow;
