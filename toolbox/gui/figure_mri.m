@@ -2661,12 +2661,13 @@ end
 % WARNING: Inputs are in millimeters
 function SetSubjectFiducials(iSubject, NAS, LPA, RPA, AC, PC, IH) %#ok<DEFNU>
     % Get the updated subject structure
-    sSubject = bst_get('Subject', iSubject);
+    sSubject = db_get('Subject', iSubject, 'iAnatomy');
     if isempty(sSubject.iAnatomy)
         error('No MRI defined for this subject');
     end
     % Build full MRI file
-    BstMriFile = file_fullpath(sSubject.Anatomy(sSubject.iAnatomy).FileName);
+    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+    BstMriFile = file_fullpath(sAnatFile.FileName);
     % Load MRI structure
     sMri = in_mri_bst(BstMriFile);
     % Set fiducials

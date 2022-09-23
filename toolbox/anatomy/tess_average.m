@@ -130,9 +130,9 @@ if isSave
     % Make output filename relative
     NewTessFile = file_short(NewTessFile);
     % Get subject
-    [sSubject, iSubject, iFirstSurf] = bst_get('SurfaceFile', TessFiles{1});
+    sAnatFile = db_get('AnatomyFile', TessFiles{1});
     % Register this file in Brainstorm database
-    iSurface = db_add_surface(iSubject, NewTessFile, NewTess.Comment, sSubject.Surface(iFirstSurf).SurfaceType);
+    iSurface = db_add_surface(sAnatFile.Subject, NewTessFile, NewTess.Comment, sAnatFile.SurfaceType);
 else
     NewTessFile = NewTess;
     iSurface = [];

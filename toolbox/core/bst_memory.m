@@ -154,7 +154,7 @@ function [sMri,iMri] = LoadMri(MriFile)
         if ~isempty(sSubject.iAnatomy) && ~file_compare(MriFile, sAnatFile.FileName) && ...
             (~isfield(sMri, 'SCS') || isempty(sMri.SCS) || isempty(sMri.SCS.NAS) || ~isfield(sMri, 'NCS') || isempty(sMri.NCS) || isempty(sMri.NCS.AC))
             % Load reference volume for this subject
-            sMriRef = bst_memory('LoadMri', sSubject.Anatomy(sSubject.iAnatomy).FileName);
+            sMriRef = bst_memory('LoadMri', sAnatFile.FileName);
             % Copy SCS field
             if (~isfield(sMri, 'SCS') || isempty(sMri.SCS) || isempty(sMri.SCS.NAS)) && isfield(sMriRef, 'SCS') && ~isempty(sMriRef.SCS) && ~isempty(sMriRef.SCS.NAS)
                 sMri.SCS = sMriRef.SCS;

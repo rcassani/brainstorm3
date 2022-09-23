@@ -40,15 +40,17 @@ end
 sMri = [];
 if ischar(iSubject)
     MriFile = iSubject;
-    [sSubject, iSubject] = bst_get('MriFile', MriFile);
+    sSubject = db_get('SubjectFromAnatomyFile', MriFile);
+    %[sSubject, iSubject] = bst_get('MriFile', MriFile);
 elseif isnumeric(iSubject)
     % Get subject
-    sSubject = bst_get('Subject', iSubject);
-    MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
+    sSubject = db_get('Subject', iSubject);
+    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy);
+    MriFile = sAnatFile.FileName;
 elseif isstruct(iSubject)
     sMri = iSubject;
     MriFile = sMri.FileName;
-    [sSubject, iSubject] = bst_get('MriFile', MriFile);
+    sSubject = db_get('SubjectFromAnatomyFile', MriFile);
     % Don't save a surface file, instead return surface directly.
     isSave = false;  
 else
@@ -66,10 +68,11 @@ end
 panel_scout('SaveModifications');
 % If subject is using the default anatomy: use the default subject instead
 if sSubject.UseDefaultAnat
-    iSubject = 0;
+    sSubject = db_get('Subject', '@default_subject');
+    iSubject = sSubject.Id;
 end
 % Check layers
-if isempty(sSubject.iAnatomy) || isempty(sSubject.Anatomy)
+if isempty(sSubject.iAnatomy)
     bst_error('The generate of the head surface requires at least the MRI of the subject.', 'Head surface', 0);
     return
 end
