@@ -30,15 +30,15 @@ end
 
 sqlConn = sql_connect();
 
-% Delete MRI
+% Delete MRIs and Surfaces
 if ~isKeepMri
-    db_set(sqlConn, 'AnatomyFile', 'Delete', struct('Subject', iSubject, 'Type', 'anatomy'));
+    db_set(sqlConn, 'AnatomyFilesWithSubject', 'Delete', iSubject);
     % Empty default anatomy
     sSubject.iAnatomy = [];
+% Delete only Surfaces
+else
+    db_set(sqlConn, 'AnatomyFile', 'Delete', struct('Subject', iSubject, 'Type', 'surface'));
 end
-
-% Delete surfaces
-db_set(sqlConn, 'AnatomyFile', 'Delete', struct('Subject', iSubject, 'Type', 'surface'));
 % Empty default surfaces
 sSubject.iCortex = [];
 sSubject.iScalp = [];
