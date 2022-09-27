@@ -122,7 +122,7 @@ switch (dbInfo.Rdbms)
                 if ~isempty(tables(iTable).Fields(iField).ForeignKey)
                     foreignQry = [foreignQry ', FOREIGN KEY ("' tables(iTable).Fields(iField).Name '")' ...
                         ' REFERENCES "' tables(iTable).Fields(iField).ForeignKey{1} '"' ...
-                        '("' tables(iTable).Fields(iField).ForeignKey{2} '") ON DELETE CASCADE'];
+                        '("' tables(iTable).Fields(iField).ForeignKey{2} '") ON UPDATE RESTRICT ON DELETE CASCADE'];
                 end
                 
             end
