@@ -35,6 +35,7 @@ table = generateTable('Subject');
 table.PrimaryKey = 'Id';
 editField('Id', 'AutoIncrement');
 editField('FileName', 'Unique');
+editField('Name', 'Unique');
 tables(end + 1) = table;
 
 % Study table
