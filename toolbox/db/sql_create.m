@@ -116,6 +116,9 @@ switch (dbInfo.Rdbms)
                 if tables(iTable).Fields(iField).NotNull
                     tblQry = [tblQry ' NOT NULL'];
                 end
+                if tables(iTable).Fields(iField).Unique
+                    tblQry = [tblQry ' UNIQUE'];
+                end
                 if ~isempty(tables(iTable).Fields(iField).ForeignKey)
                     foreignQry = [foreignQry ', FOREIGN KEY ("' tables(iTable).Fields(iField).Name '")' ...
                         ' REFERENCES "' tables(iTable).Fields(iField).ForeignKey{1} '"' ...
