@@ -521,9 +521,13 @@ function SetFigureStatus(hFig, isEditFiducials, isEditVolume, isOverlay, isEeg, 
     end
     % Warning if surfaces or recordings
     SubjectFile = getappdata(hFig, 'SubjectFile');
-    sSubject = bst_get('Subject', SubjectFile);
-    sStudies = bst_get('StudyWithSubject', SubjectFile);
-    if ((~isempty(isEditFiducials) && isEditFiducials) || (~isempty(isEditVolume) && isEditVolume)) && ((~isempty(sSubject) && ~isempty(sSubject.Surface)) || (~isempty(sStudies) && any(~cellfun(@isempty, {sStudies.Channel}))))
+    sqlConn = sql_connect();
+    sSubject = db_get(sqlConn, 'Subject', SubjectFile, 'Name');
+    sSurfaceFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', SubjectFile, 'surface', 'Id');
+    sStudies = db_get(sqlConn, 'StudiesFromSubject', SubjectFile, 'iChannel');
+    sChannelFiles = db_get(sqlConn, 'FunctionalFile', [sStudies.iChannel], 'Id');
+    sql_close(sqlConn);
+    if ((~isempty(isEditFiducials) && isEditFiducials) || (~isempty(isEditVolume) && isEditVolume)) && ((~isempty(sSubject) && ~isempty(sSurfaceFiles)) || (~isempty(sStudies) && ~isempty([sChannelFiles.Id])))
         isConfirm = java_dialog('confirm', [...
             'Surfaces or MEG/EEG recordings have already been imported for subject "' sSubject.Name '".' 10 10 ...
             'Editing the MRI orientation or the position of the NAS/LPA/RPA anatomical fiducials' 10 ...
@@ -2443,9 +2447,12 @@ function SetFiducial(hFig, FidCategory, FidName)
     % Get MRI
     [sMri,TessInfo,iTess,iMri] = panel_surface('GetSurfaceMri', hFig);
     % Get the file in the database
-    [sSubject, iSubject, iAnatomy] = bst_get('MriFile', sMri.FileName);
+    sqlConn = sql_connect();
+    sAnatFile  = db_get(sqlConn, 'AnatomyFile', sMri.FileName, {'Id', 'Subject'});
+    sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sAnatFile.Subject, 'anatomy', 'Id');
+    sql_close(sqlConn);
     % If it is not the first MRI: can't edit the fiducuials
-    if (iAnatomy > 1)
+    if (sAnatFile.Id ~= sAnatFiles(1).Id)
         bst_error('The fiducials should be edited only in the first MRI file.', 'Set fiducials', 0);
     end
     % Get Handles
@@ -2565,7 +2572,7 @@ function [isCloseAccepted, MriFile] = SaveMri(hFig)
 
     % ==== GET REFERENCIAL CHANGES ====
     % Get subject in database, with subject directory
-    [sSubject, iSubject, iAnatomy] = bst_get('MriFile', sMri.FileName);
+    sSubject = db_get('SubjectFromAnatomyFile', sMri.FileName, 'Id');
     % Load the previous MRI fiducials
     warning('off', 'MATLAB:load:variableNotFound');
     sMriOld = load(MriFileFull, 'SCS');
@@ -2602,7 +2609,8 @@ function [isCloseAccepted, MriFile] = SaveMri(hFig)
     
     % ==== REALIGN SURFACES ====
     if ~isempty(sMriOld)
-        UpdateSurfaceCS({sSubject.Surface.FileName}, sMriOld, sMri);
+        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'surfaces', 'FileName');
+        UpdateSurfaceCS({sAnatFiles.FileName}, sMriOld, sMri);
     end
 end
 
@@ -2653,12 +2661,13 @@ end
 % WARNING: Inputs are in millimeters
 function SetSubjectFiducials(iSubject, NAS, LPA, RPA, AC, PC, IH) %#ok<DEFNU>
     % Get the updated subject structure
-    sSubject = bst_get('Subject', iSubject);
+    sSubject = db_get('Subject', iSubject, 'iAnatomy');
     if isempty(sSubject.iAnatomy)
         error('No MRI defined for this subject');
     end
     % Build full MRI file
-    BstMriFile = file_fullpath(sSubject.Anatomy(sSubject.iAnatomy).FileName);
+    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+    BstMriFile = file_fullpath(sAnatFile.FileName);
     % Load MRI structure
     sMri = in_mri_bst(BstMriFile);
     % Set fiducials
@@ -3074,20 +3083,20 @@ function [AtlasNames, AtlasFiles, iAtlas] = GetVolumeAtlases(hFig)
     iAtlas = [];
     % Get subject info
     SubjectFile = getappdata(hFig, 'SubjectFile');
-    sSubject = bst_get('Subject', SubjectFile);
+    sAnatFiles  = db_get('AnatomyFilesWithSubject', SubjectFile, 'anatomy', {'Name', 'FileName'});
     % Find atlases based on the volume names
     iAllAtlases = [];
-    for iAnat = 1:length(sSubject.Anatomy)
-        if any(~cellfun(@(c)isempty(strfind(sSubject.Anatomy(iAnat).Comment, c)), {'aseg', 'svreg', 'tissues'})) || ...
-           ~isempty(strfind(sSubject.Anatomy(iAnat).FileName, '_volatlas'))
+    for iAnat = 1:length(sAnatFiles)
+        if any(~cellfun(@(c)isempty(strfind(sAnatFiles(iAnat).Name, c)), {'aseg', 'svreg', 'tissues'})) || ...
+           ~isempty(strfind(sAnatFiles(iAnat).FileName, '_volatlas'))
             iAllAtlases(end+1) = iAnat;
         end
     end
     if isempty(iAllAtlases)
         return;
     end
-    AtlasNames = {sSubject.Anatomy(iAllAtlases).Comment};
-    AtlasFiles = {sSubject.Anatomy(iAllAtlases).FileName};
+    AtlasNames = {sAnatFiles(iAllAtlases).Name};
+    AtlasFiles = {sAnatFiles(iAllAtlases).FileName};
     % Add an empty atlas
     if ~isempty(AtlasNames)
         AtlasNames{end+1} = 'none';

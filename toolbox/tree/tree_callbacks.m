@@ -168,9 +168,9 @@ switch (lower(action))
                 
             % === SUBJECT ===
             case 'subject'
-                % If clicked subject is not the default subject (ie. index=0)
-                if (bstNodes(1).getStudyIndex() > 0)
-                	db_edit_subject(bstNodes(1).getStudyIndex());
+                % If clicked subject is not the default subject (ie. dir=@default_subject)
+                if ~strcmp(bst_fileparts(char(bstNodes(1).getFileName())), bst_get('DirDefaultSubject'))
+                    db_edit_subject(bstNodes(1).getStudyIndex());
                 end
             % === SUBJECT ===
             case 'studysubject'
@@ -183,9 +183,6 @@ switch (lower(action))
             % ===== ANATOMY =====
             % Mark/unmark (items selected : 1)
             case 'anatomy'
-                % Get subject
-                iSubject = bstNodes(1).getStudyIndex();
-                sSubject = bst_get('Subject', iSubject);
                 % MRI: Display in MRI viewer
                 view_mri(filenameRelative);
                 
@@ -194,10 +191,11 @@ switch (lower(action))
                 % Get subject
                 iSubject = bstNodes(1).getStudyIndex();
                 iAnatomy = bstNodes(1).getItemIndex();
-                sSubject = bst_get('Subject', iSubject);
+                sSubject = db_get('Subject', iSubject, 'iAnatomy');
                 % Atlas: display as overlay on the default MRI
                 if (iAnatomy ~= sSubject.iAnatomy)
-                    view_mri(sSubject.Anatomy(sSubject.iAnatomy).FileName, filenameRelative);
+                    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                    view_mri(sAnatFile.FileName, filenameRelative);
                 else
                     view_mri(filenameRelative);
                 end
@@ -572,14 +570,15 @@ switch (lower(action))
             case 'subject'
                 % Get subject
                 iSubject = bstNodes(1).getStudyIndex(); 
-                sSubject = bst_get('Subject', iSubject);
+                sSubject = db_get('Subject', iSubject);
+                isDefaultSubject = strcmp(sSubject.Name, bst_get('DirDefaultSubject'));
                 % === EDIT SUBJECT ===
                 % If subject is not default subject (if subject index is not 0)
-                if ~bst_get('ReadOnly') && (iSubject > 0)
+                if ~bst_get('ReadOnly') && ~isDefaultSubject
                     gui_component('MenuItem', jPopup, [], 'Edit subject', IconLoader.ICON_EDIT, [], @(h,ev)db_edit_subject(iSubject));
                 end
                 % If subject node is not a node linked to "Default anatomy"
-                if ~bst_get('ReadOnly') && ((iSubject == 0) || ~sSubject.UseDefaultAnat)
+                if ~bst_get('ReadOnly') && (isDefaultSubject || ~sSubject.UseDefaultAnat)
                     AddSeparator(jPopup);
                     % === IMPORT ===
                     gui_component('MenuItem', jPopup, [], 'Import anatomy folder', IconLoader.ICON_ANATOMY, [], @(h,ev)bst_call(@import_anatomy, iSubject, 0));
@@ -655,7 +654,7 @@ switch (lower(action))
                     % === MRI SEGMENTATION ===
                     fcnMriSegment(jPopup, sSubject, iSubject, [], 0);
                     % Export menu (added later)
-                    if (iSubject ~= 0)
+                    if ~isDefaultSubject
                         jMenuExport{1} = gui_component('MenuItem', [], [], 'Export subject',  IconLoader.ICON_SAVE, [], @(h,ev)export_protocol(bst_get('iProtocol'), iSubject));
                         jMenuExport{2} = 'separator';
                     end
@@ -1023,7 +1022,7 @@ switch (lower(action))
 %% ===== POPUP: ANATOMY =====
             case {'anatomy', 'volatlas'}
                 iSubject = bstNodes(1).getStudyIndex();
-                sSubject = bst_get('Subject', iSubject);
+                sSubject = db_get('Subject', iSubject);
                 iAnatomy = [];
                 for iFile = 1:length(bstNodes)
                     iAnatomy(iFile) = bstNodes(iFile).getItemIndex();
@@ -1041,8 +1040,8 @@ switch (lower(action))
                         % Display as overlay
                         if ~bstNodes(1).isMarked()
                             % Get subject structure
-                            sSubject = bst_get('MriFile', filenameRelative);
-                            sAnatFile = db_get('AnatomyFile', iAnatomy, 'FileName');
+                            sSubject = db_get('SubjectFromAnatomyFile', filenameRelative, 'iAnatomy');
+                            sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
                             MriFile = sAnatFile.FileName;
                             % Overlay menus
                             gui_component('MenuItem', jMenuDisplay, [], 'Overlay on default MRI (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(MriFile, filenameRelative));
@@ -3032,12 +3031,12 @@ end
 function fcnMriSegment(jPopup, sSubject, iSubject, iAnatomy, isAtlas)
     import org.brainstorm.icon.*;
     % No anatomy: nothing to do
-    if isempty(sSubject.Anatomy)
+    if isempty(db_get('AnatomyFilesWithSubject', iSubject, 'anatomy', 'Id'))
         return;
     end
     % Using default anatomy
     if isempty(iAnatomy)
-        if ~isempty(sSubject.iAnatomy) && (sSubject.iAnatomy <= length(sSubject.Anatomy))
+        if ~isempty(sSubject.iAnatomy)
             sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
             MriFile = sAnatFile.FileName;
         else
@@ -3100,7 +3099,7 @@ function fcnMriSegment(jPopup, sSubject, iSubject, iAnatomy, isAtlas)
           
     % === TISSUE SEGMENTATION ===
     elseif (length(iAnatomy) == 1) && ~isempty(strfind(sAnatFile.Name, 'tissues'))
-        gui_component('MenuItem', jPopup, [], 'Generate triangular meshes', IconLoader.ICON_SURFACE_SCALP, [], @(h,ev)bst_call(@tess_meshlayer, sSubject.Anatomy(iAnatomy).FileName));
+        gui_component('MenuItem', jPopup, [], 'Generate triangular meshes', IconLoader.ICON_SURFACE_SCALP, [], @(h,ev)bst_call(@tess_meshlayer, sAnatFile.FileName));
         gui_component('MenuItem', jPopup, [], 'Generate hexa mesh (FieldTrip)', IconLoader.ICON_FEM, [], @(h,ev)bst_call(@process_ft_prepare_mesh_hexa, 'ComputeInteractive', iSubject, iAnatomy));
     end
 end

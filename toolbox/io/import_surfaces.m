@@ -75,10 +75,20 @@ Labels = [];
 % Get Protocol information
 ProtocolInfo = bst_get('ProtocolInfo');
 % Get subject directory
-sSubject = bst_get('Subject', iSubject);
+% Default subject
+if (iSubject == 0)
+	sSubject = db_get('Subject', '@default_subject');
+    iSubject = sSubject.Id;
+% Normal subject
+else
+    sSubject = db_get('Subject', iSubject);
+end
 subjectSubDir = bst_fileparts(sSubject.FileName);
+% Current MRIs
+sAnatFilesMris = db_get('AnatomyFilesWithSubject', iSubject, 'anatomy', {'Id', 'FileName'});
+
 % Check the presence of the MRI: warning if no MRI
-if isempty(sSubject.Anatomy)
+if isempty(sAnatFilesMris)
     res = java_dialog('confirm', ...
         ['WARNING: To import correctly surface files, the subject''s MRI is needed.' 10 10 ...
         'Import subject''s MRI now?' 10 10], 'Import surfaces');
@@ -120,8 +130,8 @@ end
 
 %% ===== APPLY MRI TRANSFORM =====
 % Load MRI
-if ~isempty(sSubject.Anatomy)
-    sMri = bst_memory('LoadMri', sSubject.Anatomy(sSubject.iAnatomy).FileName);
+if ~isempty(sAnatFilesMris)
+    sMri = bst_memory('LoadMri', sAnatFilesMris([sAnatFilesMris.Id] == sSubject.iAnatomy).FileName);
 else
     sMri = [];
 end

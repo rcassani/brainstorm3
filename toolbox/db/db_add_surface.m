@@ -1,4 +1,4 @@
-function [ iSurface ] = db_add_surface( iSubject, FileName, Comment, SurfaceType )
+function [ iAnatFile ] = db_add_surface( iSubject, FileName, Comment, SurfaceType )
 % DB_ADD_SURFACE: Add a surface in database and refresh tree.
 %
 % USAGE:  [iSurface] = db_add_surface( iSubject, FileName, Comment, SurfaceType )

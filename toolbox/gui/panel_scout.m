@@ -4602,9 +4602,11 @@ function ReloadScouts(hFig)
     if (nargin < 1) || isempty(hFig)
         % Get current surface and/or subject MRI
         SurfaceFiles = {GlobalData.CurrentScoutsSurface};
-        sSubject = bst_get('SurfaceFile', GlobalData.CurrentScoutsSurface);
-        if ~isempty(sSubject) && ~isempty(sSubject.Anatomy)
-            SurfaceFiles{2} = sSubject.Anatomy(sSubject.iAnatomy).FileName;
+        %sSubject = bst_get('SurfaceFile', GlobalData.CurrentScoutsSurface);
+        sSubject = db_get('SubjectFromAnatomyFile', GlobalData.CurrentScoutsSurface);
+        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'anatomy');
+        if ~isempty(sSubject) && ~isempty(sAnatFiles)
+            SurfaceFiles{2} = sAnatFiles([sAnatFiles.Id] == sSubject.iAnatomy).FileName;
         end
         % Get figures to update
         hFigures = bst_figures('GetFigureWithSurface', SurfaceFiles);

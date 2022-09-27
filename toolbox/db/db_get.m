@@ -229,6 +229,8 @@ switch contextName
                         tmp = sDefaultSubject;
                         tmp.Id                = sSubjects(i).Id;
                         tmp.Name              = sSubjects(i).Name;
+                        tmp.Comments          = sSubjects(i).Comments;
+                        tmp.DateOfAcquisition = sSubjects(i).DateOfAcquisition;
                         tmp.UseDefaultAnat    = sSubjects(i).UseDefaultAnat;
                         tmp.UseDefaultChannel = sSubjects(i).UseDefaultChannel;
                         sSubjects(i) = tmp;                   

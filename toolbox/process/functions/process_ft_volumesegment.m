@@ -152,13 +152,13 @@ function OutputFiles = Run(sProcess, sInputs) %#ok<DEFNU>
     % ===== LOOP ON SUBJECTS =====
     for isub = 1:length(SubjectNames)
         % Get subject 
-        [sSubject, iSubject] = bst_get('Subject', SubjectNames{isub});
-        if isempty(iSubject)
+        sSubject = db_get('Subject', SubjectNames{isub});
+        if isempty(sSubject)
             bst_report('Error', sProcess, [], ['Subject "' SubjectNames{isub} '" does not exist.']);
             return
         end
         % Check if a MRI is available for the subject
-        if isempty(sSubject.Anatomy) || isempty(sSubject.iAnatomy)
+        if isempty(sSubject.iAnatomy)
             bst_report('Error', sProcess, [], ['No MRI available for subject "' SubjectNames{isub} '".']);
             return
         end
@@ -166,7 +166,7 @@ function OutputFiles = Run(sProcess, sInputs) %#ok<DEFNU>
         % Initialize progress bar
         bst_progress('start', 'ft_volumesegment', 'Initializing...');
         % Call processing function
-        [isOk, errMsg] = Compute(iSubject, sSubject.iAnatomy, OPTIONS);
+        [isOk, errMsg] = Compute(sSubject.Id, sSubject.iAnatomy, OPTIONS);
         % Handling errors
         if ~isOk
             bst_report('Error', sProcess, [], errMsg);
@@ -208,7 +208,7 @@ function [isOk, errMsg, TissueFile] = Compute(iSubject, iMri, OPTIONS)
         OPTIONS = struct_copy_fields(OPTIONS, Def_OPTIONS, 0);
     end
     % Get subject
-    sSubject = bst_get('Subject', iSubject);
+    sSubject = db_get('Subject', iSubject);
     % If not specified, use default MRI
     if isempty(iMri)
         iMri = sSubject.iAnatomy;
@@ -216,7 +216,8 @@ function [isOk, errMsg, TissueFile] = Compute(iSubject, iMri, OPTIONS)
 
     % ===== LOAD INPUT =====
     % Load Brainstorm MRI
-    MriFile = sSubject.Anatomy(iMri).FileName;
+    sAnatFile = db_get('AnatomyFile', iMri, 'FileName');
+    MriFile = sAnatFile.FileName;
     sMri = in_mri_bst(MriFile);
     % Convert to FieldTrip structure
     ftMri = out_fieldtrip_mri(sMri);
@@ -293,19 +294,15 @@ function [isOk, errMsg, TissueFile] = Compute(iSubject, iMri, OPTIONS)
             sTess.Vertices = ftMesh(i).pos;
             sTess.Faces    = ftMesh(i).tri;
             % Set comment
+            sAnatFilesSurfaces = db_get('AnatomyFilesWithSubject', sSubject.Id, 'surface', 'Name');
             fileTag = sprintf('_%dV', OPTIONS.nVertices(i));
-            sTess.Comment = file_unique(['bem_' bemName '_ft' fileTag], {sSubject.Surface.Comment});
+            sTess.Comment = file_unique(['bem_' bemName '_ft' fileTag], {sAnatFilesSurfaces.Name});
             % Output file name
             NewTessFile = file_unique(bst_fullfile(bst_fileparts(file_fullpath(MriFile)), ['tess_' bemName 'bem_ft' fileTag '.mat']));
             % Save file
             bst_save(NewTessFile, sTess, 'v7');
             % Add to subject
-            iSurface = length(sSubject.Surface) + 1;
-            sSubject.Surface(iSurface).Comment     = sTess.Comment;
-            sSubject.Surface(iSurface).FileName    = file_short(NewTessFile);
-            sSubject.Surface(iSurface).SurfaceType = SurfaceType;
-            % Save subject
-            bst_set('Subject', iSubject, sSubject);
+            iSurface = db_add_anatomyfile(sSubject.Id, NewTessFile, sTess.Comment, SurfaceType);
             % Set surface type
             sSubject = db_surface_default(iSubject, SurfaceType, iSurface, 0);
         end
@@ -315,7 +312,8 @@ function [isOk, errMsg, TissueFile] = Compute(iSubject, iMri, OPTIONS)
     % Add basic labels
     sMriTissue.Labels = mri_getlabels('tissues5');
     % Set comment
-    sMriTissue.Comment = file_unique('tissues', {sSubject.Surface.Comment});
+    sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'anatomy', 'Name');
+    sMriTissue.Comment = file_unique('tissues', {sAnatFiles.Name});
     % Copy some fields from the original MRI
     if isfield(sMri, 'SCS') 
         sMriTissue.SCS = sMri.SCS;
@@ -333,15 +331,11 @@ function [isOk, errMsg, TissueFile] = Compute(iSubject, iMri, OPTIONS)
     % Save new MRI in Brainstorm format
     sMriTissue = out_mri_bst(sMriTissue, TissueFile);
     % Add to subject
-    iAnatomy = length(sSubject.Anatomy) + 1;
-    sSubject.Anatomy(iAnatomy).Comment  = sMriTissue.Comment;
-    sSubject.Anatomy(iAnatomy).FileName = file_short(TissueFile);
+    db_add_anatomyfile(sSubject.Id, TissueFile, sMriTissue.Comment);
     
     % ===== UPDATE GUI =====
-    % Save subject
-    bst_set('Subject', iSubject, sSubject);
     % Refresh tree
-    panel_protocols('UpdateNode', 'Subject', iSubject);
+    panel_protocols('UpdateNode', 'Subject', sSubject.Id);
     % Save database
     db_save();
     isOk = 1;

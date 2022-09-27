@@ -54,21 +54,23 @@ end
 % Save current scouts modifications
 panel_scout('SaveModifications');
 % Get subject
-sSubject = bst_get('Subject', iSubject);
+sSubject = db_get('Subject', iSubject);
 % If subject is using the default anatomy: use the default subject instead
 if sSubject.UseDefaultAnat
-    iSubject = 0;
+    sSubjectDefault = db_get('Subject', '@default_subject', 'Id');
+    iSubject = sSubjectDefault.Id;
 end
 % Check layers
-if isempty(sSubject.iCortex) || isempty(sSubject.iScalp) || isempty(sSubject.iAnatomy) || isempty(sSubject.Anatomy)
+if isempty(sSubject.iCortex) || isempty(sSubject.iScalp) || isempty(sSubject.iAnatomy)
     bst_error('Computation of BEM layers requires at least: MRI + scalp surface + cortex surface.', 'BEM surfaces', 0);
     return
 end
 % Progress bar
 bst_progress('start', 'Create BEM surfaces', 'Initialization...', 0, 100);
 % Get surfaces
-CortexFile = sSubject.Surface(sSubject.iCortex(1)).FileName;
-ScalpFile  = sSubject.Surface(sSubject.iScalp(1)).FileName;
+sAnatFiles = db_get('AnatomyFile', [sSubject.iCortex , sSubject.iScalp], 'FileName');
+CortexFile = sAnatFiles(1).FileName;
+ScalpFile  = sAnatFiles(2).FileName;
 
 
 %% ===== GET DEFAULT ANATOMY =====

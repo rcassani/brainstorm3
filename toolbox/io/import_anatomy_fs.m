@@ -92,9 +92,17 @@ bst_memory('UnloadAll', 'Forced');
 
 %% ===== DELETE PREVIOUS ANATOMY =====
 % Get subject definition
-sSubject = bst_get('Subject', iSubject);
+if (iSubject == 0)
+	sSubject = db_get('Subject', '@default_subject');
+    iSubject = sSubject.Id;
+% Normal subject
+else
+    sSubject = db_get('Subject', iSubject);
+end
+sAnatFilesMri  = db_get('AnatomyFilesWithSubject', iSubject, 'anatomy', 'Id');
+nAnatFileSSurf = db_get('AnatomyFilesWithSubject', iSubject, 'surface', 'Id');
 % Check for existing anatomy
-if (~isempty(sSubject.Anatomy) && (isKeepMri == 0)) || (~isempty(sSubject.Surface) && (isKeepMri < 2))
+if (~isempty(sAnatFilesMri) && (isKeepMri == 0)) || (~isempty(nAnatFileSSurf) && (isKeepMri < 2))
     % Ask user whether the previous anatomy should be removed
     if isInteractive
         isDel = java_dialog('confirm', ['Warning: There is already an anatomy defined for this subject.' 10 10 ...
@@ -233,8 +241,9 @@ end
 
 
 %% ===== IMPORT T1 =====
-if isKeepMri && ~isempty(sSubject.Anatomy)
-    BstT1File = file_fullpath(sSubject.Anatomy(sSubject.iAnatomy).FileName);
+if isKeepMri && ~isempty(sAnatFilesMri)
+    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+    BstT1File = file_fullpath(sAnatFile.FileName);
     in_mri_bst(BstT1File);
 else
     % Read T1 MRI
@@ -247,7 +256,8 @@ else
         return;
     end
     % Enforce it as the permanent default MRI
-    sSubject = db_surface_default(iSubject, 'Anatomy', 1, 0);
+    sAnatFile = db_get('AnatomyFile', BstT1File, 'Id');
+    sSubject = db_surface_default(iSubject, 'Anatomy', sAnatFile.Id, 0);
 end
 
 
@@ -464,11 +474,15 @@ if ~isempty(TessLhFile) && ~isempty(TessRhFile)
     CortexHiFile    = bst_fullfile(bst_fileparts(oldCortexHiFile), 'tess_cortex_pial_high.mat');
     file_move(oldCortexHiFile, CortexHiFile);
     CortexHiFile = file_short(CortexHiFile);
-    % Rename high-res file
+    sAnatFile = db_get('AnatomyFile', oldCortexHiFile, 'Id');
+    db_set('AnatomyFile', struct('FileName', CortexHiFile), sAnatFile.Id);
+    % Rename low-res file
     oldCortexLowFile = file_fullpath(CortexLowFile);
     CortexLowFile    = bst_fullfile(bst_fileparts(oldCortexLowFile), 'tess_cortex_pial_low.mat');
     file_move(oldCortexLowFile, CortexLowFile);
-    CortexHiFile = file_short(CortexHiFile);
+    CortexLowFile = file_short(CortexLowFile);
+    sAnatFile = db_get('AnatomyFile', oldCortexLowFile, 'Id');
+    db_set('AnatomyFile', struct('FileName', CortexLowFile), sAnatFile.Id);
 else
     CortexHiFile = [];
     CortexLowFile = [];
@@ -484,10 +498,14 @@ if ~isempty(TessLwFile) && ~isempty(TessRwFile)
     oldWhiteHiFile = file_fullpath(WhiteHiFile);
     WhiteHiFile    = bst_fullfile(bst_fileparts(oldWhiteHiFile), 'tess_cortex_white_high.mat');
     file_move(oldWhiteHiFile, WhiteHiFile);
-    % Rename high-res file
+    sAnatFile = db_get('AnatomyFile', oldWhiteHiFile, 'Id');
+    db_set('AnatomyFile', struct('FileName', WhiteHiFile), sAnatFile.Id);
+    % Rename low-res file
     oldWhiteLowFile = file_fullpath(WhiteLowFile);
     WhiteLowFile    = bst_fullfile(bst_fileparts(oldWhiteLowFile), 'tess_cortex_white_low.mat');
     file_move(oldWhiteLowFile, WhiteLowFile);
+    sAnatFile = db_get('AnatomyFile', oldWhiteLowFile, 'Id');
+    db_set('AnatomyFile', struct('FileName', WhiteLowFile), sAnatFile.Id);
 end
 % Merge hemispheres: mid-surface (do not compute without volume atlases, to make a very light default import)
 if isVolumeAtlas && ~isempty(TessLhFile) && ~isempty(TessRhFile) && ~isempty(TessLwFile) && ~isempty(TessRwFile)
@@ -500,10 +518,14 @@ if isVolumeAtlas && ~isempty(TessLhFile) && ~isempty(TessRhFile) && ~isempty(Tes
     oldMidHiFile = file_fullpath(MidHiFile);
     MidHiFile    = bst_fullfile(bst_fileparts(oldMidHiFile), 'tess_cortex_mid_high.mat');
     file_move(oldMidHiFile, MidHiFile);
-    % Rename high-res file
+    sAnatFile = db_get('AnatomyFile', oldMidHiFile, 'Id');
+    db_set('AnatomyFile', struct('FileName', MidHiFile), sAnatFile.Id);
+    % Rename low-res file
     oldMidLowFile = file_fullpath(MidLowFile);
     MidLowFile    = bst_fullfile(bst_fileparts(oldMidLowFile), 'tess_cortex_mid_low.mat');
     file_move(oldMidLowFile, MidLowFile);
+    sAnatFile = db_get('AnatomyFile', oldMidLowFile, 'Id');
+    db_set('AnatomyFile', struct('FileName', MidLowFile), sAnatFile.Id);
 end
 
 %% ===== DELETE INTERMEDIATE FILES =====
@@ -567,8 +589,8 @@ end
 %% ===== UPDATE GUI =====
 % Set default cortex
 if ~isempty(TessLhFile) && ~isempty(TessRhFile)
-    [sSubject, iSubject, iSurface] = bst_get('SurfaceFile', CortexLowFile);
-    db_surface_default(iSubject, 'Cortex', iSurface);
+    sAnatFileSurf = db_get('AnatomyFile', CortexLowFile, 'Id');
+    db_surface_default(iSubject, 'Cortex', sAnatFileSurf.Id);
 end
 % Update subject node
 panel_protocols('UpdateNode', 'Subject', iSubject);

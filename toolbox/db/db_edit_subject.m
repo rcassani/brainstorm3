@@ -29,16 +29,18 @@ iSubject  = [];
 %% ===== PARSE INPUTS =====
 % Get ProtocolSubjects structure 
 ProtocolInfo = bst_get('ProtocolInfo');
-ProtocolSubjects = bst_get('ProtocolSubjects');
-nbSubjects = length(ProtocolSubjects.Subject);
 % Get subject to edit (parse inputs)
 if (nargin == 0)
-    iSubjectsList = nbSubjects + 1;
+    isNewSubject = 1;
+    iSubject = db_get('SubjectCount') + 1;
 elseif (nargin == 1)
     iSubjectsList = varargin{1};
-    if (iSubjectsList <= 0)
-        error('Subject #%d does not exist.', iSubjectsList);
+    % Start with the first subject of the list to edit
+    iSubject = iSubjectsList(1);
+    if ~sql_query('EXIST', 'Subject', struct('Id', iSubject))
+        error('Subject #%d does not exist.', iSubject);
     end
+    isNewSubject = 0;
 else
     error('Usage : db_edit_subject([iSubject])');
 end
@@ -54,11 +56,7 @@ ctrl = get(panelSubjectEditor, 'sControls');
 java_setcb(ctrl.jButtonSave, 'ActionPerformedCallback', @updateSubjectModifications);
 % Show panel
 panelContainer = gui_show(panelSubjectEditor, 'JavaWindow', 'Edit subject', [], 1, 0, 0);
-
-% Start with the first subject of the list to edit
-iSubject = iSubjectsList(1);
 UpdatePanel();
-
 
 
 %% =================================================================================
@@ -66,16 +64,14 @@ UpdatePanel();
 %  =================================================================================
 %% ===== UPDATE PANEL FOR A GIVEN SUBJECT =====
     function UpdatePanel()
-        % Get subject
-        nbSubjects = bst_get('SubjectCount');
-        isNewSubject = (iSubject > nbSubjects);
-        sDefaultSubject = bst_get('Subject', 0);
+        % Is there Default Subject
+        isDefaultSubject = sql_query('EXIST', 'Subject',  struct('Name', bst_get('DirDefaultSubject')));
         
         % EDITING EXISTING SUBJECT
         if ~isNewSubject
             panelTitle = sprintf('Edit subject #%d',iSubject);
             % Get subject
-            sSubject = bst_get('Subject', iSubject, 1);
+            sSubject = db_get('Subject', iSubject, '*', 1);
         % NEW SUBJECT
         else
             panelTitle = sprintf('Create subject #%d',iSubject);
@@ -94,7 +90,7 @@ UpdatePanel();
         ctrl.jTextSubjectName.setText(sSubject.Name);
         ctrl.jTextSubjectComments.setText(sSubject.Comments);
         % Default anatomy 
-        if (~isfield(sSubject, 'UseDefaultAnat') || ~sSubject.UseDefaultAnat) || isempty(sDefaultSubject)
+        if (~isfield(sSubject, 'UseDefaultAnat') || ~sSubject.UseDefaultAnat) || ~isDefaultSubject
             ctrl.jRadioAnatomyIndividual.setSelected(1);
         else
             ctrl.jRadioAnatomyDefault.setSelected(1);
@@ -110,7 +106,7 @@ UpdatePanel();
 
         % If no protocol's default subject is available 
         % => Disable "Use protocol default" radio button for anatomy
-        if isempty(sDefaultSubject)
+        if ~isDefaultSubject
             ctrl.jRadioAnatomyDefault.setEnabled(0);
         end
     end
@@ -119,14 +115,11 @@ UpdatePanel();
 %% ===== SAVE button : Update subject modifications =====
     function updateSubjectModifications(varargin)       
         % ==== GET INPUTS ====
-        % Is it a new subject?
-        nbSubjects = bst_get('SubjectCount');
-        isNewSubject = (iSubject > nbSubjects);
         % Create subject structure
         if isNewSubject
             sSubject = db_template('Subject');
         else
-            sOldSubject = bst_get('Subject', iSubject);
+            sOldSubject = db_get('Subject', iSubject);
             sSubject = sOldSubject;
         end
         % Subject name, filename, comments
@@ -157,7 +150,7 @@ UpdatePanel();
             return
         end
         % Check for existing subject
-        if ~isNewSubject && ~strcmpi(sOldSubject.Name, sSubject.Name) && file_exist(bst_fullfile(ProtocolInfo.SUBJECTS, sSubject.Name))
+        if ~isNewSubject && ~strcmpi(sOldSubject.Name, sSubject.Name) && file_exist(file_fullpath(sSubject.FileName))
             bst_error(['Subject "' sSubject.Name '" already exists.'], 'Subject editor', 0);
             return
         end
@@ -169,7 +162,7 @@ UpdatePanel();
         % ==== ADD SUBJECT ====
         % Create a new subject
         if isNewSubject
-            sSubject = db_add_subject(sSubject);
+            [sSubject, iSubject] = db_add_subject(sSubject);
             if isempty(sSubject)
                 bst_error('Subject could not be created.', 'Subject editor', 0);
                 return
@@ -195,10 +188,10 @@ UpdatePanel();
                 % Rename subject
                 db_rename_subject(sOldSubject.Name, sSubject.Name);
                 % Get subject again (database was reloaded)
-                [sOldSubject, iSubject] = bst_get('Subject', sSubject.Name);
+                sOldSubject = db_get('Subject', sSubject.Name);
             end
-            % Save new subject
-            sSubject = db_add_subject(sSubject, iSubject);
+            % Save edited subject
+            [sSubject, iSubject] = db_add_subject(sSubject);
             % Update channel files
             if (sSubject.UseDefaultChannel ~= sOldSubject.UseDefaultChannel)
                 % Get studies where there should be channel files for this subject

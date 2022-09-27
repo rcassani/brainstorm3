@@ -28,22 +28,18 @@ if (nargin < 2) || isempty(isKeepMri)
     isKeepMri = 0;
 end
 
-% Get subject
-sSubject = bst_get('Subject', iSubject);
+sqlConn = sql_connect();
 
-% Delete MRI
-if ~isKeepMri && ~isempty(sSubject.Anatomy)
-    file_delete(file_fullpath({sSubject.Anatomy.FileName}), 1);
-    sSubject.Anatomy(1:end) = [];
+% Delete MRIs and Surfaces
+if ~isKeepMri
+    db_set(sqlConn, 'AnatomyFilesWithSubject', 'Delete', iSubject);
+    % Empty default anatomy
     sSubject.iAnatomy = [];
+% Delete only Surfaces
+else
+    db_set(sqlConn, 'AnatomyFile', 'Delete', struct('Subject', iSubject, 'Type', 'surface'));
 end
-
-% Delete surfaces
-if ~isempty(sSubject.Surface)
-    file_delete(file_fullpath({sSubject.Surface.FileName}), 1);
-    sSubject.Surface(1:end) = [];
-end
-% Empty defaults lists
+% Empty default surfaces
 sSubject.iCortex = [];
 sSubject.iScalp = [];
 sSubject.iInnerSkull = [];
@@ -51,9 +47,12 @@ sSubject.iOuterSkull = [];
 sSubject.iFibers = [];
 sSubject.iFEM = [];
 
-% Update subject structure
-bst_set('Subject', iSubject, sSubject);
+% Update Subject
+db_set(sqlConn, 'Subject', sSubject, iSubject);
 panel_protocols('UpdateNode', 'Subject', iSubject);
-% Save database
-db_save();
+
+if nargout > 0
+    sSubject = db_get(sqlConn, 'Subject', iSubject);
+end
+sql_close(sqlConn);
 

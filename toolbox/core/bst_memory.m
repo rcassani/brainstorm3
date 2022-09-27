@@ -86,7 +86,7 @@ function [sMri,iMri] = LoadMri(MriFile)
     if isnumeric(MriFile)
         % Get subject
         iSubject = MriFile;
-        sSubject = db_get('Subject', iSubject, {'Name', 'iAnatomy'});
+        sSubject = db_get('Subject', iSubject, {'FileName', 'iAnatomy', 'Name'});
         % If subject does not have a MRI
         if isempty(sSubject.iAnatomy)
             error('No MRI avaialable for subject "%s".', sSubject.Name);
@@ -95,7 +95,7 @@ function [sMri,iMri] = LoadMri(MriFile)
         sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
         MriFile = sAnatFile.FileName;
     else
-        sSubject = bst_get('MriFile', MriFile);
+        sSubject = db_get('SubjectFromAnatomyFile', MriFile, {'FileName', 'iAnatomy'});
     end
 
     % ===== CHECK IF LOADED =====
@@ -150,10 +150,11 @@ function [sMri,iMri] = LoadMri(MriFile)
         
         % === REFERENCE VOLUME ===
         % Copy SCS and NCS fields from reference volume
-        if ~isempty(sSubject.iAnatomy) && ~file_compare(MriFile, sSubject.Anatomy(sSubject.iAnatomy).FileName) && ...
+        sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+        if ~isempty(sSubject.iAnatomy) && ~file_compare(MriFile, sAnatFile.FileName) && ...
             (~isfield(sMri, 'SCS') || isempty(sMri.SCS) || isempty(sMri.SCS.NAS) || ~isfield(sMri, 'NCS') || isempty(sMri.NCS) || isempty(sMri.NCS.AC))
             % Load reference volume for this subject
-            sMriRef = bst_memory('LoadMri', sSubject.Anatomy(sSubject.iAnatomy).FileName);
+            sMriRef = bst_memory('LoadMri', sAnatFile.FileName);
             % Copy SCS field
             if (~isfield(sMri, 'SCS') || isempty(sMri.SCS) || isempty(sMri.SCS.NAS)) && isfield(sMriRef, 'SCS') && ~isempty(sMriRef.SCS) && ~isempty(sMriRef.SCS.NAS)
                 sMri.SCS = sMriRef.SCS;
@@ -3470,7 +3471,7 @@ function UnloadMri(MriFile) %#ok<DEFNU>
     % Unload MRI
     GlobalData.Mri(iMri) = [];
     % Get subject
-    sSubject = bst_get('MriFile', MriFile);
+    sSubject = db_get('SubjectFromAnatomyFile', MriFile, 'FileName');
     % Unload subject
     UnloadSubject(sSubject.FileName);
 end
@@ -3483,7 +3484,7 @@ function UnloadSubject(SubjectFile)
     % Process all the datasets
     for iDS = 1:length(GlobalData.DataSet)
         % Get subject filename (with default anat if it is the case)
-        sSubjectDs = bst_get('Subject', GlobalData.DataSet(iDS).SubjectFile);
+        sSubjectDs = db_get('Subject', GlobalData.DataSet(iDS).SubjectFile, 'FileName');
         % If this dataset uses the subject to unload
         if file_compare(sSubjectDs.FileName, SubjectFile)
             iDsToUnload = [iDsToUnload, iDS];
