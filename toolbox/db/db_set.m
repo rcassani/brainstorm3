@@ -466,7 +466,7 @@ switch contextName
                 end
                 iFuncFile = sql_query(sqlConn, 'INSERT', 'FunctionalFile', sFuncFile);
                 varargout{1} = iFuncFile;
-                % Increase the number of children in parent or list
+                % Increase the number of children in parent
                 if ~isempty(sFuncFile.ParentFile) && sFuncFile.ParentFile > 0
                    db_set(sqlConn, 'ParentCount', sFuncFile.ParentFile, '+', 1);
                 end
@@ -493,49 +493,64 @@ switch contextName
                 end
             end
 
-            % Handle lists
+            % Handle List in case of Insert or Renamed FunctionalFile
             if ~isempty(list_names) && (length(unique(list_names)) == length(list_names))
-                % Get all files in Study and Type ('Id', 'Name', 'FileName')
-                sFuncFiles = db_get('FunctionalFilesWithStudy', list_study, list_type, {'Id', 'Name', 'FileName', 'ParentFile'});
-                cleanNames = cellfun(@(x) str_remove_parenth(x), {sFuncFiles.Name}, 'UniformOutput', false);
-                for i = 1 : length(list_names)
-                    % Search for a list for this clean name
-                    list = sql_query(sqlConn, 'SELECT', 'FunctionalFile', ...
-                           struct('Name', list_names{i}, 'Study', list_study, 'Type', [list_type, 'list']), 'Id');
-                    % Get number for items matching name
-                    ix = strcmp(cleanNames, list_names{i});
-                    sFunctFilesTmp = sFuncFiles(ix);
-                    if length(sFunctFilesTmp) >= minListChildren
-                        if isempty(list)
+                % Look for existing list
+                searchQry = struct('Name', list_names{1}, 'Study', list_study, 'Type', [list_type, 'list']);
+                list = sql_query(sqlConn, 'SELECT', 'FunctionalFile', searchQry, 'Id');
+                if ~isempty(list)
+                    % Update child.ParentFile
+                    db_set(sqlConn, 'FunctionalFile', struct('ParentFile', list.Id), iFuncFile);
+                    % Update list.NuChild
+                    db_set(sqlConn, 'ParentCount', list.Id, '+', 1);
+                else
+                    % Look for potential sibilings (including recently inserted)
+                    sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', list_study, list_type, {'Id', 'Name', 'FileName', 'ParentFile'});
+                    if ~isempty(sFuncFiles)
+                        cleanNames = cellfun(@(x) str_remove_parenth(x), {sFuncFiles.Name}, 'UniformOutput', false);
+                        % Get items with matching name
+                        ix = strcmp(cleanNames, list_names{1});
+                        sFunctFilesTmp = sFuncFiles(ix);
+                        if length(sFunctFilesTmp) >= minListChildren
                             % Create List
                             listFunctionalFile = db_template('FunctionalFile');
                             listFunctionalFile.Study = list_study;
                             listFunctionalFile.Type = [list_type 'list'];
                             listFunctionalFile.FileName = [sFuncFiles(find(ix, 1)).FileName(1:end-4), '.lst']; % Avoid duplicate FileName
-                            listFunctionalFile.Name = list_names{i};
+                            listFunctionalFile.Name = list_names{1};
                             listFunctionalFile.NumChildren = length(sFunctFilesTmp);
                             % Insert List
                             iListFuncFile = db_set(sqlConn, 'FunctionalFile', listFunctionalFile);
                         else
-                            % Update List
-                            iListFuncFile = db_set(sqlConn, 'FunctionalFile', struct('NumChildren', length(sFunctFilesTmp)), list.Id);
+                            iListFuncFile = [];
                         end
-                        % Update the ParentFile in FunctionalFiles in DB with same cleanName
+                        % Update all sibilings that need it
                         for j = 1 : length(sFunctFilesTmp)
-                            % If needed
-                            if isempty(sFunctFilesTmp(j).ParentFile) || sFunctFilesTmp(j).ParentFile ~= iListFuncFile
+                            if ~isequal(sFunctFilesTmp(j).ParentFile,iListFuncFile)
                                 db_set(sqlConn, 'FunctionalFile', struct('ParentFile', iListFuncFile), sFunctFilesTmp(j).Id);
                             end
                         end
-                    else
-                        if ~isempty(list)
-                            % Delete list
-                            db_set(sqlConn, 'FunctionalFile', 'Delete', list.Id);
+                    end
+                end
+            end
+
+            % Handle OldList in case of Renamed FunctionalFile
+            if length(unique(list_names)) == 2
+                % Look for existing list
+                searchQry = struct('Name', list_names{2}, 'Study', list_study, 'Type', [list_type, 'list']);
+                list = sql_query(sqlConn, 'SELECT', 'FunctionalFile', searchQry, {'Id', 'NumChildren'});
+                if ~isempty(list)
+                    % Update number of children
+                    list.NumChildren = list.NumChildren - 1;
+                    db_set(sqlConn, 'FunctionalFile', list, list.Id);
+                    if list.NumChildren < minListChildren
+                        % Remove ParentFile in former children
+                        sFuncFiles = db_get(sqlConn, 'FunctionalFile', struct('ParentFile', list.Id), 'Id');
+                        for j = 1 : length(sFuncFiles)
+                            db_set(sqlConn, 'FunctionalFile', struct('ParentFile', []), sFuncFiles(j).Id);
                         end
-                        % Clear Children
-                        for j = 1 : length(sFunctFilesTmp)
-                            db_set(sqlConn, 'FunctionalFile', struct('ParentFile', []), sFunctFilesTmp(j).Id);
-                        end
+                        % Delete list
+                        db_set(sqlConn, 'FunctionalFile', 'Delete', list.Id);
                     end
                 end
             end
