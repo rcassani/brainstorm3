@@ -413,22 +413,22 @@ switch contextName
                     delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', iFuncFile);
                 elseif isnumeric(iFuncFile)
                     % Get Parent of FunctionalFile to delete
-                    sParentFuncFile = db_get(sqlConn, 'ParentFromFunctionalFile', iFuncFile);
+                    sParentFuncFile = db_get(sqlConn, 'ParentFromFunctionalFile', iFuncFile, {'Id', 'Type', 'NumChildren'});
                     % Delete using iFunctionalFile
                     delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', struct('Id', iFuncFile));
                     % Handle children count
                     if ~isempty(sParentFuncFile)
-                        % Decrement number of children in parent
+                        % Decrement number of children in parent or list
                         db_set(sqlConn, 'ParentCount', sParentFuncFile.Id, '-', 1);
-                        % If list and it had 2 or less items before removing one children
+                        % If Parent is a List and it had minListChildren or less children before removing one children (previous line)
                         if ismember(sParentFuncFile.Type, {'datalist', 'matrixlist'}) && sParentFuncFile.NumChildren <= minListChildren
-                            % Delete list
-                            db_set(sqlConn, 'FunctionalFile', 'Delete', sParentFuncFile.Id);
                             % Remove ParentFile in former children
                             sChildrenFuncFiles = db_get(sqlConn, 'FunctionalFile', struct('ParentFile', sParentFuncFile.Id), 'Id');
                             for ix = 1 : length(sChildrenFuncFiles)
                                 db_set(sqlConn, 'FunctionalFile', struct('ParentFile', []), sChildrenFuncFiles(ix).Id);
                             end
+                            % Delete list
+                            db_set(sqlConn, 'FunctionalFile', 'Delete', sParentFuncFile.Id);
                         end
                     end
                 end
