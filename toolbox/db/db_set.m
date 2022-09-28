@@ -96,6 +96,7 @@ switch contextName
     %                      = db_set('Subject', Subject, SubjectId)
     case 'Subject'
         % Default parameters
+        delResult = 0;
         iSubject = [];       
         varargout{1} = [];
         
@@ -114,13 +115,19 @@ switch contextName
                 delResult = sql_query(sqlConn, 'DELETE', 'Subject');
                 % Reset auto-increment
                 sql_query(sqlConn, 'RESET-AUTOINCREMENT', 'Subject');
-            else
-                if isstruct(iSubject)
-                    % Delete using the CondQuery
+            elseif isnumeric(iSubject)
+                iSubjectTmp.Id = iSubject;
+                iSubject = iSubjectTmp;
+            end
+            if isstruct(iSubject)
+                % Avoid deleting @default_subject
+                if (isfield(iSubject, 'Id')       && iSubject.Id == 0 ) || ...
+                   (isfield(iSubject, 'Name')     && strcmp(iSubject.Name, bst_get('DirDefaultSubject'))) || ...
+                   (isfield(iSubject, 'FileName') && strfind(iSubject.FileName, bst_get('DirDefaultSubject')))
+                    disp('DB> Cannot delete Subject with Id = 0.');
+                else
+                    % Delete using struct iSubject
                     delResult = sql_query(sqlConn, 'DELETE', 'Subject', iSubject);
-                elseif isnumeric(iSubject)
-                    % Delete using iSubject
-                    delResult = sql_query(sqlConn, 'DELETE', 'Subject', struct('Id', iSubject));
                 end
             end
             if delResult > 0
@@ -132,6 +139,10 @@ switch contextName
             if isempty(iSubject)
                 % Insert Subject row
                 sSubject.Id = []; 
+                % Insert @default_subject with special Id = 0 in DB
+                if strcmp(sSubject.Name, bst_get('DirDefaultSubject'))
+                    sSubject.Id = 0;
+                end
                 iSubject = sql_query(sqlConn, 'INSERT', 'Subject', sSubject);
                 varargout{1} = iSubject;
             else

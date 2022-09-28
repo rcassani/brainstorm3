@@ -213,12 +213,8 @@ switch contextName
         sSubject = varargin{3};
         sqlConn = sql_connect();
         
-        % If default subject
-        if (iSubject == 0)
-            sExistingSubject = db_get(sqlConn, 'Subject', '@default_subject', 'Id');
-        else
-            sExistingSubject = db_get(sqlConn, 'Subject', iSubject, 'Id');
-        end
+        % Get subject
+        sExistingSubject = db_get(sqlConn, 'Subject', iSubject, 'Id');
         
         % Get FileNames for currently selected Anatomy and Surface files
         categories = {'Anatomy', 'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'};
@@ -258,7 +254,7 @@ switch contextName
         if ~isempty(sExistingSubject)
             sSubject.Id = sExistingSubject.Id;
             sExistingSubject.Id = db_set(sqlConn, 'Subject', sSubject, sExistingSubject.Id);
-            if sExistingSubject.Id
+            if ~isempty(sExistingSubject.Id)
                 iSubject = sExistingSubject.Id;
                 argout1 = iSubject;
             else
