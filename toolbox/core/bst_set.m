@@ -382,8 +382,10 @@ switch contextName
                     end
                     sFuncFiles = [sFuncFiles, sTypeFuncFiles];
                 end
+                % Remove FunctionalFiles empty FileName
+                iNotEmpty = ~cellfun(@isempty,{sFuncFiles.FileName});
                 % Insert FunctionalFiles in database
-                db_set(sqlConn, 'FunctionalFilesWithStudy', sFuncFiles, iStudy);
+                db_set(sqlConn, 'FunctionalFilesWithStudy', sFuncFiles(iNotEmpty), iStudy);
 
                 % Set selected Channel and HeadModel files
                 hasSelFiles = 0;
