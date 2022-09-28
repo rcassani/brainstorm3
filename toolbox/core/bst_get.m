@@ -564,7 +564,7 @@ switch contextName
                 % Get subject, israw=1
                 sSubject = bst_get('Subject', subjectIds(ix), 1);
                 if strcmp(sSubject.Name, '@default_subject')
-                    iDefaultSubject = subjectIds(ix);
+                    iDefaultSubject = ix;
                 end
                 sSubjects(end + 1) = sSubject;
             end
