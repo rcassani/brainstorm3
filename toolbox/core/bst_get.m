@@ -556,7 +556,7 @@ switch contextName
         
         iDefaultSubject = [];
         sSubjects  = repmat(db_template('Subject'), 0);
-        subjectIds = db_get('Subjects', 1, 'Id');
+        subjectIds = db_get('AllSubjects', 'Id', '@default_subject');
         % Get all subjects
         if ~isempty(subjectIds)
             subjectIds = [subjectIds.Id];

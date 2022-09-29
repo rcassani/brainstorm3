@@ -16,9 +16,9 @@ function varargout = db_get(varargin)
 %    - db_get('Subject', CondQuery,          Fields, isRaw) : Get Subject(s) with a Query struct
 %    - db_get('Subject', '@default_subject', Fields)        : Get default Subject
 %    - db_get('Subject')                                    : Get current Subject in current protocol
-%    - db_get('Subjects')                                   : Get all Subjects in current protocol, exclude @default_subject
-%    - db_get('Subjects', 0, Fields)                        : Get all Subjects in current protocol, exclude @default_subject
-%    - db_get('Subjects', 1, Fields)                        : Get all Subjects in current protocol, include @default_subject
+%    - db_get('AllSubjects')                                : Get all Subjects in current protocol, excluding @default_subject
+%    - db_get('AllSubjects', Fields)                        : Get all Subjects in current protocol, excluding @default_subject
+%    - db_get('AllSubjects', Fields, '@default_subject')    : Get all Subjects in current protocol, including @default_subject
 %    - db_get('SubjectCount')                               : Get number of subjects in current protocol, exclude @default_subject
 %    - db_get('SubjectFromStudy', StudyID, SubjectFields)       : Find SubjectID for StudyID
 %    - db_get('SubjectFromStudy', StudyFileName, SubjectFields) : Find SubjectID for StudyFileName
@@ -242,24 +242,24 @@ switch contextName
         varargout{1} = sSubjects;   
         
 
-%% ==== SUBJECTS ====
-    % sSubjects = db_get('Subjects');            % Exclude @default_subject
-    %           = db_get('Subjects', 0, Fields); % Include @default_subject
-    %           = db_get('Subjects', 1, Fields); % Include @default_subject
-    case 'Subjects'
-        includeDefaultSub = [];
+%% ==== ALL SUBJECTS ====
+    % sSubjects = db_get('AllSubjects');                             % Exclude @default_subject
+    %           = db_get('AllSubjects', Fields);                     % Exclude @default_subject
+    %           = db_get('AllSubjects', Fields, '@default_subject'); % Include @default_subject
+    case 'AllSubjects'
+        includeDefaultSub = 0;
         fields = '*';
         % Parse arguments
         if length(args) > 0
-            includeDefaultSub = args{1};
-            if length(args) > 1
-                fields = args{2};
-            end
+            fields = args{1};
+        end
+        if length(args) > 1 && strcmpi('@default_subject', args{2})
+            includeDefaultSub = 1;
         end
 
-        % Exclude global studies if indicated
+        % Exclude @default_subject if indicated
         addQuery = '';
-        if isempty(includeDefaultSub) || (includeDefaultSub == 0)
+        if includeDefaultSub == 0
             addQuery = 'AND Name <> "@default_subject"';
         end
 

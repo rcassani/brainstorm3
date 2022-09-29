@@ -68,7 +68,7 @@ sqlConn = sql_connect();
 subjectFields = {'Id', 'FileName', 'Name'};
 % If SubjectDir starts with '*' : get all subjects except @default_subject
 if ischar(SubjectName) && (SubjectName(1) == '*')
-    sSubjects = db_get(sqlConn, 'Subjects', 0, subjectFields);
+    sSubjects = db_get(sqlConn, 'AllSubjects', subjectFields);
 % Else: Look for subject
 else
     sSubjects = db_get(sqlConn, 'Subject', SubjectName, subjectFields, 1);
