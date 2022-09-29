@@ -47,7 +47,7 @@ for i = 1:length(iSubjects)
     sSubject = db_get(sqlConn, 'Subject', iSubjects(i), {'Id','FileName'});
     % === DELETE STUDIES ===
     % Find all the studies that are associated with the current brainstormsubject file
-    sStudies = db_get(sqlConn, 'StudiesFromSubject', sSubject.Id, {'Id','FileName'}, 'intra_subject', 'default_study');
+    sStudies = db_get(sqlConn, 'StudiesFromSubject', sSubject.Id, {'Id','FileName'}, '@intra', '@default_study');
     if ~isempty(sStudies)
         db_delete_studies([sStudies.Id]);
         % Delete the studies folder for the subject

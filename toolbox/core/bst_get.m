@@ -884,7 +884,7 @@ switch contextName
                 if NoIntra
                     sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, 'Id');
                 else
-                    sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, 'Id', 'intra_subject');
+                    sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, 'Id', '@intra');
                 end
                 iStudies = [iStudies, sStudies.Id];
             end

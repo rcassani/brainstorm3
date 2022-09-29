@@ -87,7 +87,7 @@ for ix = 1 : length(sSubjects)
         error('Cannot add folders to the default anatomy.');
     end
     % Get conditions for subject
-    sStudies = db_get(sqlConn, 'StudiesFromSubject', sSubjects(ix).Id, {'Id', 'Condition'}, 'intra_subject', 'default_study');
+    sStudies = db_get(sqlConn, 'StudiesFromSubject', sSubjects(ix).Id, {'Id', 'Condition'}, '@intra', '@default_study');
     
     % If condition already exists for this subject: return it
     iExistStudy = find(strcmpi({sStudies.Condition}, ConditionName));

@@ -36,11 +36,11 @@ function varargout = db_get(varargin)
 %    - db_get('AnatomyFile', CondQuery, Fields) : Find AnatomyFile(s) with a Query
 %
 % ====== STUDIES =======================================================================
-%    - db_get('StudiesFromSubject', SubjectID,   Fields, 'intra_subject', 'default_study') : Find Studies for Subject with SubjectID (with intra_subject and default_study)
-%    - db_get('StudiesFromSubject', SubjectID,   Fields)     : Find Studies for Subject with SubjectID (w/o intra_subject study and default_study)
-%    - db_get('StudiesFromSubject', SubjectFileName, Fields) : Find Studies for Subject with SubjectFileName (w/o intra_subject study and default_study)
-%    - db_get('StudiesFromSubject', SubjectName, Fields)     : Find Studies for Subject with SubjectName (w/o intra_subject study and default_study)
-%    - db_get('DefaultStudy', SubjectID,       Fields) : Get default study for SubjectID
+%    - db_get('StudiesFromSubject', SubjectID,   Fields, '@intra', 'default_study') : Find Studies for Subject with SubjectID including @intra and @default_study
+%    - db_get('StudiesFromSubject', SubjectID,   Fields)     : Find Studies for Subject with SubjectID excluding @intra and @default_study
+%    - db_get('StudiesFromSubject', SubjectFileName, Fields) : Find Studies for Subject with SubjectFileName excluding @intra and @default_study
+%    - db_get('StudiesFromSubject', SubjectName, Fields)     : Find Studies for Subject with SubjectName excluding @intra and @default_study
+%    - db_get('DefaultStudy', SubjectID,       Fields) : Get @default_study for SubjectID
 %    - db_get('DefaultStudy', SubjectFileName, Fields) : Get default study for SubjectFileName
 %    - db_get('DefaultStudy', CondQuery,       Fields) : Get default study for CondQuery
 %    - db_get('Study', StudyIDs,         Fields) : Get study(s) by ID(s)
@@ -585,8 +585,8 @@ switch contextName
 
 
 %% ==== STUDIES FROM SUBJECT ====        
-    % sStudies = db_get('StudiesFromSubject', iSubject,        Fields)                                   % Exclude 'intra_subject' study and 'default_study')
-    %          = db_get('StudiesFromSubject', iSubject,        Fields, 'intra_subject', 'default_study') % Include 'intra_subject' study and 'default_study')
+    % sStudies = db_get('StudiesFromSubject', iSubject,        Fields)                             % Exclude '@intra' study and '@default_study')
+    %          = db_get('StudiesFromSubject', iSubject,        Fields, '@intra', '@default_study') % Include '@intra' study and '@default_study')
     %          = db_get('StudiesFromSubject', SubjectFileName, Fields)
     %          = db_get('StudiesFromSubject', SubjectName,     Fields)
     case 'StudiesFromSubject'
@@ -616,11 +616,11 @@ switch contextName
         else
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
-        % Complete query with studies ("intra_subject" and "default_study") to exclude
-        if length(args) < 2 || ~ismember('intra_subject', args(3:end))
+        % Complete query with studies ("@intra" and "@default_study") to exclude
+        if length(args) < 2 || ~ismember('@intra', args(3:end))
             addQuery = [addQuery ' AND Study.Name <> "' bst_get('DirAnalysisIntra') '"'];
         end
-        if length(args) < 2 || ~ismember('default_study', args(3:end))
+        if length(args) < 2 || ~ismember('@default_study', args(3:end))
             addQuery = [addQuery ' AND Study.Name <> "' bst_get('DirDefaultStudy') '"'];
         end
         % Select query

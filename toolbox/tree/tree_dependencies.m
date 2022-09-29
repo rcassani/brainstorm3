@@ -131,7 +131,7 @@ try
                     % Get subject filename
                     SubjectFile = sSubjects(iSubject).FileName;
                     % Get all the studies for this subject
-                    sStudies = db_get(sqlConn, 'StudiesFromSubject', SubjectFile, 'Id', 'intra_subject');
+                    sStudies = db_get(sqlConn, 'StudiesFromSubject', SubjectFile, 'Id', '@intra');
                     iTargetStudies = [iTargetStudies, [sStudies.Id]];
                     iParentFiles = [iParentFiles, 0];
                 end
@@ -141,7 +141,7 @@ try
                 % If directory (in subject/condition display, StudyIndex = 0)
                 if (nodeStudies(iNode) == 0)
                     % Get all the studies related to this subject
-                    sStudies = db_get(sqlConn, 'StudiesFromSubject', nodeFileNames{iNode}, 'Id', 'intra_subject');
+                    sStudies = db_get(sqlConn, 'StudiesFromSubject', nodeFileNames{iNode}, 'Id', '@intra');
                     iTargetStudies = [iTargetStudies, [sStudies.Id]];
                     iParentFiles = [iParentFiles, 0];
                 % Else : study node (in condition/subject display, StudyIndex = 0)
