@@ -211,11 +211,11 @@ try
 
                     case 'results'
                         % Find the results associated with this data node
-                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'result', {'Id', 'FileName', 'Name', 'ExtraNum'});
+                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'result', {'Id', 'FileName', 'Comment', 'ExtraNum'});
                         iFoundResults = [sFuncFiles.Id];
                         if ~isempty(iFoundResults)
                             ResultsFiles = {sFuncFiles.FileName};
-                            ResultsComments = {sFuncFiles.Name};
+                            ResultsComments = {sFuncFiles.Comment};
                             ResultsTypes = {'results', 'link'};
                             ResultsTypes = ResultsTypes(1 + [sFuncFiles.ExtraNum]); %.isLink
                             % === Check file filters ===
@@ -229,11 +229,11 @@ try
                     case 'timefreq'
                         iStudy = nodeStudies(iNode);
                         % Find the results associated with this data node
-                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'timefreq', {'Id', 'FileName', 'Name'});
+                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'timefreq', {'Id', 'FileName', 'Comment'});
                         iFoundTf = [sFuncFiles.Id];
                         if ~isempty(iFoundTf)
                             TimefreqFiles = {sFuncFiles.FileName};
-                            TimefreqComments = {sFuncFiles.Name};
+                            TimefreqComments = {sFuncFiles.Comment};
                             TimefreqTypes = {'timefreq', 'spectrum'};
                             isSpectrum = cellfun(@(c)~isempty(strfind(c, '_psd')), TimefreqFiles);
                             TimefreqTypes = TimefreqTypes(1 + isSpectrum);
@@ -248,11 +248,11 @@ try
                     case 'dipoles'
                         iStudy = nodeStudies(iNode);
                         % Find the files associated with this data node
-                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'dipoles', {'Id', 'FileName', 'Name'});
+                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'dipoles', {'Id', 'FileName', 'Comment'});
                         iFoundDip = [sFuncFiles.Id];
                         if ~isempty(iFoundDip)
                             DipolesFiles = {sFuncFiles.FileName};
-                            DipolesComments = {sFuncFiles.Name};
+                            DipolesComments = {sFuncFiles.Comment};
                             % === Check file filters ===
                             if ~isempty(NodelistOptions)
                                 iFoundDip = iFoundDip(isFileSelected(DipolesFiles, DipolesComments, NodelistOptions, targetNodeType));
@@ -267,7 +267,7 @@ try
                 % Get selected study
                 iStudy = nodeStudies(iNode);
                 % Get all the data files held by this datalist
-                sFuncFiles = db_get(sqlConn, 'FilesInFileList', nodeSubItems(iNode), {'Id', 'FileName', 'Name', 'ExtraNum'});
+                sFuncFiles = db_get(sqlConn, 'FilesInFileList', nodeSubItems(iNode), {'Id', 'FileName', 'Comment', 'ExtraNum'});
                 iFoundData = [sFuncFiles.Id];
                 % Remove bad trials
                 if ~GetBadTrials
@@ -280,7 +280,7 @@ try
                         case 'data'
                             % === Check file filters ===
                             FoundDataFiles = {sFuncFiles.FileName};
-                            FoundDataComments = {sFuncFiles.Name};
+                            FoundDataComments = {sFuncFiles.Comment};
                             if ~isempty(NodelistOptions)
                                 iFoundData = iFoundData(isFileSelected(FoundDataFiles, FoundDataComments, NodelistOptions, targetNodeType));
                             end
@@ -292,10 +292,10 @@ try
                             if sql_query('EXIST', 'FunctionalFile', struct('Type', 'result', 'Study', iStudy), 'AND ParentFile IS NOT NULL AND ExtraStr1 IS NOT NULL')
                                 for id = 1:length(iFoundData)
                                     % Find the results associated with this data node
-                                    sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), 'result', {'Id', 'FileName', 'Name', 'ExtraNum'});
+                                    sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), 'result', {'Id', 'FileName', 'Comment', 'ExtraNum'});
                                     iFoundResults = [sFuncFiles.Id];
                                     ResultsFiles = {sFuncFiles.FileName};
-                                    ResultsComment = {sFuncFiles.Name};
+                                    ResultsComment = {sFuncFiles.Comment};
                                     ResultsTypes = {'results', 'link'};
                                     ResultsTypes = ResultsTypes(1 + [sFuncFiles.ExtraNum]); %.isLink
                                     % The results that were found
@@ -313,10 +313,10 @@ try
                         case 'timefreq'
                             for id = 1:length(iFoundData)
                                 % Find the files associated with this data node
-                                sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), 'timefreq', {'Id', 'FileName', 'Name'});
+                                sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), 'timefreq', {'Id', 'FileName', 'Comment'});
                                 iFoundTf = [sFuncFiles.Id];
                                 TimefreqFiles = {sFuncFiles.FileName};
-                                TimefreqComments = {sFuncFiles.Name};
+                                TimefreqComments = {sFuncFiles.Comment};
                                 TimefreqTypes = {'timefreq', 'spectrum'};
                                 isSpectrum = cellfun(@(c)~isempty(strfind(c, '_psd')), TimefreqFiles);
                                 TimefreqTypes = TimefreqTypes(1 + isSpectrum);
@@ -334,10 +334,10 @@ try
                         case 'dipoles'
                             for id = 1:length(iFoundData)
                                 % Find the files associated with this data node
-                                sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), 'dipoles', {'Id', 'FileName', 'Name'});
+                                sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), 'dipoles', {'Id', 'FileName', 'Comment'});
                                 iFoundDip = [sFuncFiles.Id];
                                 DipolesFiles = {sFuncFiles.FileName};
-                                DipolesComments = {sFuncFiles.Name};
+                                DipolesComments = {sFuncFiles.Comment};
                                 % The files that were found
                                 if ~isempty(iFoundDip)
                                     % === Check file filters ===
@@ -375,11 +375,11 @@ try
                     case 'timefreq'
                         iStudy = nodeStudies(iNode);
                         % Find the timefreq associated with this result node
-                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'timefreq', {'Id', 'FileName', 'Name'});
+                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'timefreq', {'Id', 'FileName', 'Comment'});
                         iFoundTf = [sFuncFiles.Id];
                         if ~isempty(iFoundTf)
                             TimefreqFiles = {sFuncFiles.FileName};
-                            TimefreqComments = {sFuncFiles.Name};
+                            TimefreqComments = {sFuncFiles.Comment};
                             TimefreqTypes = {'timefreq', 'spectrum'};
                             isSpectrum = cellfun(@(c)~isempty(strfind(c, '_psd')), TimefreqFiles);
                             TimefreqTypes = TimefreqTypes(1 + isSpectrum);
@@ -393,11 +393,11 @@ try
                     case 'dipoles'
                         iStudy = nodeStudies(iNode);
                         % Find the file associated with this data node
-                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'dipoles', {'Id', 'FileName', 'Name'});
+                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'dipoles', {'Id', 'FileName', 'Comment'});
                         iFoundDip = [sFuncFiles.Id];
                         if ~isempty(iFoundDip)
                             DipolesFiles = {sFuncFiles.FileName};
-                            DipolesComments = {sFuncFiles.Name};
+                            DipolesComments = {sFuncFiles.Comment};
                             % The files that were found
                             if ~isempty(iFoundDip)
                                 % === Check file filters ===
@@ -472,11 +472,11 @@ try
                     case 'timefreq'
                         iStudy = nodeStudies(iNode);
                         % Find the timefreq associated with this data node in same Study
-                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'timefreq', {'Id', 'FileName', 'Name'});
+                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'timefreq', {'Id', 'FileName', 'Comment'});
                         iFoundTf = [sFuncFiles.Id];
                         if ~isempty(sFuncFiles)
                             TimefreqFiles = {sFuncFiles.FileName};
-                            TimefreqComments = {sFuncFiles.Name};
+                            TimefreqComments = {sFuncFiles.Comment};
                             % === Check file filters ===
                             if ~isempty(NodelistOptions)
                                 iFoundTf = iFoundTf(isFileSelected(TimefreqFiles, TimefreqComments, NodelistOptions, targetNodeType));
@@ -491,7 +491,7 @@ try
                 % Get selected study
                 iStudy = nodeStudies(iNode);
                 % Get all the matrix files held by this matrixlist
-                sFuncFiles = db_get(sqlConn, 'FilesInFileList', nodeSubItems(iNode), {'Id', 'FileName', 'Name'});
+                sFuncFiles = db_get(sqlConn, 'FilesInFileList', nodeSubItems(iNode), {'Id', 'FileName', 'Comment'});
                 iFoundMatrix = [sFuncFiles.Id];
                 % If some files were found
                 if ~isempty(iFoundMatrix)
@@ -500,7 +500,7 @@ try
                         case 'matrix'
                             % === Check file filters ===
                             FoundMatrixFiles = {sFuncFiles.FileName};
-                            FoundMatrixComments = {sFuncFiles.Name};
+                            FoundMatrixComments = {sFuncFiles.Comment};
                             if ~isempty(NodelistOptions)
                                 iFoundMatrix = iFoundMatrix(isFileSelected(FoundMatrixFiles, FoundMatrixComments, NodelistOptions, targetNodeType));
                             end
@@ -511,10 +511,10 @@ try
                             for id = 1:length(iFoundMatrix)
                                 iMatrix = iFoundMatrix(id);
                                 % Find the files associated with this data node
-                                sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iMatrix, 'timefreq', {'Id', 'FileName', 'Name'});
+                                sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iMatrix, 'timefreq', {'Id', 'FileName', 'Comment'});
                                 iFoundTf = [sFuncFiles.Id];
                                 TimefreqFiles = {sFuncFiles.FileName};
-                                TimefreqComments = {sFuncFiles.Name};
+                                TimefreqComments = {sFuncFiles.Comment};
                                 % The files that were found
                                 if ~isempty(iFoundTf)
                                     % === Check file filters ===
@@ -554,7 +554,7 @@ if ~isempty(iTargetStudies)
                 if ~GetBadTrials
                     qryCond.ExtraNum = 0;
                 end
-                sFuncFiles = db_get(sqlConn, 'FunctionalFile', qryCond, {'Id', 'FileName', 'Name', 'SubType'});
+                sFuncFiles = db_get(sqlConn, 'FunctionalFile', qryCond, {'Id', 'FileName', 'Comment', 'SubType'});
                 iFoundData = [sFuncFiles.Id];
                 % Add data files to list
                 if ~isempty(iFoundData)
@@ -566,7 +566,7 @@ if ~isempty(iTargetStudies)
                         FileType(iRaw) = {'rawdata'};
                         FileType(~iRaw) = {'data'};
                         FoundDataFiles = {sFuncFiles.FileName};
-                        FoundDataComments = {sFuncFiles.Name};
+                        FoundDataComments = {sFuncFiles.Comment};
                         iFoundData = iFoundData(isFileSelected(FoundDataFiles, FoundDataComments, NodelistOptions, FileType));
                     end
                     iDepStudies = [iDepStudies, repmat(iStudies(i), 1, length(iFoundData))];
@@ -576,9 +576,9 @@ if ~isempty(iTargetStudies)
             case 'results'
                 % Get all results of this study that ARE NOT SHARED KERNELS (imaging kernel not attched to a datafile)
                 % === Check file filters ===
-                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), 'result', {'Id', 'FileName', 'Name', 'ExtraNum', 'ExtraStr1'});
+                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), 'result', {'Id', 'FileName', 'Comment', 'ExtraNum', 'ExtraStr1'});
                 ResultsFiles = {sFuncFiles.FileName};
-                ResultsComments = {sFuncFiles.Name};
+                ResultsComments = {sFuncFiles.Comment};
                 ResultsTypes = {'results', 'link'};
                 ResultsTypes = ResultsTypes(1 + [sFuncFiles.ExtraNum]); %.isLink
                 ResultsIds = [sFuncFiles.Id];
@@ -606,13 +606,13 @@ if ~isempty(iTargetStudies)
                 
             case 'timefreq'
                 % Get all timefreq files of this study
-                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), 'timefreq', {'Id', 'FileName', 'Name'});
+                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), 'timefreq', {'Id', 'FileName', 'Comment'});
                 if ~isempty(sFuncFiles)
                     iFoundTf = [sFuncFiles.Id];
                     % Check file filters
                     if ~isempty(NodelistOptions)
                         PossibleFiles = {sFuncFiles.FileName};
-                        PossibleComments = {sFuncFiles.Name};
+                        PossibleComments = {sFuncFiles.Comment};
                         TimefreqTypes = {'timefreq', 'spectrum'};
                         isSpectrum = cellfun(@(c)~isempty(strfind(c, '_psd')), PossibleFiles);
                         TimefreqTypes = TimefreqTypes(1 + isSpectrum);
@@ -657,13 +657,13 @@ if ~isempty(iTargetStudies)
 
             case 'matrix'
                 % Get all "matrix" files of this study
-                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), 'matrix', {'Id', 'FileName', 'Name'});
+                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), 'matrix', {'Id', 'FileName', 'Comment'});
                 iFoundMat = [sFuncFiles.Id];
                 if ~isempty(iFoundMat)
                     % === Check file filters ===
                     if ~isempty(NodelistOptions)
                         PossibleFiles = {sFuncFiles.FileName};
-                        PossibleComments = {sFuncFiles.Name};
+                        PossibleComments = {sFuncFiles.Comment};
                         iFoundMat = iFoundMat(isFileSelected(PossibleFiles, PossibleComments, NodelistOptions, targetNodeType));
                     end
                     % Add data files to list
@@ -686,7 +686,7 @@ if ~isempty(iTargetStudies)
                 qryCond = struct('Study', iStudies(i));
                 qryCond.Type = 'stat';
                 qryCond.SubType = targetNodeType(2:end);
-                sFuncFiles = db_get(sqlConn, 'FunctionalFile', qryCond, {'Id', 'FileName', 'Name'});
+                sFuncFiles = db_get(sqlConn, 'FunctionalFile', qryCond, {'Id', 'FileName', 'Comment'});
                 iStat = [sFuncFiles.Id] ;
                 % If some valid files were found
                 if ~isempty(iStat)

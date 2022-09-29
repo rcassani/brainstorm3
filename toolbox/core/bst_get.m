@@ -1511,7 +1511,7 @@ switch contextName
         iStudy = varargin{2};
         dataListName = varargin{3};
         % Get data files of datalist
-        condQuery = struct('Name', dataListName, 'Type', 'datalist', 'Study', iStudy);
+        condQuery = struct('Comment', dataListName, 'Type', 'datalist', 'Study', iStudy);
         sFuncFiles = db_get('FilesInFileList', condQuery, 'Id');
         % Return found data files
         argout1 = [sFuncFiles.Id];
@@ -1522,7 +1522,7 @@ switch contextName
         iStudy = varargin{2};
         matrixListName = varargin{3};
         % Get matrix files of matrixlist
-        condQuery = struct('Name', matrixListName, 'Type', 'matrixlist', 'Study', iStudy);
+        condQuery = struct('Comment', matrixListName, 'Type', 'matrixlist', 'Study', iStudy);
         sFuncFiles = db_get('FilesInFileList', condQuery, 'Id');
         % Return found data files
         argout1 = [sFuncFiles.Id];

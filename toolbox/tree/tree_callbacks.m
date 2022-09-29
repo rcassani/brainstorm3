@@ -3043,7 +3043,7 @@ function fcnMriSegment(jPopup, sSubject, iSubject, iAnatomy, isAtlas)
             return
         end
     elseif (length(iAnatomy) == 1)
-        sAnatFile = db_get('AnatomyFile', iAnatomy, {'FileName', 'Name'});
+        sAnatFile = db_get('AnatomyFile', iAnatomy, {'FileName', 'Comment'});
         MriFile = sAnatFile.FileName;
     else
         sAnatFile = db_get('AnatomyFile', iAnatomy, 'FileName');
@@ -3098,7 +3098,7 @@ function fcnMriSegment(jPopup, sSubject, iSubject, iAnatomy, isAtlas)
         end
           
     % === TISSUE SEGMENTATION ===
-    elseif (length(iAnatomy) == 1) && ~isempty(strfind(sAnatFile.Name, 'tissues'))
+    elseif (length(iAnatomy) == 1) && ~isempty(strfind(sAnatFile.Comment, 'tissues'))
         gui_component('MenuItem', jPopup, [], 'Generate triangular meshes', IconLoader.ICON_SURFACE_SCALP, [], @(h,ev)bst_call(@tess_meshlayer, sAnatFile.FileName));
         gui_component('MenuItem', jPopup, [], 'Generate hexa mesh (FieldTrip)', IconLoader.ICON_FEM, [], @(h,ev)bst_call(@process_ft_prepare_mesh_hexa, 'ComputeInteractive', iSubject, iAnatomy));
     end

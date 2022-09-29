@@ -73,7 +73,7 @@ sAnatFile = db_template('AnatomyFile');
 sAnatFile.Subject = iSubject;
 sAnatFile.Type = anatFileType;
 sAnatFile.FileName = file_short(FileName);
-sAnatFile.Name = Comment;
+sAnatFile.Comment = Comment;
 sAnatFile.SurfaceType = SurfaceType;
 
 % Add AnatomyFile to database

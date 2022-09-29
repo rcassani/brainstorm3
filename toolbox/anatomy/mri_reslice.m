@@ -273,9 +273,9 @@ if ~isempty(MriFileSrc)
     % Get subject and anatomies
     sSubject = db_get('SubjectFromAnatomyFile', MriFileSrc, {'Id', 'iAnatomy'});
     iSubject = sSubject.Id;
-    sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'anatomy', 'Name');
+    sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'anatomy', 'Comment');
     % Update comment
-    sMriReg.Comment = file_unique(sMriReg.Comment, {sAnatFiles.Name});
+    sMriReg.Comment = file_unique(sMriReg.Comment, {sAnatFiles.Comment});
     % Add history entry
     sMriReg = bst_history('add', sMriReg, 'resample', ['MRI co-registered on default file: ' MriFileRef]);
     % Save new file

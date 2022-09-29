@@ -460,7 +460,7 @@ switch contextName
                 sFuncFile.Id = [];
                 % Handle list for data and matrix
                 if ismember(sFuncFile.Type, {'data', 'matrix'})
-                    list_names = {str_remove_parenth(sFuncFile.Name)};
+                    list_names = {str_remove_parenth(sFuncFile.Comment)};
                     list_type  = sFuncFile.Type;
                     list_study = sFuncFile.Study;
                 end
@@ -475,11 +475,11 @@ switch contextName
             else
                 if ~isfield(sFuncFile, 'Id') || isempty(sFuncFile.Id) || sFuncFile.Id == iFuncFile
                     % Handle list for data and matrix in case of rename
-                    if isfield(sFuncFile, 'Name')
+                    if isfield(sFuncFile, 'Comment')
                         % Old row
-                        sFuncFileOld = db_get(sqlConn, 'FunctionalFile', iFuncFile, {'Name', 'Type', 'Study'});
+                        sFuncFileOld = db_get(sqlConn, 'FunctionalFile', iFuncFile, {'Comment', 'Type', 'Study'});
                         if ismember(sFuncFileOld.Type, {'data', 'matrix'})
-                            list_names = {str_remove_parenth(sFuncFile.Name), str_remove_parenth(sFuncFileOld.Name)};
+                            list_names = {str_remove_parenth(sFuncFile.Comment), str_remove_parenth(sFuncFileOld.Comment)};
                             list_type  = sFuncFileOld.Type;
                             list_study = sFuncFileOld.Study;
                         end
@@ -496,7 +496,7 @@ switch contextName
             % Handle List in case of Insert or Renamed FunctionalFile
             if ~isempty(list_names) && (length(unique(list_names)) == length(list_names))
                 % Look for existing list
-                searchQry = struct('Name', list_names{1}, 'Study', list_study, 'Type', [list_type, 'list']);
+                searchQry = struct('Comment', list_names{1}, 'Study', list_study, 'Type', [list_type, 'list']);
                 list = sql_query(sqlConn, 'SELECT', 'FunctionalFile', searchQry, 'Id');
                 if ~isempty(list)
                     % Update child.ParentFile
@@ -505,9 +505,9 @@ switch contextName
                     db_set(sqlConn, 'ParentCount', list.Id, '+', 1);
                 else
                     % Look for potential sibilings (including recently inserted)
-                    sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', list_study, list_type, {'Id', 'Name', 'FileName', 'ParentFile'});
+                    sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', list_study, list_type, {'Id', 'Comment', 'FileName', 'ParentFile'});
                     if ~isempty(sFuncFiles)
-                        cleanNames = cellfun(@(x) str_remove_parenth(x), {sFuncFiles.Name}, 'UniformOutput', false);
+                        cleanNames = cellfun(@(x) str_remove_parenth(x), {sFuncFiles.Comment}, 'UniformOutput', false);
                         % Get items with matching name
                         ix = strcmp(cleanNames, list_names{1});
                         sFunctFilesTmp = sFuncFiles(ix);
@@ -517,7 +517,7 @@ switch contextName
                             listFunctionalFile.Study = list_study;
                             listFunctionalFile.Type = [list_type 'list'];
                             listFunctionalFile.FileName = [sFuncFiles(find(ix, 1)).FileName(1:end-4), '.lst']; % Avoid duplicate FileName
-                            listFunctionalFile.Name = list_names{1};
+                            listFunctionalFile.Comment = list_names{1};
                             listFunctionalFile.NumChildren = length(sFunctFilesTmp);
                             % Insert List
                             iListFuncFile = db_set(sqlConn, 'FunctionalFile', listFunctionalFile);
@@ -537,7 +537,7 @@ switch contextName
             % Handle OldList in case of Renamed FunctionalFile
             if length(unique(list_names)) == 2
                 % Look for existing list
-                searchQry = struct('Name', list_names{2}, 'Study', list_study, 'Type', [list_type, 'list']);
+                searchQry = struct('Comment', list_names{2}, 'Study', list_study, 'Type', [list_type, 'list']);
                 list = sql_query(sqlConn, 'SELECT', 'FunctionalFile', searchQry, {'Id', 'NumChildren'});
                 if ~isempty(list)
                     % Update number of children

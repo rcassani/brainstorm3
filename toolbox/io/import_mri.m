@@ -341,9 +341,9 @@ else
         [fPath, fBase, fExt] = bst_fileparts(MriFile);
         fBase = strrep(fBase, '.nii', '');
         if isMni
-            sMri.Comment = file_unique(fBase, {sAnatFiles.Name});
+            sMri.Comment = file_unique(fBase, {sAnatFiles.Comment});
         else
-            sMri.Comment = file_unique([fBase, fileTag], {sAnatFiles.Name});
+            sMri.Comment = file_unique([fBase, fileTag], {sAnatFiles.Comment});
         end
     end
     % Add MNI tag

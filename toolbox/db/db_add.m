@@ -198,8 +198,8 @@ if isAnatomy
         case 'subjectimage'
             % Nothing to do: file is replaced anyway
         case {'tess', 'cortex', 'scalp', 'outerskull', 'innerskull', 'fibers', 'fem'}
-            sAnatFiles = db_get(sqlConn, 'AnatomyFile', struct('Subject', iTarget), 'Name');
-            sMat.Comment = file_unique(sMat.Comment, {sAnatFiles.Name});
+            sAnatFiles = db_get(sqlConn, 'AnatomyFile', struct('Subject', iTarget), 'Comment');
+            sMat.Comment = file_unique(sMat.Comment, {sAnatFiles.Comment});
     end
 else
     % Add comment if missing
@@ -221,14 +221,14 @@ else
             extraQry = [extraQry ' AND ExtraStr1 IS NULL'];
         end
     end
-    sFiles = sql_query(sqlConn, 'SELECT', 'FunctionalFile', qryCond, 'Name', extraQry);
+    sFiles = sql_query(sqlConn, 'SELECT', 'FunctionalFile', qryCond, 'Comment', extraQry);
     
     if ismember(fileType, {'data', 'results', 'stat', 'timefreq', 'matrix'})
         matVer = 'v6';
     end
     
     % Update comment with a file tag, to make it unique
-    sMat.Comment = file_unique(sMat.Comment, {sFiles.Name});
+    sMat.Comment = file_unique(sMat.Comment, {sFiles.Comment});
 end
 
 %% ===== ADD NEW FILE TO DATABASE =====
@@ -250,7 +250,7 @@ else
     sFile.ParentFile = ParentFile;
     sFile.Type = fileType;
     sFile.FileName = OutputFile;
-    sFile.Name = sMat.Comment;
+    sFile.Comment = sMat.Comment;
     switch fileType
         case 'data'
             sFile.SubType = sMat.DataType;

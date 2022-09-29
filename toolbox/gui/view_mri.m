@@ -222,8 +222,8 @@ if ~isOverlay || isempty(TessInfo.OverlayLabels)
     figure_mri('SetVolumeAtlas', hFig);
 % If the overlay is an atlas: simply set the atlas name in the figure
 elseif isOverlay && ~isempty(TessInfo.OverlayLabels) && strcmpi(file_gettype(OverlayFile), 'subjectimage') && ~isempty(strfind(OverlayFile, '_volatlas'))
-    sAnatFile = db_get('AnatomyFile', OverlayFile, 'Name');
-    setappdata(hFig, 'AnatAtlas', sAnatFile.Name);
+    sAnatFile = db_get('AnatomyFile', OverlayFile, 'Comment');
+    setappdata(hFig, 'AnatAtlas', sAnatFile.Comment);
 end
 % Configure the operations that are allowed
 figure_mri('SetFigureStatus', hFig, isEditFiducials, isEditVolume, isOverlay, 0, 1);

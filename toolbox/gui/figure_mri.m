@@ -3083,11 +3083,11 @@ function [AtlasNames, AtlasFiles, iAtlas] = GetVolumeAtlases(hFig)
     iAtlas = [];
     % Get subject info
     SubjectFile = getappdata(hFig, 'SubjectFile');
-    sAnatFiles  = db_get('AnatomyFilesWithSubject', SubjectFile, 'anatomy', {'Name', 'FileName'});
+    sAnatFiles  = db_get('AnatomyFilesWithSubject', SubjectFile, 'anatomy', {'Comment', 'FileName'});
     % Find atlases based on the volume names
     iAllAtlases = [];
     for iAnat = 1:length(sAnatFiles)
-        if any(~cellfun(@(c)isempty(strfind(sAnatFiles(iAnat).Name, c)), {'aseg', 'svreg', 'tissues'})) || ...
+        if any(~cellfun(@(c)isempty(strfind(sAnatFiles(iAnat).Comment, c)), {'aseg', 'svreg', 'tissues'})) || ...
            ~isempty(strfind(sAnatFiles(iAnat).FileName, '_volatlas'))
             iAllAtlases(end+1) = iAnat;
         end
@@ -3095,7 +3095,7 @@ function [AtlasNames, AtlasFiles, iAtlas] = GetVolumeAtlases(hFig)
     if isempty(iAllAtlases)
         return;
     end
-    AtlasNames = {sAnatFiles(iAllAtlases).Name};
+    AtlasNames = {sAnatFiles(iAllAtlases).Comment};
     AtlasFiles = {sAnatFiles(iAllAtlases).FileName};
     % Add an empty atlas
     if ~isempty(AtlasNames)

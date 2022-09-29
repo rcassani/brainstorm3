@@ -78,7 +78,7 @@ end
 sFiles = sql_query('SELECT', 'FunctionalFile', conditions, '*', additionalQry);
 
 % Sort files by natural order
-[tmp, iSort] = sort_nat({sFiles.Name});
+[tmp, iSort] = sort_nat({sFiles.Comment});
 sFiles = sFiles(iSort);
 
 allTypes = {sFiles.Type};
@@ -88,7 +88,7 @@ allTypes = {sFiles.Type};
 iChannel = find(strcmp('channel', allTypes), 1);
 % Display channel if : default node, or do not use default
 if (~UseDefaultChannel || isDefaultStudyNode) && ~isempty(iChannel)
-    CreateNode(nodeParent, 'channel', sFiles(iChannel).Name, ...
+    CreateNode(nodeParent, 'channel', sFiles(iChannel).Comment, ...
         sFiles(iChannel).FileName, sFiles(iChannel).Id, iStudy, ...
         sFiles(iChannel).NumChildren, sFiles(iChannel).LastModified);
 end
@@ -98,10 +98,10 @@ if ~UseDefaultChannel || isDefaultStudyNode
     iHeadModels = find(strcmp('headmodel', allTypes));
     for i = 1:length(iHeadModels)
         iHeadModel = iHeadModels(i);
-        if isempty(sFiles(iHeadModel).Name)
-            sFiles(iHeadModel).Name = '';
+        if isempty(sFiles(iHeadModel).Comment)
+            sFiles(iHeadModel).Comment = '';
         end
-        nodeHeadModel = CreateNode(nodeParent, 'headmodel', sFiles(iHeadModel).Name, ...
+        nodeHeadModel = CreateNode(nodeParent, 'headmodel', sFiles(iHeadModel).Comment, ...
             sFiles(iHeadModel).FileName, sFiles(iHeadModel).Id, iStudy, ...
             sFiles(iHeadModel).NumChildren, sFiles(iHeadModel).LastModified);
         % If current item is default one
@@ -118,13 +118,13 @@ iDataCovs  = find(strcmp('ndatacov', allTypes));
 if (~UseDefaultChannel || isDefaultStudyNode)
     % Noise covariance
     if ~isempty(iNoiseCovs)
-        CreateNode(nodeParent, 'noisecov', sFiles(iNoiseCovs(1)).Name, ...
+        CreateNode(nodeParent, 'noisecov', sFiles(iNoiseCovs(1)).Comment, ...
             sFiles(iNoiseCovs(1)).FileName, sFiles(iNoiseCovs(1)).Id, iStudy, ...
             sFiles(iNoiseCovs(1)).NumChildren, sFiles(iNoiseCovs(1)).LastModified);
     end
     % Data covariance
     if ~isempty(iDataCovs)
-        CreateNode(nodeParent, 'noisecov', sFiles(iDataCovs(1)).Name, ...
+        CreateNode(nodeParent, 'noisecov', sFiles(iDataCovs(1)).Comment, ...
             sFiles(iDataCovs(1)).FileName, sFiles(iDataCovs(1)).Id, iStudy, ...
             sFiles(iDataCovs(1)).NumChildren, sFiles(iDataCovs(1)).LastModified);
     end
@@ -139,7 +139,7 @@ for i = 1:length(iResults)
     
     % Only add kernels at this point
     if ~isLink && isempty(DataFile) && ~isempty(strfind(sFiles(iResult).FileName, 'KERNEL'))
-        CreateNode(nodeParent, 'kernel', sFiles(iResult).Name, sFiles(iResult).FileName, ...
+        CreateNode(nodeParent, 'kernel', sFiles(iResult).Comment, sFiles(iResult).FileName, ...
             sFiles(iResult).Id, iStudy, sFiles(iResult).NumChildren, sFiles(iResult).LastModified);
     end
 end
@@ -149,7 +149,7 @@ end
 iFolders = find(strcmp('folder', allTypes));
 for i = 1:length(iFolders)
     iFolder = iFolders(i);
-    CreateNode(nodeParent, 'folder', sFiles(iFolder).Name, ...
+    CreateNode(nodeParent, 'folder', sFiles(iFolder).Comment, ...
         sFiles(iFolder).FileName, sFiles(iFolder).Id, iStudy, ...
         sFiles(iFolder).NumChildren, sFiles(iFolder).LastModified);
 end
@@ -159,8 +159,8 @@ iDataLists = find(strcmp('datalist', allTypes));
 for i = 1:length(iDataLists)
     iDataList = iDataLists(i);
     CreateNode(nodeParent, 'datalist', ...
-        sprintf('%s (%d files)', sFiles(iDataList).Name, sFiles(iDataList).NumChildren), ...
-        sFiles(iDataList).Name, sFiles(iDataList).Id, iStudy, ...
+        sprintf('%s (%d files)', sFiles(iDataList).Comment, sFiles(iDataList).NumChildren), ...
+        sFiles(iDataList).Comment, sFiles(iDataList).Id, iStudy, ...
         sFiles(iDataList).NumChildren, sFiles(iDataList).LastModified);
 end
 
@@ -180,7 +180,7 @@ for i = 1:length(iDatas)
         nodeType = 'data';
     end
     
-    CreateNode(nodeParent, nodeType, sFiles(iData).Name, sFiles(iData).FileName, ...
+    CreateNode(nodeParent, nodeType, sFiles(iData).Comment, sFiles(iData).FileName, ...
         sFiles(iData).Id, iStudy, sFiles(iData).NumChildren, ...
         sFiles(iData).LastModified, Modifier);
 end
@@ -203,7 +203,7 @@ for i = 1:length(iResults)
         nodeType = 'link';
     end
     
-    CreateNode(nodeParent, nodeType, sFiles(iResult).Name, sFiles(iResult).FileName, ...
+    CreateNode(nodeParent, nodeType, sFiles(iResult).Comment, sFiles(iResult).FileName, ...
         sFiles(iResult).Id, iStudy, sFiles(iResult).NumChildren, sFiles(iResult).LastModified);
 end
 
@@ -212,8 +212,8 @@ iMatrixLists = find(strcmp('matrixlist', allTypes));
 for i = 1:length(iMatrixLists)
     iMatrixList = iMatrixLists(i);
     CreateNode(nodeParent, 'matrixlist', ...
-        sprintf('%s (%d files)', sFiles(iMatrixList).Name, sFiles(iMatrixList).NumChildren), ...
-        sFiles(iMatrixList).Name, sFiles(iMatrixList).Id, iStudy, ...
+        sprintf('%s (%d files)', sFiles(iMatrixList).Comment, sFiles(iMatrixList).NumChildren), ...
+        sFiles(iMatrixList).Comment, sFiles(iMatrixList).Id, iStudy, ...
         sFiles(iMatrixList).NumChildren, sFiles(iMatrixList).LastModified);
 end
 
@@ -221,7 +221,7 @@ end
 iMatrices = find(strcmp('matrix', allTypes));
 for i = 1:length(iMatrices)
     iMatrix = iMatrices(i);    
-    CreateNode(nodeParent, 'matrix', sFiles(iMatrix).Name, sFiles(iMatrix).FileName, ...
+    CreateNode(nodeParent, 'matrix', sFiles(iMatrix).Comment, sFiles(iMatrix).FileName, ...
         sFiles(iMatrix).Id, iStudy, sFiles(iMatrix).NumChildren, sFiles(iMatrix).LastModified);
 end
 
@@ -238,7 +238,7 @@ for i = 1:length(iTimeFreqs)
         nodeType = 'timefreq';
     end
     
-    CreateNode(nodeParent, nodeType, sFiles(iTimeFreq).Name, sFiles(iTimeFreq).FileName, ...
+    CreateNode(nodeParent, nodeType, sFiles(iTimeFreq).Comment, sFiles(iTimeFreq).FileName, ...
         sFiles(iTimeFreq).Id, iStudy, sFiles(iTimeFreq).NumChildren, sFiles(iTimeFreq).LastModified);
 end
 
@@ -248,7 +248,7 @@ iDipoles = find(strcmp('dipoles', allTypes));
 % Display dipoles
 for i = 1:length(iDipoles)
     iDipole = iDipoles(i);
-    CreateNode(nodeParent, 'dipoles', sFiles(iDipole).Name, sFiles(iDipole).FileName, ...
+    CreateNode(nodeParent, 'dipoles', sFiles(iDipole).Comment, sFiles(iDipole).FileName, ...
         sFiles(iDipole).Id, iStudy, sFiles(iDipole).NumChildren, sFiles(iDipole).LastModified);
 end
 
@@ -282,7 +282,7 @@ for i = 1:length(iStats)
     end
     
     % Create node
-    CreateNode(nodeParent, nodeType, sFiles(iStat).Name, sFiles(iStat).FileName, ...
+    CreateNode(nodeParent, nodeType, sFiles(iStat).Comment, sFiles(iStat).FileName, ...
         sFiles(iStat).Id, iStudy, sFiles(iStat).NumChildren, sFiles(iStat).LastModified);
 end
 
@@ -304,7 +304,7 @@ for i = 1:length(iImages)
             nodeType = fileType;
     end
     
-    CreateNode(nodeParent, nodeType, sFiles(iImage).Name, sFiles(iImage).FileName, ...
+    CreateNode(nodeParent, nodeType, sFiles(iImage).Comment, sFiles(iImage).FileName, ...
         sFiles(iImage).Id, iStudy, sFiles(iImage).NumChildren, sFiles(iImage).LastModified);
 end
 

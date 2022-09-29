@@ -50,7 +50,7 @@ if all(isfield(inStructs(1), {'Id', 'Type'}))
         for iStruct = 1 : nStructs
             % Common fields
             outStructs(iStruct).FileName = inStructs(iStruct).FileName;
-            outStructs(iStruct).Comment  = inStructs(iStruct).Name;
+            outStructs(iStruct).Comment  = inStructs(iStruct).Comment;
             % Extra fields
             if strcmpi(inStructs(iStruct).Type, 'surface')
                 outStructs(iStruct).SurfaceType = inStructs(iStruct).SurfaceType;
@@ -64,7 +64,7 @@ else
     for iStruct = 1 : nStructs
         % Common fields
         outStructs(iStruct).FileName = inStructs(iStruct).FileName;
-        outStructs(iStruct).Name     = inStructs(iStruct).Comment;
+        outStructs(iStruct).Comment  = inStructs(iStruct).Comment;
         outStructs(iStruct).Type     = type;
         % Extra fileds
         switch lower(type)
