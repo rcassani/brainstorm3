@@ -50,9 +50,9 @@ function varargout = db_get(varargin)
 %    - db_get('Study', '@inter',         Fields) : Get @inter study
 %    - db_get('Study', '@default_study', Fields) : Get global @default_study study
 %    - db_get('Study');                          : Get current study in current protocol
-%    - db_get('Studies')             : Get all studies in current protocol, exclude @inter and global @default_study
-%    - db_get('Studies', 0, Fields)  : Get all studies in current protocol, exclude @inter and global @default_study
-%    - db_get('Studies', 1, Fields)  : Get all studies in current protocol, include @inter and global @default_study
+%    - db_get('AllStudies')          : Get all Studies in current protocol, excluding @inter and global @default_study
+%    - db_get('AllStudies', Fields)  : Get all Studies in current protocol, excluding @inter and global @default_study
+%    - db_get('AllStudies', Fields, '@inter', '@default_study')  : Get all Studies in current protocol including @inter and global @default_study
 %    - db_get('StudyWithCondition', ConditionPath, Fields) : Get studies for a given condition path
 %
 % ====== FUNCTIONAL FILES ==============================================================
@@ -732,24 +732,23 @@ switch contextName
         varargout{1} = sStudies;
 
 
-%% ==== STUDIES ====              
-    % sStudy = db_get('Studies')             % Exclude @inter and global @default_study
-    %        = db_get('Studies', 0, Fields)  % Exclude @inter and global @default_study
-    %        = db_get('Studies', 1, Fields)  % Include @inter and global @default_study
-    case 'Studies'
-        includeGlobalStudies  = [];
+%% ==== ALL STUDIES ====
+    % sStudy = db_get('AllStudies')                                      % Exclude @inter and global @default_study
+    %        = db_get('AllStudies', Fields)                              % Exclude @inter and global @default_study
+    %        = db_get('AllStudies', Fields, '@inter', '@default_study')  % Include @inter and global @default_study
+    case 'AllStudies'
         fields = '*';
         % Parse arguments
         if length(args) > 0
-            includeGlobalStudies = args{1};
-            if length(args) > 1
-                fields = args{2};
-            end
+            fields = args{1};
         end
-        % Exclude global studies if indicated
         addQuery = '';
-        if isempty(includeGlobalStudies) || (includeGlobalStudies == 0)
-            addQuery = 'AND Name <> "@inter" AND (Subject <> 0 OR Name <> "@default_study")';
+        % Complete query with studies ("@inter" and global "@default_study")
+        if length(args) < 2 || ~ismember('@inter', args(3:end))
+            addQuery = [addQuery ' AND Name <> "' bst_get('DirAnalysisInter') '"'];
+        end
+        if length(args) < 2 || ~ismember('@default_study', args(3:end))
+            addQuery = [addQuery ' AND (Subject <> 0 OR Name <> "@default_study")'];
         end
         
         varargout{1} = sql_query(sqlConn, 'SELECT', 'Study', [], fields, addQuery);

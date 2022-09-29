@@ -589,7 +589,7 @@ switch contextName
         end
         
         % Get all the studies (old sStudy structure) from Protocol
-        studyIds = db_get('Studies', 1, 'Id');
+        studyIds = db_get('AllStudies', 'Id', '@inter', '@default_study');
         if ~isempty(studyIds)
             studyIds = [studyIds.Id];
             sStudies = bst_get('Study', studyIds);
