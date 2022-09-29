@@ -20,9 +20,10 @@ function sql_create(sqlConnection, tables, dbInfo)
 % =============================================================================@
 %
 % Authors: Martin Cousineau, 2020
+%          Raymundo Cassani, 2022
 
-% Set this to 1 if you want to print the query for debugging
-debug = 1;
+global GlobalData;
+debug = GlobalData.Program.DispSqlDebug;
 
 if nargin < 3 || isempty(dbInfo)
     dbInfo = sql_get_info();

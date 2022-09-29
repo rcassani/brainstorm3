@@ -22,7 +22,9 @@ function sqlConn = sql_connect(dbInfo)
 % Authors: Martin Cousineau, 2020
 %          Raymundo Cassani, 2022
 
-debug = 1;
+global GlobalData;
+debug = GlobalData.Program.DispSqlDebug;
+
 if nargin < 1 || isempty(dbInfo)
     dbInfo = sql_get_info();
 end

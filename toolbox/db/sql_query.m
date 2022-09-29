@@ -74,8 +74,8 @@ function result = sql_query(varargin)
 % Authors: Martin Cousineau, 2020
 %          Raymundo Cassani, 2022
 
-% Set this to 1 if you want to print the query for debugging
-debug = 1;
+global GlobalData;
+debug = GlobalData.Program.DispSqlDebug;
 
 %% ==== PARSE INPUTS ====
 if (nargin > 1) && isjava(varargin{1})
