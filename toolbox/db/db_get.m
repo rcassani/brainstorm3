@@ -41,8 +41,9 @@ function varargout = db_get(varargin)
 %    - db_get('StudiesFromSubject', SubjectFileName, Fields) : Find Studies for Subject with SubjectFileName excluding @intra and @default_study
 %    - db_get('StudiesFromSubject', SubjectName, Fields)     : Find Studies for Subject with SubjectName excluding @intra and @default_study
 %    - db_get('DefaultStudy', SubjectID,       Fields) : Get @default_study for SubjectID
-%    - db_get('DefaultStudy', SubjectFileName, Fields) : Get default study for SubjectFileName
-%    - db_get('DefaultStudy', CondQuery,       Fields) : Get default study for CondQuery
+%    - db_get('DefaultStudy', SubjectFileName, Fields) : Get @default_study for SubjectFileName
+%    - db_get('DefaultStudy', SubjectName,     Fields) : Get @default_study for SubjectName
+%    - db_get('DefaultStudy', CondQuery,       Fields) : Get @default_study for CondQuery
 %    - db_get('Study', StudyIDs,         Fields) : Get study(s) by ID(s)
 %    - db_get('Study', StudyFileNames,   Fields) : Get study(s) by FileName(s)
 %    - db_get('Study', CondQuery,        Fields) : Get study(s) with a Query
@@ -630,6 +631,7 @@ switch contextName
 %% ==== DEFAULT STUDY ====       
     % sStudy = db_get('DefaultStudy', SubjectID,       Fields)
     %        = db_get('DefaultStudy', SubjectFileName, Fields)
+    %        = db_get('DefaultStudy', SubjectName,     Fields)
     %        = db_get('DefaultStudy', CondQuery,       Fields)
     case 'DefaultStudy'
         fields = '*';
