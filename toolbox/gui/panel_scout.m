@@ -4604,7 +4604,7 @@ function ReloadScouts(hFig)
         SurfaceFiles = {GlobalData.CurrentScoutsSurface};
         %sSubject = bst_get('SurfaceFile', GlobalData.CurrentScoutsSurface);
         sSubject = db_get('SubjectFromAnatomyFile', GlobalData.CurrentScoutsSurface);
-        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'anatomy');
+        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'volume');
         if ~isempty(sSubject) && ~isempty(sAnatFiles)
             SurfaceFiles{2} = sAnatFiles([sAnatFiles.Id] == sSubject.iAnatomy).FileName;
         end

@@ -312,7 +312,7 @@ function [isOk, errMsg, TissueFile] = Compute(iSubject, iMri, OPTIONS)
     % Add basic labels
     sMriTissue.Labels = mri_getlabels('tissues5');
     % Set comment
-    sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'anatomy', 'Comment');
+    sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'volume', 'Comment');
     sMriTissue.Comment = file_unique('tissues', {sAnatFiles.Comment});
     % Copy some fields from the original MRI
     if isfield(sMri, 'SCS') 

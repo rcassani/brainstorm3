@@ -1074,9 +1074,9 @@ switch contextName
             argout2 = iSubject;
         % Return found subject
         else                 
-            % Populate Surface & Anatomy files
+            % Populate Anatomy files: Volume and Surface
             sSubject.Anatomy = [repmat(db_template('Anatomy'), 0), ...
-                db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'anatomy'))];
+                db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'volume'))];
             sSubject.Surface = [repmat(db_template('Surface'), 0), ...
                 db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'surface'))];
             
@@ -1137,11 +1137,11 @@ switch contextName
             return;
         end
         SurfaceType = varargin{3};
+        field = ['i' SurfaceType];
         
         % === RETURN ONLY DEFAULTS ===
         if isDefaultOnly
             % Look for required surface type
-            field = ['i' SurfaceType];
             if ~isfield(sSubject, field) || isempty(sSubject.(field))
                 return
             end
@@ -1150,18 +1150,18 @@ switch contextName
             argout2 = sAnatFile.Id;
         % === RETURN ALL THE SURFACES ===
         else
-            % Surface filenames for Subject
-            sAnatFiles = db_get('AnatomyFile', struct('Subject', sSubject.Id, 'Type', 'surface'), {'Id', 'FileName'});
-            % Build the list of tagged surfaces
-            fileTag = ['_' lower(SurfaceType)];
-            iTargetList = find(cellfun(@(c)~isempty(strfind(c, fileTag)), {sAnatFiles.FileName}));
-            % Put the default cortex on top of the list
-            iDefaults = intersect([sSubject.iCortex, sSubject.iScalp, sSubject.iInnerSkull, sSubject.iOuterSkull, sSubject.iFibers, sSubject.iFEM], iTargetList);
-            if ~isempty(iDefaults)
-                iTargetList = [iDefaults, setdiff(iTargetList, iDefaults)];
+            if strcmp(SurfaceType, 'Anatomy')
+                SurfaceType = 'Image';
             end
-            % Return all cortex surfaces
-            sAnatFiles = db_get('AnatomyFile', [sAnatFiles(iTargetList).Id]);
+            % AnatomyFiles (volume or surface) with specific SubType for Subject
+            sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, '', 'Id', SurfaceType);
+            % Put the default AnatomyFile on top of the list
+            iDefaults = sSubject.(field) == [sAnatFiles.Id];
+            if ~isempty(iDefaults)
+                sAnatFiles = [sAnatFiles(iDefaults), sAnatFiles(~iDefaults)];
+            end
+            % Return all AnatomyFiles
+            sAnatFiles = db_get('AnatomyFile', [sAnatFiles.Id]);
             argout1 = db_convert_anatomyfile(sAnatFiles);
             argout2 = [sAnatFiles.Id];
         end

@@ -31,12 +31,6 @@ function [ iAnatFile ] = db_add_surface( iSubject, FileName, Comment, SurfaceTyp
 %
 % Authors: Francois Tadel, 2008-2019
 
-% Find @default_subject Id
-if iSubject == 0
-    sSubject = db_get('Subject', '@default_subject', 'Id');
-    iSubject = sSubject.Id;
-end
-
 % If surface type is not defined : detect it
 if (nargin < 4)
     % Get surface type 
@@ -54,16 +48,7 @@ end
 
 % Add surface file to database
 iAnatFile = db_add_anatomyfile(iSubject, FileName, Comment, SurfaceType);
-% Make surface as default (if not 'Other')
-if ~strcmpi(SurfaceType, 'Other')
-    db_surface_default(iSubject, SurfaceType, iAnatFile);
-end
 
-% ===== UPDATE TREE =====
-panel_protocols('UpdateNode', 'Subject', iSubject);
-panel_protocols('SelectNode', [], FileName);
-% Save database
-db_save();
 
 
 

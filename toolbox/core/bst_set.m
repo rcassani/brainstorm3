@@ -273,8 +273,8 @@ switch contextName
             % Delete existing anatomy files
             db_set(sqlConn, 'AnatomyFilesWithSubject', 'Delete', iSubject);
                        
-            % Convert Anatomy & Surface files to AnatomyFiles and insert
-            sAnatFiles = [db_convert_anatomyfile(sSubject.Anatomy, 'anatomy'), ...
+            % Convert Volume & Surface files to AnatomyFiles and insert
+            sAnatFiles = [db_convert_anatomyfile(sSubject.Anatomy, 'volume'), ...
                           db_convert_anatomyfile(sSubject.Surface, 'surface')];
             db_set(sqlConn, 'AnatomyFilesWithSubject', sAnatFiles, iSubject);
 

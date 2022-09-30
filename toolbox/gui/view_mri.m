@@ -120,7 +120,7 @@ if ~isempty(MriFile)
 elseif isempty(OverlayFile) || isempty(SubjectFile)
     error('Missing input file.');
 else
-    sAnatFiles = db_get('AnatomyFilesWithSubject', SubjectFile, 'anatomy', 'FileName');
+    sAnatFiles = db_get('AnatomyFilesWithSubject', SubjectFile, 'volume', 'FileName', 'Image');
     if isempty(sAnatFiles)
         error('No MRI available.');
     end

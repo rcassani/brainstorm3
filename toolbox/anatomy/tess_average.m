@@ -132,7 +132,7 @@ if isSave
     % Get subject
     sAnatFile = db_get('AnatomyFile', TessFiles{1});
     % Register this file in Brainstorm database
-    iSurface = db_add_surface(sAnatFile.Subject, NewTessFile, NewTess.Comment, sAnatFile.SurfaceType);
+    iSurface = db_add_surface(sAnatFile.Subject, NewTessFile, NewTess.Comment, sAnatFile.SubType);
 else
     NewTessFile = NewTess;
     iSurface = [];

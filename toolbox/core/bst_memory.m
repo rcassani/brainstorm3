@@ -276,7 +276,7 @@ function [sSurf, iSurf] = LoadSurface(varargin)
     if isempty(sAnatFile.Subject)
         SurfaceType = 'Other';
     else
-        SurfaceType = sAnatFile.SurfaceType;
+        SurfaceType = sAnatFile.SubType;
     end
             
     % ===== LOAD FILE =====

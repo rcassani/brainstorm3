@@ -40,7 +40,7 @@ end
 
 switch lower(structureName)
     % ===== BASIC LOADED STRUCTURES =====
-    case 'anatomy'
+    case {'anatomy', 'volume'}
         template = struct('Comment',  '', ...
                           'FileName', '');
     case 'surface'
@@ -1306,7 +1306,7 @@ switch lower(structureName)
             'Type',        {'str', [], 1}, ...
             'FileName',    {'str', [], 1}, ...
             'Comment',     {'str', 'Unnamed', 1}, ...
-            'SurfaceType', {'str', [], 0});
+            'SubType',     {'str', [], 1});
         template = template(dataType);
         
     case 'functionalfile'

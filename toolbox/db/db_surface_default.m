@@ -55,13 +55,12 @@ if (nargin < 3) || isempty(iSurface)
     % If no default file, or it was not found: Use the first one
     if isempty(iSurface)
         if strcmpi(SurfaceType, 'Anatomy')
-            % == ANATOMY ==
-            condQuery = struct('Subject', sSubject.Id, 'Type', 'anatomy');
+            % == VOLUME IMAGE ==
+            sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'volume', 'Id', 'Image');
         else
             % == SURFACE ==
-            condQuery = struct('Subject', sSubject.Id, 'Type', 'surface', 'SurfaceType', SurfaceType);
+            sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'surface', 'Id', SurfaceType);
         end
-        sAnatFiles = db_get(sqlConn, 'AnatomyFile', condQuery, 'Id');
         if ~isempty(sAnatFiles)
             iSurface = sAnatFiles(1).Id;
         end

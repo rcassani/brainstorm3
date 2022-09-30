@@ -274,23 +274,30 @@ switch contextName
 
 
 %% ==== ANATOMY FILES WITH SUBJECT ====
-    % sAnatomyFiles = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields)
+    % sAnatomyFiles = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields, SubType)
+    %               = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields)
     %               = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType)
     %               = db_get('AnatomyFilesWithSubject', SubjectID)
+    %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, Fields, SubType)
     %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, Fields)
     %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType)
     %               = db_get('AnatomyFilesWithSubject', SubjectFileName)
+    %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType, Fields, SubType)
     %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType, Fields)
     %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType)
     %               = db_get('AnatomyFilesWithSubject', SubjectName)
     case 'AnatomyFilesWithSubject'
         fileType = '';
         fields = '*';
+        subType = '';
         varargout{1} = [];
         if length(args) > 1
             fileType = lower(args{2});
             if length(args) > 2
                 fields = args{3};
+                if length(args) > 3
+                    subType = args{4};
+                end
             end
         end
         if ischar(fields), fields = {fields}; end
@@ -304,6 +311,9 @@ switch contextName
         addQuery = '';
         if ~isempty(fileType)
             addQuery = ['AND AnatomyFile.Type = "' fileType '" '];
+        end
+        if ~isempty(subType)
+            addQuery = ['AND AnatomyFile.SubType = "' subType '" '];
         end
         addQuery = [addQuery, 'AND Subject.'];
         % Complete query with FileName of FileID

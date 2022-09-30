@@ -92,7 +92,7 @@ switch lower(nodeType)
             [iAnatFile, sAnatFile] = db_set('AnatomyFile', struct('Comment', newComment), iSurface);
             % If new tess comment contains a keyword (head, cortex, scalp, brain, ...)
             % => update surface type (only if surface type changed)
-            prevType = sAnatFile.SurfaceType;
+            prevType = sAnatFile.SubType;
             % SCALP
             if ~strcmpi(prevType, 'Scalp') && (~isempty(strfind(lower(newComment), 'head')) || ~isempty(strfind(lower(newComment), 'scalp')) || ~isempty(strfind(lower(newComment), 'skin')))
                 node_set_type(bstNode, 'Scalp');

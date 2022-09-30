@@ -59,10 +59,18 @@ surfaces = struct('Scalp',      repmat(templateSurface,0), ...
                   'IndexFEM',        [], ...
                   'IndexOther',      []);
 
-for iSurf = 1:length(surfacesArray)
-    surfaces.(surfacesArray(iSurf).SurfaceType)(end + 1) = surfacesArray(iSurf);
-    surfaces.(['Index' surfacesArray(iSurf).SurfaceType])(end + 1) = iSurf;
+% templateSurface is db_template('Surface')
+if isfield(templateSurface, 'SurfaceType')
+    for iSurf = 1:length(surfacesArray)
+        surfaces.(surfacesArray(iSurf).SurfaceType)(end + 1) = surfacesArray(iSurf);
+        surfaces.(['Index' surfacesArray(iSurf).SurfaceType])(end + 1) = iSurf;
+    end
+% templateSurface is db_template('AnatomyFile')
+else
+    for iSurf = 1:length(surfacesArray)
+        surfaces.(surfacesArray(iSurf).SubType)(end + 1) = surfacesArray(iSurf);
+        surfaces.(['Index' surfacesArray(iSurf).SubType])(end + 1) = iSurf;
+    end
 end
-
 
 

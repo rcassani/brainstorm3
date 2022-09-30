@@ -53,7 +53,7 @@ if all(isfield(inStructs(1), {'Id', 'Type'}))
             outStructs(iStruct).Comment  = inStructs(iStruct).Comment;
             % Extra fields
             if strcmpi(inStructs(iStruct).Type, 'surface')
-                outStructs(iStruct).SurfaceType = inStructs(iStruct).SurfaceType;
+                outStructs(iStruct).SurfaceType = inStructs(iStruct).SubType;
             end
         end
     end
@@ -68,10 +68,15 @@ else
         outStructs(iStruct).Type     = type;
         % Extra fileds
         switch lower(type)
-            case 'anatomy'
+            case 'volume'
+                SubType = 'Image';
+                if ~isempty(strfind(inStructs(iStruct).FileName, '_volatlas'))
+                    SubType = 'Atlas';
+                end
+                outStructs(iStruct).SubType = SubType;
                 % No extra fields
             case 'surface'
-                outStructs(iStruct).SurfaceType = inStructs(iStruct).SurfaceType;
+                outStructs(iStruct).SubType = inStructs(iStruct).SurfaceType;
             otherwise
                 error('Unsupported input structure type');
         end
