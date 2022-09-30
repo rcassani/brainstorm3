@@ -70,9 +70,9 @@ ProtocolInfo = bst_get('ProtocolInfo');
 % Query database to get all functional files
 conditions = struct('Study', iStudy);
 if isempty(iFile)
-    additionalQry = 'AND ParentFile IS NULL';
+    additionalQry = 'AND Parent IS NULL';
 else
-    conditions.ParentFile = iFile;
+    conditions.Parent = iFile;
     additionalQry = [];
 end
 sFiles = sql_query('SELECT', 'FunctionalFile', conditions, '*', additionalQry);

@@ -1282,14 +1282,14 @@ end
 %% ===== COPY FILE =====
 % USAGE:   destFile = CopyFile(iTarget, srcFile, srcType, iSrcStudy, sSubjectTargetRaw)
 %          destFile = CopyFile(iTarget, srcFile)
-function destFile = CopyFile(iTarget, srcFile, srcType, iSrcStudy, sSubjectTargetRaw, ParentFile)
+function destFile = CopyFile(iTarget, srcFile, srcType, iSrcStudy, sSubjectTargetRaw, iParent)
     % File info is not passed in input
     sqlConn = sql_connect();
     if nargin < 5 || isempty(sSubjectTargetRaw)
         sSubjectTargetRaw = db_get(sqlConn, 'SubjectFromFunctionalFile', srcFile);
     end
     if nargin < 6
-        ParentFile = [];
+        iParent = [];
     end
     isAnatomy = ismember(srcType, {'anatomy','volatlas','cortex','scalp','innerskull','outerskull','fibers','fem','other'});
     % Get source subject
@@ -1358,7 +1358,7 @@ function destFile = CopyFile(iTarget, srcFile, srcType, iSrcStudy, sSubjectTarge
         src = srcFile;
     end
     % Copy file
-    destFile = db_add(iTarget, src, 1, ParentFile);
+    destFile = db_add(iTarget, src, 1, iParent);
     if isempty(destFile)
         return
     end

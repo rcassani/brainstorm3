@@ -422,10 +422,10 @@ switch contextName
                         db_set(sqlConn, 'ParentCount', sParentFuncFile.Id, '-', 1);
                         % If Parent is a List and it had minListChildren or less children before removing one children (previous line)
                         if ismember(sParentFuncFile.Type, {'datalist', 'matrixlist'}) && sParentFuncFile.NumChildren <= minListChildren
-                            % Remove ParentFile in former children
-                            sChildrenFuncFiles = db_get(sqlConn, 'FunctionalFile', struct('ParentFile', sParentFuncFile.Id), 'Id');
+                            % Remove iParent in former children
+                            sChildrenFuncFiles = db_get(sqlConn, 'FunctionalFile', struct('Parent', sParentFuncFile.Id), 'Id');
                             for ix = 1 : length(sChildrenFuncFiles)
-                                db_set(sqlConn, 'FunctionalFile', struct('ParentFile', []), sChildrenFuncFiles(ix).Id);
+                                db_set(sqlConn, 'FunctionalFile', struct('Parent', []), sChildrenFuncFiles(ix).Id);
                             end
                             % Delete list
                             db_set(sqlConn, 'FunctionalFile', 'Delete', sParentFuncFile.Id);
@@ -443,14 +443,14 @@ switch contextName
             sFuncFile.LastModified = bst_get('CurrentUnixTime');
             % Check for parent files
             if isfield(sFuncFile, 'Type') && ismember(sFuncFile.Type, {'dipoles', 'result', 'results', 'timefreq'})
-                % There is parent FileName but not ParentFile
-                if ~isempty(sFuncFile.ExtraStr1) && ( isempty(sFuncFile.ParentFile) || sFuncFile.ParentFile == 0)
+                % There is parent FileName (ExtraStr1) but not iParent
+                if ~isempty(sFuncFile.ExtraStr1) && ( isempty(sFuncFile.Parent) || sFuncFile.Parent == 0)
                     % Search parent in database (ignore 'datalist' and 'matrixlist' FunctionalFiles)
                     parent = sql_query(sqlConn, 'SELECT', 'FunctionalFile', ...
                              struct('FileName', sFuncFile.ExtraStr1), ...
                              'Id', 'AND Type <> "datalist" AND Type <> "matrixlist"');
                     if ~isempty(parent)
-                        sFuncFile.ParentFile = parent.Id;
+                        sFuncFile.Parent = parent.Id;
                     end
                 end
             end
@@ -467,8 +467,8 @@ switch contextName
                 iFuncFile = sql_query(sqlConn, 'INSERT', 'FunctionalFile', sFuncFile);
                 varargout{1} = iFuncFile;
                 % Increase the number of children in parent
-                if ~isempty(sFuncFile.ParentFile) && sFuncFile.ParentFile > 0
-                   db_set(sqlConn, 'ParentCount', sFuncFile.ParentFile, '+', 1);
+                if ~isempty(sFuncFile.Parent) && sFuncFile.Parent > 0
+                   db_set(sqlConn, 'ParentCount', sFuncFile.Parent, '+', 1);
                 end
 
             % Update iFunctionalFile row
@@ -499,13 +499,13 @@ switch contextName
                 searchQry = struct('Comment', list_names{1}, 'Study', list_study, 'Type', [list_type, 'list']);
                 list = sql_query(sqlConn, 'SELECT', 'FunctionalFile', searchQry, 'Id');
                 if ~isempty(list)
-                    % Update child.ParentFile
-                    db_set(sqlConn, 'FunctionalFile', struct('ParentFile', list.Id), iFuncFile);
-                    % Update list.NuChild
+                    % Update child.Parent
+                    db_set(sqlConn, 'FunctionalFile', struct('Parent', list.Id), iFuncFile);
+                    % Update list.NumChild
                     db_set(sqlConn, 'ParentCount', list.Id, '+', 1);
                 else
                     % Look for potential sibilings (including recently inserted)
-                    sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', list_study, list_type, {'Id', 'Comment', 'FileName', 'ParentFile'});
+                    sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', list_study, list_type, {'Id', 'Comment', 'FileName', 'Parent'});
                     if ~isempty(sFuncFiles)
                         cleanNames = cellfun(@(x) str_remove_parenth(x), {sFuncFiles.Comment}, 'UniformOutput', false);
                         % Get items with matching name
@@ -526,8 +526,8 @@ switch contextName
                         end
                         % Update all sibilings that need it
                         for j = 1 : length(sFunctFilesTmp)
-                            if ~isequal(sFunctFilesTmp(j).ParentFile,iListFuncFile)
-                                db_set(sqlConn, 'FunctionalFile', struct('ParentFile', iListFuncFile), sFunctFilesTmp(j).Id);
+                            if ~isequal(sFunctFilesTmp(j).Parent, iListFuncFile)
+                                db_set(sqlConn, 'FunctionalFile', struct('Parent', iListFuncFile), sFunctFilesTmp(j).Id);
                             end
                         end
                     end
@@ -544,10 +544,10 @@ switch contextName
                     list.NumChildren = list.NumChildren - 1;
                     db_set(sqlConn, 'FunctionalFile', list, list.Id);
                     if list.NumChildren < minListChildren
-                        % Remove ParentFile in former children
-                        sFuncFiles = db_get(sqlConn, 'FunctionalFile', struct('ParentFile', list.Id), 'Id');
+                        % Remove Parent in former children
+                        sFuncFiles = db_get(sqlConn, 'FunctionalFile', struct('Parent', list.Id), 'Id');
                         for j = 1 : length(sFuncFiles)
-                            db_set(sqlConn, 'FunctionalFile', struct('ParentFile', []), sFuncFiles(j).Id);
+                            db_set(sqlConn, 'FunctionalFile', struct('Parent', []), sFuncFiles(j).Id);
                         end
                         % Delete list
                         db_set(sqlConn, 'FunctionalFile', 'Delete', list.Id);
@@ -565,7 +565,7 @@ switch contextName
 
 
 %% ==== PARENT COUNT ====       
-    % db_set('ParentCount', ParentFile, modifier, count)
+    % db_set('ParentCount', ParentFileID, modifier, count)
     case 'ParentCount'
         iFile = args{1};
         modifier = args{2};

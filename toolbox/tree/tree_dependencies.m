@@ -103,7 +103,7 @@ sqlConn = sql_connect();
 try
     % Define target studies
     iTargetStudies = [];
-    iParentFiles   = [];
+    iParents   = [];
     iDepStudies = [];
     iDepItems   = [];
     % Process all the selected nodes
@@ -124,7 +124,7 @@ try
                 end
                 % Add inter-subject node
                 iTargetStudies = [iTargetStudies, -2];
-                iParentFiles = [iParentFiles, 0];
+                iParents = [iParents, 0];
                 % Process each subject
                 for i = 1:length(iSubjectsSorted)
                     iSubject = iSubjectsSorted(i);
@@ -133,7 +133,7 @@ try
                     % Get all the studies for this subject
                     sStudies = db_get(sqlConn, 'StudiesFromSubject', SubjectFile, 'Id', '@intra');
                     iTargetStudies = [iTargetStudies, [sStudies.Id]];
-                    iParentFiles = [iParentFiles, 0];
+                    iParents = [iParents, 0];
                 end
 
             % ==== SUBJECT ====
@@ -143,12 +143,12 @@ try
                     % Get all the studies related to this subject
                     sStudies = db_get(sqlConn, 'StudiesFromSubject', nodeFileNames{iNode}, 'Id', '@intra');
                     iTargetStudies = [iTargetStudies, [sStudies.Id]];
-                    iParentFiles = [iParentFiles, 0];
+                    iParents = [iParents, 0];
                 % Else : study node (in condition/subject display, StudyIndex = 0)
                 else
                     % Just add the study
                     iTargetStudies = [iTargetStudies, nodeStudies(iNode)];
-                    iParentFiles = [iParentFiles, 0];
+                    iParents = [iParents, 0];
                 end
 
             % ==== STUDY ====
@@ -157,33 +157,33 @@ try
                 if (nodeStudies(iNode) == 0)
                     sStudies = db_get(sqlConn, 'StudyWithCondition', bst_fileparts(nodeFileNames{iNode}), 'Id');
                     iTargetStudies = [iTargetStudies, [sStudies.Id]];
-                    iParentFiles = [iParentFiles, 0];
+                    iParents = [iParents, 0];
                 % Else: regular study
                 else
                     % Just add the study
                     iTargetStudies = [iTargetStudies, nodeStudies(iNode)];
-                    iParentFiles = [iParentFiles, 0];
+                    iParents = [iParents, 0];
                 end
             % ==== CONDITION ====
             case {'condition', 'rawcondition'}
                 % Get all the studies related with the condition name
                 sStudies = db_get(sqlConn, 'StudyWithCondition', bst_fileparts(nodeFileNames{iNode}), 'Id');
                 iTargetStudies = [iTargetStudies, [sStudies.Id]];
-                iParentFiles = [iParentFiles, 0];
+                iParents = [iParents, 0];
                 
             % ==== SUBFOLDER ====
             case 'folder'
                 %TODO
                 % Add the study and ParentFile
                 iTargetStudies = [iTargetStudies, nodeStudies(iNode)];
-                iParentFiles = [iParentFiles, nodeSubItems(iNode)];
+                iParents = [iParents, nodeSubItems(iNode)];
 
             % ==== HEADMODEL ====
             case 'headmodel'
                 % If looking for headmodel in headmodel, return headmodel
                 if strcmpi(targetNodeType, 'headmodel')
                      iTargetStudies = [iTargetStudies, nodeStudies(iNode)];
-                     iParentFiles = [iParentFiles, 0];
+                     iParents = [iParents, 0];
                 end
 
             % ==== DATA ====
@@ -289,7 +289,7 @@ try
 
                         case 'results'
                             % If there are result files associated to a datafile
-                            if sql_query('EXIST', 'FunctionalFile', struct('Type', 'result', 'Study', iStudy), 'AND ParentFile IS NOT NULL AND ExtraStr1 IS NOT NULL')
+                            if sql_query('EXIST', 'FunctionalFile', struct('Type', 'result', 'Study', iStudy), 'AND Parent IS NOT NULL AND ExtraStr1 IS NOT NULL')
                                 for id = 1:length(iFoundData)
                                     % Find the results associated with this data node
                                     sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), 'result', {'Id', 'FileName', 'Comment', 'ExtraNum'});
@@ -540,8 +540,8 @@ end
 if ~isempty(iTargetStudies)
     iStudies = iTargetStudies;
     for i = 1:length(iStudies)
-        if iParentFiles(i) > 0
-            qryCond = struct('ParentFile', iParentFiles(i));
+        if iParents(i) > 0
+            qryCond = struct('Parent', iParents(i));
         else
             qryCond = struct();
         end
@@ -624,7 +624,7 @@ if ~isempty(iTargetStudies)
                         % Check file by file
                         for iTf = 1:length(iFoundTf)
                             % Get DataFile
-                            sFuncFileParent = db_get(sqlConn, 'ParentFromFunctionalFile', iFoundTf(iTf), {'Id','Type','ParentFile'});
+                            sFuncFileParent = db_get(sqlConn, 'ParentFromFunctionalFile', iFoundTf(iTf), {'Id','Type','Parent'});
                             if isempty(sFuncFileParent)
                                 continue;
                             end
@@ -632,7 +632,7 @@ if ~isempty(iTargetStudies)
                             DataFileId = sFuncFileParent.Id;
                             % Time-freq on results: get DataFile
                             if ismember(sFuncFileParent.Type, {'result'})
-                                DataFileId = sFuncFileParent.ParentFile;
+                                DataFileId = sFuncFileParent.Parent;
                             % Time-freq on results: get DataFile
                             elseif strcmpi(sFuncFileParent.Type, 'matrix')
                                 DataFileId = [];

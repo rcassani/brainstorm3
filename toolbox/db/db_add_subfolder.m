@@ -69,7 +69,7 @@ for iStudy = iStudies
     sFile.Comment = FolderName;
     
     if ~isempty(iParent)
-        sFile.ParentFile = iParent;
+        sFile.Parent = iParent;
         
         % Get parent name
         sFuncFileParent = db_get(sqlConn, 'FunctionalFile', iParent, 'FileName');

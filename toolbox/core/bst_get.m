@@ -2139,9 +2139,9 @@ switch contextName
         end
         % Get parent file
         RelatedDataFile = '';
-        sFunctFile = db_get('FunctionalFile', iFile, 'ParentFile');
-        if ~isempty(sFunctFile.ParentFile)
-            sFunctFileParent = db_get('FunctionalFile', sFunctFile.ParentFile, 'FileName');
+        sFunctFile = db_get('FunctionalFile', iFile, 'Parent');
+        if ~isempty(sFunctFile.Parent)
+            sFunctFileParent = db_get('FunctionalFile', sFunctFile.Parent, 'FileName');
             RelatedDataFile = sFunctFileParent.FileName;
         end
         % If related file is results: get related data file

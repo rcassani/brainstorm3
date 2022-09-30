@@ -99,12 +99,12 @@ try
     if isempty(sLock) && ~isempty(FileId)
         ParentId = FileId;
         while 1
-            sFuncFileParent = db_get(sqlConn, 'FunctionalFile', ParentId, 'ParentFile');
-            if isempty(sFuncFileParent) || isempty(sFuncFileParent.ParentFile)
+            sFuncFileParent = db_get(sqlConn, 'FunctionalFile', ParentId, 'Parent');
+            if isempty(sFuncFileParent) || isempty(sFuncFileParent.Parent)
                 break;
             end
 
-            ParentId = sFuncFileParent.ParentFile;
+            ParentId = sFuncFileParent.Parent;
             sLock = sql_query(sqlConn, 'SELECT', 'Lock', struct('File', ParentId), '*', IdQuery);
             if ~isempty(sLock)
                 break;

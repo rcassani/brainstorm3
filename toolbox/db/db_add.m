@@ -1,4 +1,4 @@
-function OutputFile = db_add(iTarget, InputFile, isReload, ParentFile)
+function OutputFile = db_add(iTarget, InputFile, isReload, iParent)
 % DB_ADD: Create a new file in a given study.
 %
 % USAGE:  db_add(iStudy/iSubject, InputFile, isReload)
@@ -30,7 +30,7 @@ if (nargin < 3) || isempty(isReload)
     isReload = 1;
 end
 if nargin < 4
-    ParentFile = [];
+    iParent = [];
 end
 % USAGE:  db_add(iTarget)
 if (nargin < 2) || isempty(InputFile)
@@ -133,8 +133,8 @@ if isAnatomy
     OutputFile = file_short(OutputFileFull);
 else
     % Get parent file
-    if ~isempty(ParentFile)
-        sFuncFileParent = db_get(sqlConn, 'FunctionalFile', ParentFile, {'FileName', 'Type'});
+    if ~isempty(iParent)
+        sFuncFileParent = db_get(sqlConn, 'FunctionalFile', iParent, {'FileName', 'Type'});
         if strcmpi(sFuncFileParent.Type, 'folder')
             ParentFolder = sFuncFileParent.FileName;
         else
@@ -210,8 +210,8 @@ else
     % Get names of other files in same folder to ensure it's unique
     extraQry = '';
     qryCond = struct('Study', iTarget, 'Type', fileType);
-    if ~isempty(ParentFile)
-        qryCond.ParentFile = ParentFile;
+    if ~isempty(iParent)
+        qryCond.Parent = iParent;
     end
     % Special case: only check result files with same parent data file
     if strcmpi(fileType, 'results')
@@ -247,7 +247,7 @@ if isAnatomy
 else
     sFile = db_template('FunctionalFile');
     sFile.Study = iTarget;
-    sFile.ParentFile = ParentFile;
+    sFile.Parent = iParent;
     sFile.Type = fileType;
     sFile.FileName = OutputFile;
     sFile.Comment = sMat.Comment;

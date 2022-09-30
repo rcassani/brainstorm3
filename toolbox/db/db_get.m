@@ -503,7 +503,7 @@ switch contextName
         % Get fileListID and Type
         sFuncFile = db_get(sqlConn, 'FunctionalFile', iFileList, {'Id', 'Type', 'Study'});
         % Get all children files of the list
-        condQuery = struct('ParentFile', sFuncFile.Id, 'Type', strrep(sFuncFile.Type, 'list', ''), 'Study', sFuncFile.Study);
+        condQuery = struct('Parent', sFuncFile.Id, 'Type', strrep(sFuncFile.Type, 'list', ''), 'Study', sFuncFile.Study);
         varargout{1} = db_get(sqlConn, 'FunctionalFile', condQuery, fields);
 
 
@@ -877,7 +877,7 @@ switch contextName
             fields = cellfun(@(x) ['parent.' x], fields, 'UniformOutput', 0);
         end
         % Join query
-        joinQry = 'FunctionalFile parent INNER JOIN FunctionalFile ON parent.Id = FunctionalFile.ParentFile ';
+        joinQry = 'FunctionalFile parent INNER JOIN FunctionalFile ON parent.Id = FunctionalFile.Parent ';
         % Add query
         addQuery = 'AND FunctionalFile.';
         % Complete query with FileName of FileID
@@ -916,9 +916,9 @@ switch contextName
         alsoGrandChildren = isempty(children_type) || ismember(children_type, {'timefreq', 'dipoles'});
 
         % Join query
-        joinQry = 'FunctionalFile children INNER JOIN FunctionalFile parent1 ON children.ParentFile = parent1.Id';
+        joinQry = 'FunctionalFile children INNER JOIN FunctionalFile parent1 ON children.Parent = parent1.Id';
         if alsoGrandChildren
-            joinQry = [joinQry, ' LEFT JOIN FunctionalFile parent2 ON parent1.ParentFile = parent2.Id '];
+            joinQry = [joinQry, ' LEFT JOIN FunctionalFile parent2 ON parent1.Parent = parent2.Id '];
         end
         % Add query
         addQuery = 'AND (parent1.';

@@ -51,7 +51,7 @@ tables(end + 1) = table;
 table = generateTable('FunctionalFile');
 table.PrimaryKey = 'Id';
 editField('Id', 'AutoIncrement');
-editField('ParentFile', 'ForeignKey', {'FunctionalFile', 'Id'});
+editField('Parent', 'ForeignKey', {'FunctionalFile', 'Id'});
 editField('Study', 'ForeignKey', {'Study', 'Id'});
 editField('FileName', 'Unique');
 tables(end + 1) = table;
