@@ -91,6 +91,8 @@ switch contextName
 %% ==== SUBJECT ====
     % Success              = db_set('Subject', 'Delete')
     %                      = db_set('Subject', 'Delete', SubjectId)
+    %                      = db_set('Subject', 'Delete', SubjectName)
+    %                      = db_set('Subject', 'Delete', SubjectFileName)
     %                      = db_set('Subject', 'Delete', CondQuery)
     % [SubjectId, Subject] = db_set('Subject', Subject)
     %                      = db_set('Subject', Subject, SubjectId)
@@ -123,8 +125,8 @@ switch contextName
                 % Avoid deleting @default_subject
                 if (isfield(iSubject, 'Id')       && iSubject.Id == 0 ) || ...
                    (isfield(iSubject, 'Name')     && strcmp(iSubject.Name, bst_get('DirDefaultSubject'))) || ...
-                   (isfield(iSubject, 'FileName') && strfind(iSubject.FileName, bst_get('DirDefaultSubject')))
-                    disp('DB> Cannot delete Subject with Id = 0.');
+                   (isfield(iSubject, 'FileName') && strcmp(iSubject.FileName, bst_fullfile(bst_get('DirDefaultSubject'), 'brainstormsubject.mat')))
+                    disp('DB> Cannot delete @default_subject (Id = 0)');
                 else
                     % Delete using struct iSubject
                     delResult = sql_query(sqlConn, 'DELETE', 'Subject', iSubject);

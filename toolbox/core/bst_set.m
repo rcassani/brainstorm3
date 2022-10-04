@@ -165,6 +165,7 @@ switch contextName
             sSubject.Id = SubjectId;
             bst_set('Subject', sSubject.Id, sSubject);
         end
+        sql_close(sqlConn);
         
     case 'ProtocolStudies'
         sqlConn = sql_connect();
