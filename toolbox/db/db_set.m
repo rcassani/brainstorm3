@@ -261,11 +261,13 @@ switch contextName
 %% ==== STUDY ====
     % Success          = db_set('Study', 'Delete')
     %                  = db_set('Study', 'Delete', StudyId)
+    %                  = db_set('Study', 'Delete', StudyFileName)
     %                  = db_set('Study', 'Delete', CondQuery)
     % [StudyId, Study] = db_set('Study', Study)
     %                  = db_set('Study', Study, StudyId)
     case 'Study'
         % Default parameters
+        delResult = 0;
         iStudy = [];
         varargout{1} = [];
 
@@ -284,13 +286,21 @@ switch contextName
                 delResult = sql_query(sqlConn, 'DELETE', 'Study');
                 % Reset auto-increment
                 sql_query(sqlConn, 'RESET-AUTOINCREMENT', 'Study');
-            else
-                if isstruct(iStudy)
-                    % Delete using the CondQuery
+            elseif isnumeric(iStudy)
+                iSutudyTmp.Id = iStudy;
+                iStudy = iSutudyTmp;
+            end
+            if isstruct(iStudy)
+                % Avoid deleting special study @inter
+                if (isfield(iStudy, 'Id')       && iStudy.Id == -2) || ...
+                   (isfield(iStudy, 'FileName') && strcmp(iStudy.FileName, bst_fullfile(bst_get('DirAnalysisInter'), 'brainstormstudy.mat')))
+                    disp('DB> Cannot delete special study @inter (Id = -2)');
+                elseif (isfield(iStudy, 'Id')   && iStudy.Id == -3) || ...
+                       (isfield(iStudy, 'FileName') && strcmp(iStudy.FileName, bst_fullfile(bst_get('DirDefaultStudy'), 'brainstormstudy.mat')))
+                    disp('DB> Cannot delete global special study @default_study (Id = -3)');
+                else
+                    % Delete using struct iStudy
                     delResult = sql_query(sqlConn, 'DELETE', 'Study', iStudy);
-                elseif isnumeric(iStudy)
-                    % Delete using iStudy
-                    delResult = sql_query(sqlConn, 'DELETE', 'Study', struct('Id', iStudy));
                 end
             end
             if delResult > 0
@@ -300,13 +310,16 @@ switch contextName
         % Insert or Update
         elseif isstruct(sStudy)
             if isempty(iStudy)
-                if isempty(sStudy.Subject)
-                    % Get ID of parent subject
-                    sSubject = db_get(sqlConn, 'Subject', sStudy.BrainStormSubject, 'Id');
-                    sStudy.Subject = sSubject.Id;
-                end
                 % Insert Study row
                 sStudy.Id = [];
+                % Insert special study @inter
+                if (sStudy.Subject == 0) && strcmp(sStudy.Name, bst_get('DirAnalysisInter'))
+                    sStudy.Id = -2;
+                end
+                % Insert special global @defaul_study
+                if (sStudy.Subject == 0) && strcmp(sStudy.Name, bst_get('DirDefaultStudy'))
+                    sStudy.Id = -3;
+                end
                 iStudy = sql_query(sqlConn, 'INSERT', 'Study', sStudy);
                 varargout{1} = iStudy;
             else

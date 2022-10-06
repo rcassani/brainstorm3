@@ -71,10 +71,16 @@ switch (expandOrder)
         % nodeListToSort = [nodeListToSort, nodeStudiesDB];
 end
 
-% Get the @inter study, global @default_study and All subjects
+% Get the global @default_study, @inter study, and All Subjects
 sqlConn = sql_connect();
 sDefaultStudy  = db_get(sqlConn, 'Study', '@default_study', {'Id', 'FileName'});
+if ~isempty(sDefaultStudy) && ~sql_query(sqlConn, 'EXIST', 'FunctionalFile', struct('Study', sDefaultStudy.Id))
+    sDefaultStudy = [];
+end
 sAnalysisStudy = db_get(sqlConn, 'Study', '@inter', {'Id', 'FileName'});
+if ~isempty(sAnalysisStudy) && ~sql_query(sqlConn, 'EXIST', 'FunctionalFile', struct('Study', sAnalysisStudy.Id))
+    sAnalysisStudy = [];
+end
 sSubjects = db_get(sqlConn, 'AllSubjects', {'Id', 'FileName', 'Name'}, '@default_subject');
 sql_close(sqlConn);
 iDefaultSubject = find(strcmp({sSubjects.Name}, bst_get('DirDefaultSubject')), 1);
