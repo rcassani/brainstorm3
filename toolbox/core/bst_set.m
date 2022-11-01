@@ -390,7 +390,7 @@ switch contextName
                     sFuncFiles = [sFuncFiles, sTypeFuncFiles];
                 end
                 if ~isempty(sFuncFiles)
-                    % Remove FunctionalFiles empty FileName
+                    % Remove FunctionalFiles with empty FileName
                     iNotEmpty = ~cellfun(@isempty,{sFuncFiles.FileName});
                     % Insert FunctionalFiles in database
                     db_set(sqlConn, 'FunctionalFilesWithStudy', sFuncFiles(iNotEmpty), iStudy);

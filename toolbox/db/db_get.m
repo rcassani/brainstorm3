@@ -36,7 +36,7 @@ function varargout = db_get(varargin)
 %    - db_get('AnatomyFile', CondQuery, Fields) : Find AnatomyFile(s) with a Query
 %
 % ====== STUDIES =======================================================================
-%    - db_get('StudiesFromSubject', SubjectID,   Fields, '@intra', 'default_study') : Find Studies for Subject with SubjectID including @intra and @default_study
+%    - db_get('StudiesFromSubject', SubjectID,   Fields, '@intra', '@default_study') : Find Studies for Subject with SubjectID including @intra and @default_study
 %    - db_get('StudiesFromSubject', SubjectID,   Fields)     : Find Studies for Subject with SubjectID excluding @intra and @default_study
 %    - db_get('StudiesFromSubject', SubjectFileName, Fields) : Find Studies for Subject with SubjectFileName excluding @intra and @default_study
 %    - db_get('StudiesFromSubject', SubjectName, Fields)     : Find Studies for Subject with SubjectName excluding @intra and @default_study
@@ -250,16 +250,15 @@ switch contextName
     case 'AllSubjects'
         includeDefaultSub = 0;
         fields = '*';
+        addQuery = '';
         % Parse arguments
         if length(args) > 0
             fields = args{1};
         end
+        % Include @default_subject if required        
         if length(args) > 1 && strcmpi('@default_subject', args{2})
             includeDefaultSub = 1;
         end
-
-        % Exclude @default_subject if indicated
-        addQuery = '';
         if includeDefaultSub == 0
             addQuery = 'AND Name <> "@default_subject"';
         end

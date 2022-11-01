@@ -41,7 +41,7 @@ function varargout = db_set(varargin)
 %    - db_set('FunctionalFilesWithStudy', 'Delete' , StudyID)          : Delete All FunctionalFiles from StudyID
 %    - db_set('FunctionalFilesWithStudy', sFunctionalFiles, StudyID)   : Insert FunctionalFiles with StudyID
 %    - db_set('FunctionalFilesWithStudy', sFunctionalFiles)            : Update FunctionalFiles
-%    - db_set('ParentCount', ParentFileID, modifier, count)            : Update NumChildren field in ParentFileID
+%    - db_set('ParentCount', ParentId, modifier, count)                : Update NumChildren field in ParentFileID
 %
 % SEE ALSO db_get
 %
@@ -316,7 +316,7 @@ switch contextName
                 if (sStudy.Subject == 0) && strcmp(sStudy.Name, bst_get('DirAnalysisInter'))
                     sStudy.Id = -2;
                 end
-                % Insert special global @defaul_study
+                % Insert special global @default_study
                 if (sStudy.Subject == 0) && strcmp(sStudy.Name, bst_get('DirDefaultStudy'))
                     sStudy.Id = -3;
                 end
@@ -433,9 +433,9 @@ switch contextName
                     delResult = sql_query(sqlConn, 'DELETE', 'FunctionalFile', struct('Id', iFuncFile));
                     % Handle children count
                     if ~isempty(sParentFuncFile)
-                        % Decrement number of children in parent or list
+                        % Decrement number of children in Parent
                         db_set(sqlConn, 'ParentCount', sParentFuncFile.Id, '-', 1);
-                        % If Parent is a List and it had minListChildren or less children before removing one children (previous line)
+                        % If Parent is a List and it had minListChildren (or less) children before removing one children (previous line)
                         if ismember(sParentFuncFile.Type, {'datalist', 'matrixlist'}) && sParentFuncFile.NumChildren <= minListChildren
                             % Remove iParent in former children
                             sChildrenFuncFiles = db_get(sqlConn, 'FunctionalFile', struct('Parent', sParentFuncFile.Id), 'Id');
@@ -508,7 +508,7 @@ switch contextName
                 end
             end
 
-            % Handle List in case of Insert or Renamed FunctionalFile
+            % Handle List in case of new (Insert) or renamed (Update) FunctionalFile
             if ~isempty(list_names) && (length(unique(list_names)) == length(list_names))
                 % Look for existing list
                 searchQry = struct('Comment', list_names{1}, 'Study', list_study, 'Type', [list_type, 'list']);
@@ -519,7 +519,7 @@ switch contextName
                     % Update list.NumChild
                     db_set(sqlConn, 'ParentCount', list.Id, '+', 1);
                 else
-                    % Look for potential sibilings (including recently inserted)
+                    % Look for potential sibilings (including recently inserted FunctionalFile)
                     sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', list_study, list_type, {'Id', 'Comment', 'FileName', 'Parent'});
                     if ~isempty(sFuncFiles)
                         cleanNames = cellfun(@(x) str_remove_parenth(x), {sFuncFiles.Comment}, 'UniformOutput', false);
@@ -580,7 +580,7 @@ switch contextName
 
 
 %% ==== PARENT COUNT ====       
-    % db_set('ParentCount', ParentFileID, modifier, count)
+    % db_set('ParentCount', ParentId, modifier, count)
     case 'ParentCount'
         iFile = args{1};
         modifier = args{2};
