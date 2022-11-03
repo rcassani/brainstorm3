@@ -21,7 +21,9 @@ function sql_close(sqlConnection, dbInfo)
 %
 % Authors: Martin Cousineau, 2020
 
-debug = 1;
+global GlobalData;
+debug = GlobalData.Program.DispSqlDebug;
+
 if nargin < 2 || isempty(dbInfo)
     dbInfo = sql_get_info();
 end

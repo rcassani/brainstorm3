@@ -57,10 +57,30 @@ else
     nodeSubject.setComment('(Default anatomy)');
 end
 
+sDefaultStudy = [];
+sIntraStudy   = [];
 % Get all studies of selected subject
-sStudies = db_get('StudiesFromSubject', iSubject, '*', 'intra_subject', 'default_study');
+sqlConn = sql_connect();
+sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, '*', '@intra', '@default_study');
+% Separate @intra and @default_study, and check if they have functional files
+% TODO COMPARE AGAINST FILENAME WHICH IS UNIQUE
 iDefaultStudy = find(strcmp({sStudies.Name}, bst_get('DirDefaultStudy')), 1);
-iIntraStudy   = find(strcmp({sStudies.Name}, bst_get('DirAnalysisIntra')), 1);
+if ~isempty(iDefaultStudy)
+    sDefaultStudy = sStudies(iDefaultStudy);
+    sStudies(iDefaultStudy) = [];
+    if ~sql_query(sqlConn, 'EXIST', 'FunctionalFile', struct('Study', sDefaultStudy.Id))
+        sDefaultStudy = [];
+    end
+end
+iIntraStudy = find(strcmp({sStudies.Name}, bst_get('DirAnalysisIntra')), 1);
+if ~isempty(iIntraStudy)
+    sIntraStudy = sStudies(iIntraStudy);
+    sStudies(iIntraStudy) = [];
+    if ~sql_query(sqlConn, 'EXIST', 'FunctionalFile', struct('Study', sIntraStudy.Id))
+        sIntraStudy = [];
+    end
+end
+sql_close(sqlConn);
 % Extract raw studies
 listRaw = strncmp('@raw', {sStudies.Name}, 4);
 isRaw = find(listRaw);
@@ -75,37 +95,31 @@ if (length(iStudiesSorted) ~= length(sStudies))
     sStudies = [];
 end
 
-% 1. Default study (common files), 
-if ~isempty(iDefaultStudy)
-    % Only accessible when using default channel
-    if sSubject.UseDefaultChannel == 1
-        nodeStudy = BstNode('defaultstudy', '(Common files)', sStudies(iDefaultStudy).FileName, iSubject, sStudies(iDefaultStudy).Id);
-        
-        % Expand node if this is the currently selected study
-        if ~isempty(ProtocolInfo.iStudy) && ProtocolInfo.iStudy == sStudies(iDefaultStudy).Id
-            node_create_study(nodeStudy, nodeRoot, sStudies(iDefaultStudy), sStudies(iDefaultStudy).Id, [], 1, [], iSearch);
-            selectedNode = nodeStudy;
-        else
-            % Set the node as un-processed
-            nodeStudy.setUserObject(0);
-            % Add a "Loading" node
-            nodeStudy.add(BstNode('loading', 'Loading...'));
-        end
-        
-        % Add node to tree
-        nodeSubject.add(nodeStudy);
+% 1. Default study (common files), only accessible when using default channel
+if ~isempty(sDefaultStudy) && sSubject.UseDefaultChannel == 1
+    nodeStudy = BstNode('defaultstudy', '(Common files)', sDefaultStudy.FileName, iSubject, sDefaultStudy.Id);
+
+    % Expand node if this is the currently selected study
+    if ~isempty(ProtocolInfo.iStudy) && ProtocolInfo.iStudy == sDefaultStudy.Id
+        node_create_study(nodeStudy, nodeRoot, sDefaultStudy, sDefaultStudy.Id, [], 1, [], iSearch);
+        selectedNode = nodeStudy;
+    else
+        % Set the node as un-processed
+        nodeStudy.setUserObject(0);
+        % Add a "Loading" node
+        nodeStudy.add(BstNode('loading', 'Loading...'));
     end
-else
-    iDefaultStudy = -3;
+
+    % Add node to tree
+    nodeSubject.add(nodeStudy);
 end
 
 % 2. Intra-analysis study
-if ~isempty(iIntraStudy)
-    nodeStudy = BstNode('study', '(Intra-subject)', sStudies(iIntraStudy).FileName, iSubject, sStudies(iIntraStudy).Id);
-    
+if ~isempty(sIntraStudy)
+    nodeStudy = BstNode('study', '(Intra-subject)', sIntraStudy.FileName, iSubject, sIntraStudy.Id);
     % Expand node if this is the currently selected study
-    if ~isempty(ProtocolInfo.iStudy) && ProtocolInfo.iStudy == sStudies(iIntraStudy).Id
-        node_create_study(nodeStudy, nodeRoot, sStudies(iIntraStudy), sStudies(iIntraStudy).Id, [], 1, [], iSearch);
+    if ~isempty(ProtocolInfo.iStudy) && ProtocolInfo.iStudy == sIntraStudy.Id
+        node_create_study(nodeStudy, nodeRoot, sIntraStudy, sIntraStudy.Id, [], 1, [], iSearch);
         selectedNode = nodeStudy;
     else
         % Set the node as un-processed
@@ -116,20 +130,12 @@ if ~isempty(iIntraStudy)
     
     % Add node to tree
     nodeSubject.add(nodeStudy);
-else
-    iIntraStudy = -2;
 end
 
 % 3. All other studies
 for i = 1:length(sStudies)
     iStudy = iStudiesSorted(i);
     sStudy = sStudies(iStudy);
-    
-    % Skip special studies
-    if iStudy == iDefaultStudy || iStudy == iIntraStudy
-        continue;
-    end
-    
     % Regular/Raw condition
     if listRaw(iStudy)
         nodeType = 'rawcondition';

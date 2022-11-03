@@ -20,9 +20,10 @@ function sql_create(sqlConnection, tables, dbInfo)
 % =============================================================================@
 %
 % Authors: Martin Cousineau, 2020
+%          Raymundo Cassani, 2022
 
-% Set this to 1 if you want to print the query for debugging
-debug = 1;
+global GlobalData;
+debug = GlobalData.Program.DispSqlDebug;
 
 if nargin < 3 || isempty(dbInfo)
     dbInfo = sql_get_info();
@@ -116,10 +117,13 @@ switch (dbInfo.Rdbms)
                 if tables(iTable).Fields(iField).NotNull
                     tblQry = [tblQry ' NOT NULL'];
                 end
+                if tables(iTable).Fields(iField).Unique
+                    tblQry = [tblQry ' UNIQUE'];
+                end
                 if ~isempty(tables(iTable).Fields(iField).ForeignKey)
                     foreignQry = [foreignQry ', FOREIGN KEY ("' tables(iTable).Fields(iField).Name '")' ...
                         ' REFERENCES "' tables(iTable).Fields(iField).ForeignKey{1} '"' ...
-                        '("' tables(iTable).Fields(iField).ForeignKey{2} '") ON DELETE CASCADE'];
+                        '("' tables(iTable).Fields(iField).ForeignKey{2} '") ON UPDATE RESTRICT ON DELETE CASCADE'];
                 end
                 
             end

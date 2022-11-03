@@ -41,7 +41,7 @@ sNew = db_template('FunctionalFile');
 sNew.Study    = iStudy;
 sNew.Type     = fileType;
 sNew.FileName = FileName;
-sNew.Name     = FileMat.Comment;
+sNew.Comment  = FileMat.Comment;
 
 % Switch according to file type
 switch (fileType)
@@ -86,13 +86,13 @@ if isempty(iItem)
         queryCond.ExtraStr1 = sNew.ExtraStr1;
     end
     
-    sFuncFiles = db_get(sqlConn, 'FunctionalFile', queryCond, 'Name');
+    sFuncFiles = db_get(sqlConn, 'FunctionalFile', queryCond, 'Comment');
     if ~isempty(sFuncFiles)
-        Comment = file_unique(sNew.Name, {sFuncFiles.Name});
+        Comment = file_unique(sNew.Comment, {sFuncFiles.Comment});
         % Modify input file
-        if ~isequal(Comment, sNew.Name)
+        if ~isequal(Comment, sNew.Comment)
             save(file_fullpath(FileName), 'Comment', '-append');
-            sNew.Name = Comment;
+            sNew.Comment = Comment;
         end
     end
     

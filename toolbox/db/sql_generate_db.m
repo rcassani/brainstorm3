@@ -34,6 +34,8 @@ tables(end + 1) = table;
 table = generateTable('Subject');
 table.PrimaryKey = 'Id';
 editField('Id', 'AutoIncrement');
+editField('FileName', 'Unique');
+editField('Name', 'Unique');
 tables(end + 1) = table;
 
 % Study table
@@ -42,14 +44,16 @@ table.Name = 'Study';
 table.PrimaryKey = 'Id';
 editField('Id', 'AutoIncrement');
 editField('Subject', 'ForeignKey', {'Subject', 'Id'});
+editField('FileName', 'Unique');
 tables(end + 1) = table;
 
 % Functional File table
 table = generateTable('FunctionalFile');
 table.PrimaryKey = 'Id';
 editField('Id', 'AutoIncrement');
-editField('ParentFile', 'ForeignKey', {'FunctionalFile', 'Id'});
+editField('Parent', 'ForeignKey', {'FunctionalFile', 'Id'});
 editField('Study', 'ForeignKey', {'Study', 'Id'});
+editField('FileName', 'Unique');
 tables(end + 1) = table;
 
 % Anatomy File table
@@ -57,6 +61,7 @@ table = generateTable('AnatomyFile');
 table.PrimaryKey = 'Id';
 editField('Id', 'AutoIncrement');
 editField('Subject', 'ForeignKey', {'Subject', 'Id'});
+editField('FileName', 'Unique');
 tables(end + 1) = table;
 
 % Locks table

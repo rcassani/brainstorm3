@@ -65,46 +65,46 @@ if sSubject.UseDefaultAnat && ~strcmpi(sSubject.Name, bst_get('DirDefaultSubject
 
 % ==== Individual anatomy ====
 else
-    sqlConn = sql_connect();
-    anatomies = db_get(sqlConn, 'AnatomyFilesWithSubject', iSubject, 'anatomy');
-    surfaces  = db_get(sqlConn, 'AnatomyFilesWithSubject', iSubject, 'surface');
-    sql_close(sqlConn);
+    sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject);
+    % Volumes: images and atlases
+    volimages = sAnatFiles(strcmpi('Image', {sAnatFiles.SubType}));
+    volatlas  = sAnatFiles(strcmpi('Atlas', {sAnatFiles.SubType}));
+    % Surfaces
+    surfaces  = sAnatFiles(strcmpi('surface', {sAnatFiles.Type}));
     % Sort by Id
-    [~, ixs] = sort([anatomies.Id]);
-    anatomies = anatomies(ixs);
-    [~, ixs] = sort([surfaces.Id]);
-    surfaces = surfaces(ixs);
+    [~, ixs]  = sort([volimages.Id]);
+    volimages = volimages(ixs);
+    [~, ixs]  = sort([volatlas.Id]);
+    volatlas  = volatlas(ixs);
+    [~, ixs]  = sort([surfaces.Id]);
+    surfaces  = surfaces(ixs);
     
-    % Create list of anat files (put the default at the top)
-    nAnatomies = length(anatomies);
-    iAnatList = 1:nAnatomies;
-    iAtlas = find(~cellfun(@(c)(isempty(strfind(char(c), '_volatlas')) && isempty(strfind(char(c), '_tissues'))), {anatomies.FileName}));
-    % Default anatomy
-    iAnatomy = find([anatomies.Id] == sSubject.iAnatomy);
-    if nAnatomies > 1
-        iAnatList = [iAnatomy, setdiff(iAnatList,[iAtlas,iAnatomy]), setdiff(iAtlas,iAnatomy)];
+    % Create list of volumes: [default image, other images, atlases]
+    iDefaults = sSubject.iAnatomy == [volimages.Id];
+    if ~isempty(iDefaults)
+        volimages = [volimages(iDefaults), volimages(~iDefaults)];
     end
-    % Create and add anatomy nodes
-    for iAnatomy = iAnatList
-        if ismember(iAnatomy, iAtlas)
+    volumes = [volimages, volatlas];
+    % Create and add volume nodes
+    for iVolume = 1 : length(volumes)
+        nodeType = 'anatomy';
+        if strcmpi(volumes(iVolume).SubType, 'atlas')
             nodeType = 'volatlas';
-        else
-            nodeType = 'anatomy';
         end
-        [nodeCreated, nodeAnatomy] = CreateNode(nodeType, ...
-            char(anatomies(iAnatomy).Name), ...
-            char(anatomies(iAnatomy).FileName), ...
-            anatomies(iAnatomy).Id, iSubject, iSearch);    
+        [nodeCreated, nodeVolume] = CreateNode(nodeType, ...
+            char(volumes(iVolume).Comment), ...
+            char(volumes(iVolume).FileName), ...
+            volumes(iVolume).Id, iSubject, iSearch);
 
         if nodeCreated
             % If current item is default one
-            if ismember(anatomies(iAnatomy).Id, sSubject.iAnatomy)
-                nodeAnatomy.setMarked(1);
+            if ismember(volumes(iVolume).Id, sSubject.iAnatomy)
+                nodeVolume.setMarked(1);
             end
             if showParentNodes || isempty(nodeRoot)
-                nodeSubject.add(nodeAnatomy);
+                nodeSubject.add(nodeVolume);
             else
-                nodeRoot.add(nodeAnatomy);
+                nodeRoot.add(nodeVolume);
             end
             numElems = numElems + 1;
         end
@@ -117,10 +117,10 @@ else
     % Process all the surfaces
     for i = 1:length(iSorted)
         iSurface = iSorted(i);
-        SurfaceType = surfaces(iSurface).SurfaceType;
+        SurfaceType = surfaces(iSurface).SubType;
         % Create a node adapted to represent this surface
         [nodeCreated, nodeSurface] = CreateNode(lower(SurfaceType), ...
-            char(surfaces(iSurface).Name), ...
+            char(surfaces(iSurface).Comment), ...
             char(surfaces(iSurface).FileName), ...
             surfaces(iSurface).Id, iSubject, iSearch);
         if nodeCreated

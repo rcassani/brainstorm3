@@ -66,10 +66,10 @@ for iStudy = iStudies
     sFile = db_template('FunctionalFile');
     sFile.Study = iStudy;
     sFile.Type = 'folder';
-    sFile.Name = FolderName;
+    sFile.Comment = FolderName;
     
     if ~isempty(iParent)
-        sFile.ParentFile = iParent;
+        sFile.Parent = iParent;
         
         % Get parent name
         sFuncFileParent = db_get(sqlConn, 'FunctionalFile', iParent, 'FileName');

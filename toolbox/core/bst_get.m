@@ -556,7 +556,7 @@ switch contextName
         
         iDefaultSubject = [];
         sSubjects  = repmat(db_template('Subject'), 0);
-        subjectIds = db_get('Subjects', 1, 'Id');
+        subjectIds = db_get('AllSubjects', 'Id', '@default_subject');
         % Get all subjects
         if ~isempty(subjectIds)
             subjectIds = [subjectIds.Id];
@@ -564,7 +564,7 @@ switch contextName
                 % Get subject, israw=1
                 sSubject = bst_get('Subject', subjectIds(ix), 1);
                 if strcmp(sSubject.Name, '@default_subject')
-                    iDefaultSubject = subjectIds(ix);
+                    iDefaultSubject = ix;
                 end
                 sSubjects(end + 1) = sSubject;
             end
@@ -589,7 +589,7 @@ switch contextName
         end
         
         % Get all the studies (old sStudy structure) from Protocol
-        studyIds = db_get('Studies', 1, 'Id');
+        studyIds = db_get('AllStudies', 'Id', '@inter', '@default_study');
         if ~isempty(studyIds)
             studyIds = [studyIds.Id];
             sStudies = bst_get('Study', studyIds);
@@ -884,7 +884,7 @@ switch contextName
                 if NoIntra
                     sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, 'Id');
                 else
-                    sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, 'Id', 'intra_subject');
+                    sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, 'Id', '@intra');
                 end
                 iStudies = [iStudies, sStudies.Id];
             end
@@ -1074,9 +1074,9 @@ switch contextName
             argout2 = iSubject;
         % Return found subject
         else                 
-            % Populate Surface & Anatomy files
+            % Populate Anatomy files: Volume and Surface
             sSubject.Anatomy = [repmat(db_template('Anatomy'), 0), ...
-                db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'anatomy'))];
+                db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'volume'))];
             sSubject.Surface = [repmat(db_template('Surface'), 0), ...
                 db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'surface'))];
             
@@ -1137,11 +1137,11 @@ switch contextName
             return;
         end
         SurfaceType = varargin{3};
+        field = ['i' SurfaceType];
         
         % === RETURN ONLY DEFAULTS ===
         if isDefaultOnly
             % Look for required surface type
-            field = ['i' SurfaceType];
             if ~isfield(sSubject, field) || isempty(sSubject.(field))
                 return
             end
@@ -1150,18 +1150,18 @@ switch contextName
             argout2 = sAnatFile.Id;
         % === RETURN ALL THE SURFACES ===
         else
-            % Surface filenames for Subject
-            sAnatFiles = db_get('AnatomyFile', struct('Subject', sSubject.Id, 'Type', 'surface'), {'Id', 'FileName'});
-            % Build the list of tagged surfaces
-            fileTag = ['_' lower(SurfaceType)];
-            iTargetList = find(cellfun(@(c)~isempty(strfind(c, fileTag)), {sAnatFiles.FileName}));
-            % Put the default cortex on top of the list
-            iDefaults = intersect([sSubject.iCortex, sSubject.iScalp, sSubject.iInnerSkull, sSubject.iOuterSkull, sSubject.iFibers, sSubject.iFEM], iTargetList);
-            if ~isempty(iDefaults)
-                iTargetList = [iDefaults, setdiff(iTargetList, iDefaults)];
+            if strcmp(SurfaceType, 'Anatomy')
+                SurfaceType = 'Image';
             end
-            % Return all cortex surfaces
-            sAnatFiles = db_get('AnatomyFile', [sAnatFiles(iTargetList).Id]);
+            % AnatomyFiles (volume or surface) with specific SubType for Subject
+            sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, '', 'Id', SurfaceType);
+            % Put the default AnatomyFile on top of the list
+            iDefaults = sSubject.(field) == [sAnatFiles.Id];
+            if ~isempty(iDefaults)
+                sAnatFiles = [sAnatFiles(iDefaults), sAnatFiles(~iDefaults)];
+            end
+            % Return all AnatomyFiles
+            sAnatFiles = db_get('AnatomyFile', [sAnatFiles.Id]);
             argout1 = db_convert_anatomyfile(sAnatFiles);
             argout2 = [sAnatFiles.Id];
         end
@@ -1511,7 +1511,7 @@ switch contextName
         iStudy = varargin{2};
         dataListName = varargin{3};
         % Get data files of datalist
-        condQuery = struct('Name', dataListName, 'Type', 'datalist', 'Study', iStudy);
+        condQuery = struct('Comment', dataListName, 'Type', 'datalist', 'Study', iStudy);
         sFuncFiles = db_get('FilesInFileList', condQuery, 'Id');
         % Return found data files
         argout1 = [sFuncFiles.Id];
@@ -1522,7 +1522,7 @@ switch contextName
         iStudy = varargin{2};
         matrixListName = varargin{3};
         % Get matrix files of matrixlist
-        condQuery = struct('Name', matrixListName, 'Type', 'matrixlist', 'Study', iStudy);
+        condQuery = struct('Comment', matrixListName, 'Type', 'matrixlist', 'Study', iStudy);
         sFuncFiles = db_get('FilesInFileList', condQuery, 'Id');
         % Return found data files
         argout1 = [sFuncFiles.Id];
@@ -2139,9 +2139,9 @@ switch contextName
         end
         % Get parent file
         RelatedDataFile = '';
-        sFunctFile = db_get('FunctionalFile', iFile, 'ParentFile');
-        if ~isempty(sFunctFile.ParentFile)
-            sFunctFileParent = db_get('FunctionalFile', sFunctFile.ParentFile, 'FileName');
+        sFunctFile = db_get('FunctionalFile', iFile, 'Parent');
+        if ~isempty(sFunctFile.Parent)
+            sFunctFileParent = db_get('FunctionalFile', sFunctFile.Parent, 'FileName');
             RelatedDataFile = sFunctFileParent.FileName;
         end
         % If related file is results: get related data file

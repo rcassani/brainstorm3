@@ -67,6 +67,8 @@ end
 global GlobalData;
 GlobalData = db_template('GlobalData');
 GlobalData.Program.GuiLevel = GuiLevel;
+% Set this to 1 if you want to print the SQLite query for debugging
+GlobalData.Program.DispSqlDebug = 1;
 % Save the software home directory
 bst_set('BrainstormHomeDir', BrainstormHomeDir);
 % Test for headless mode

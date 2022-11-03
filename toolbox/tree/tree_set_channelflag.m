@@ -117,7 +117,7 @@ for i = 1:length(iStudies)
     % Get data file
     iStudy = iStudies(i);
     iFile  = iFiles(i);
-    sFuncFile = db_get(sqlConn, 'FunctionalFile', iFile, {'Type', 'FileName', 'Name', 'SubType'});
+    sFuncFile = db_get(sqlConn, 'FunctionalFile', iFile, {'Type', 'FileName', 'Comment', 'SubType'});
     if isempty(sFuncFile)
         continue;
     end

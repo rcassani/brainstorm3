@@ -99,7 +99,7 @@ if (iSubject == 0)
 else
     sSubject = db_get('Subject', iSubject);
 end
-sAnatFilesMri  = db_get('AnatomyFilesWithSubject', iSubject, 'anatomy', 'Id');
+sAnatFilesMri  = db_get('AnatomyFilesWithSubject', iSubject, 'volume', 'Id', 'Image');
 nAnatFileSSurf = db_get('AnatomyFilesWithSubject', iSubject, 'surface', 'Id');
 % Check for existing anatomy
 if (~isempty(sAnatFilesMri) && (isKeepMri == 0)) || (~isempty(nAnatFileSSurf) && (isKeepMri < 2))

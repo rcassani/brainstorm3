@@ -1,13 +1,16 @@
-function iAnatomyFile = db_add_anatomyfile(iSubject, FileName, Comment, SurfaceType)
+function iAnatFile = db_add_anatomyfile(iSubject, FileName, Comment, SubType)
 % DB_ADD_ANATOMYFILE: Add an AnatomyFile in database
 %
-% USAGE: iAnatomyFile = db_add_anatomyfile(iSubject, FileName, Comment, SurfaceType)
+% USAGE: iAnatomyFile = db_add_anatomyfile(iSubject, FileName, Comment, SubType)
 %
 % INPUT:
-%    - iSubject     : ID of the Subject where to add the surface
-%    - FileName     : Relative path to the file in which the AnatomyFile is defined
-%    - Comment      : Optional AnatomyFile description
-%    - SurfaceType  : Optional string {'Cortex', 'Scalp', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM', 'Other'}
+%    - iSubject : ID of the Subject where to add the surface
+%    - FileName : Full or relative filename in which the AnatomyFile is defined
+%    - Comment  : Optional AnatomyFile description
+%    - SubType  : Optional string
+%                 Type 'volume',  possible SubTypes: 'Image', 'Atlas'
+%                 Type 'surface', possible SubTypes: 'Cortex', 'Scalp', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM', 'Other'
+%
 % OUTPUT:
 %    - iAnatomyFile : ID of the AnatomyFile that was created
 
@@ -31,40 +34,43 @@ function iAnatomyFile = db_add_anatomyfile(iSubject, FileName, Comment, SurfaceT
 %
 % Authors: Raymundo Cassani, 2022
 
-% Get protocol information
-ProtocolInfo = bst_get('ProtocolInfo');
-
-% Anatomy or Surface
+% Volume or Surface
 fileType = file_gettype(FileName);
 switch fileType
-    % Anatomy
+    % Volume : image, altas
     case 'subjectimage'
-        anatFileType = 'anatomy';
-    % Surfaces : cortex, scalp, outerskull, innerskull, fibers, fem
-    otherwise
+        anatFileType = 'volume';
+    % Surface : cortex, scalp, outerskull, innerskull, fibers, fem, tess
+    case {'cortex', 'scalp', 'outerskull', 'innerskull', 'fibers', 'fem', 'tess'}
         anatFileType = 'surface';
+    otherwise
+        bst_error('Type of AnatomyFile is not supported')
 end
 
 % If comment is not defined : extract it from file
 if (nargin < 3) || isempty(Comment)
-    sMat = load(bst_fullfile(ProtocolInfo.SUBJECTS, FileName), 'Comment');
+    sMat = load(file_fullpath(FileName), 'Comment');
     Comment = sMat.Comment;
 end
 
-% If surface type is not defined : detect it
-if (nargin < 4) || isempty(SurfaceType)
-    % Get surface type from file
+% If SubType is not defined : detect it
+if (nargin < 4) || isempty(SubType)
+    % Get volume surface type from file
     switch fileType
-        % Anatomy
-        case 'subjectimage', SurfaceType = '';
+        % Volume
+        case 'subjectimage'
+            SubType = 'Image';
+            if ~isempty(strfind(FileName, '_volatlas'))
+                SubType = 'Atlas';
+            end
         % Surface
-        case 'cortex',       SurfaceType = 'Cortex';
-        case 'scalp',        SurfaceType = 'Scalp';
-        case 'outerskull',   SurfaceType = 'OuterSkull';
-        case 'innerskull',   SurfaceType = 'InnerSkull';
-        case 'fibers',       SurfaceType = 'Fibers';
-        case 'fem',          SurfaceType = 'FEM';
-        otherwise,           SurfaceType = 'Other';
+        case 'cortex',       SubType = 'Cortex';
+        case 'scalp',        SubType = 'Scalp';
+        case 'outerskull',   SubType = 'OuterSkull';
+        case 'innerskull',   SubType = 'InnerSkull';
+        case 'fibers',       SubType = 'Fibers';
+        case 'fem',          SubType = 'FEM';
+        otherwise,           SubType = 'Other';
     end
 end
 
@@ -73,10 +79,23 @@ sAnatFile = db_template('AnatomyFile');
 sAnatFile.Subject = iSubject;
 sAnatFile.Type = anatFileType;
 sAnatFile.FileName = file_short(FileName);
-sAnatFile.Name = Comment;
-sAnatFile.SurfaceType = SurfaceType;
+sAnatFile.Comment = Comment;
+sAnatFile.SubType = SubType;
 
 % Add AnatomyFile to database
-iAnatomyFile = db_set('AnatomyFile', sAnatFile);
+iAnatFile = db_set('AnatomyFile', sAnatFile);
 
+% Make surface as default (if not 'Other')
+if ~strcmpi(SubType, 'other')
+    if strcmpi(SubType, 'image')
+        SubType = 'Anatomy';
+    end
+    db_surface_default(iSubject, SubType, iAnatFile);
+end
+
+% ===== UPDATE TREE =====
+panel_protocols('UpdateNode', 'Subject', iSubject);
+panel_protocols('SelectNode', [], FileName);
+% Save database
+db_save();
 

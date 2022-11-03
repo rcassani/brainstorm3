@@ -16,9 +16,9 @@ function varargout = db_get(varargin)
 %    - db_get('Subject', CondQuery,          Fields, isRaw) : Get Subject(s) with a Query struct
 %    - db_get('Subject', '@default_subject', Fields)        : Get default Subject
 %    - db_get('Subject')                                    : Get current Subject in current protocol
-%    - db_get('Subjects')                                   : Get all Subjects in current protocol, exclude @default_subject
-%    - db_get('Subjects', 0, Fields)                        : Get all Subjects in current protocol, exclude @default_subject
-%    - db_get('Subjects', 1, Fields)                        : Get all Subjects in current protocol, include @default_subject
+%    - db_get('AllSubjects')                                : Get all Subjects in current protocol, excluding @default_subject
+%    - db_get('AllSubjects', Fields)                        : Get all Subjects in current protocol, excluding @default_subject
+%    - db_get('AllSubjects', Fields, '@default_subject')    : Get all Subjects in current protocol, including @default_subject
 %    - db_get('SubjectCount')                               : Get number of subjects in current protocol, exclude @default_subject
 %    - db_get('SubjectFromStudy', StudyID, SubjectFields)       : Find SubjectID for StudyID
 %    - db_get('SubjectFromStudy', StudyFileName, SubjectFields) : Find SubjectID for StudyFileName
@@ -36,22 +36,23 @@ function varargout = db_get(varargin)
 %    - db_get('AnatomyFile', CondQuery, Fields) : Find AnatomyFile(s) with a Query
 %
 % ====== STUDIES =======================================================================
-%    - db_get('StudiesFromSubject', SubjectID,   Fields, 'intra_subject', 'default_study') : Find Studies for Subject with SubjectID (with intra_subject and default_study)
-%    - db_get('StudiesFromSubject', SubjectID,   Fields)     : Find Studies for Subject with SubjectID (w/o intra_subject study and default_study)
-%    - db_get('StudiesFromSubject', SubjectFileName, Fields) : Find Studies for Subject with SubjectFileName (w/o intra_subject study and default_study)
-%    - db_get('StudiesFromSubject', SubjectName, Fields)     : Find Studies for Subject with SubjectName (w/o intra_subject study and default_study)
-%    - db_get('DefaultStudy', SubjectID,       Fields) : Get default study for SubjectID
-%    - db_get('DefaultStudy', SubjectFileName, Fields) : Get default study for SubjectFileName
-%    - db_get('DefaultStudy', CondQuery,       Fields) : Get default study for CondQuery
+%    - db_get('StudiesFromSubject', SubjectID,   Fields, '@intra', '@default_study') : Find Studies for Subject with SubjectID including @intra and @default_study
+%    - db_get('StudiesFromSubject', SubjectID,   Fields)     : Find Studies for Subject with SubjectID excluding @intra and @default_study
+%    - db_get('StudiesFromSubject', SubjectFileName, Fields) : Find Studies for Subject with SubjectFileName excluding @intra and @default_study
+%    - db_get('StudiesFromSubject', SubjectName, Fields)     : Find Studies for Subject with SubjectName excluding @intra and @default_study
+%    - db_get('DefaultStudy', SubjectID,       Fields) : Get @default_study for SubjectID
+%    - db_get('DefaultStudy', SubjectFileName, Fields) : Get @default_study for SubjectFileName
+%    - db_get('DefaultStudy', SubjectName,     Fields) : Get @default_study for SubjectName
+%    - db_get('DefaultStudy', CondQuery,       Fields) : Get @default_study for CondQuery
 %    - db_get('Study', StudyIDs,         Fields) : Get study(s) by ID(s)
 %    - db_get('Study', StudyFileNames,   Fields) : Get study(s) by FileName(s)
 %    - db_get('Study', CondQuery,        Fields) : Get study(s) with a Query
 %    - db_get('Study', '@inter',         Fields) : Get @inter study
 %    - db_get('Study', '@default_study', Fields) : Get global @default_study study
 %    - db_get('Study');                          : Get current study in current protocol
-%    - db_get('Studies')             : Get all studies in current protocol, exclude @inter and global @default_study
-%    - db_get('Studies', 0, Fields)  : Get all studies in current protocol, exclude @inter and global @default_study
-%    - db_get('Studies', 1, Fields)  : Get all studies in current protocol, include @inter and global @default_study
+%    - db_get('AllStudies')          : Get all Studies in current protocol, excluding @inter and global @default_study
+%    - db_get('AllStudies', Fields)  : Get all Studies in current protocol, excluding @inter and global @default_study
+%    - db_get('AllStudies', Fields, '@inter', '@default_study')  : Get all Studies in current protocol including @inter and global @default_study
 %    - db_get('StudyWithCondition', ConditionPath, Fields) : Get studies for a given condition path
 %
 % ====== FUNCTIONAL FILES ==============================================================
@@ -242,24 +243,23 @@ switch contextName
         varargout{1} = sSubjects;   
         
 
-%% ==== SUBJECTS ====
-    % sSubjects = db_get('Subjects');            % Exclude @default_subject
-    %           = db_get('Subjects', 0, Fields); % Include @default_subject
-    %           = db_get('Subjects', 1, Fields); % Include @default_subject
-    case 'Subjects'
-        includeDefaultSub = [];
+%% ==== ALL SUBJECTS ====
+    % sSubjects = db_get('AllSubjects');                             % Exclude @default_subject
+    %           = db_get('AllSubjects', Fields);                     % Exclude @default_subject
+    %           = db_get('AllSubjects', Fields, '@default_subject'); % Include @default_subject
+    case 'AllSubjects'
+        includeDefaultSub = 0;
         fields = '*';
+        addQuery = '';
         % Parse arguments
         if length(args) > 0
-            includeDefaultSub = args{1};
-            if length(args) > 1
-                fields = args{2};
-            end
+            fields = args{1};
         end
-
-        % Exclude global studies if indicated
-        addQuery = '';
-        if isempty(includeDefaultSub) || (includeDefaultSub == 0)
+        % Include @default_subject if required        
+        if length(args) > 1 && strcmpi('@default_subject', args{2})
+            includeDefaultSub = 1;
+        end
+        if includeDefaultSub == 0
             addQuery = 'AND Name <> "@default_subject"';
         end
 
@@ -273,23 +273,30 @@ switch contextName
 
 
 %% ==== ANATOMY FILES WITH SUBJECT ====
-    % sAnatomyFiles = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields)
+    % sAnatomyFiles = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields, SubType)
+    %               = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields)
     %               = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType)
     %               = db_get('AnatomyFilesWithSubject', SubjectID)
+    %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, Fields, SubType)
     %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, Fields)
     %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType)
     %               = db_get('AnatomyFilesWithSubject', SubjectFileName)
+    %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType, Fields, SubType)
     %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType, Fields)
     %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType)
     %               = db_get('AnatomyFilesWithSubject', SubjectName)
     case 'AnatomyFilesWithSubject'
         fileType = '';
         fields = '*';
+        subType = '';
         varargout{1} = [];
         if length(args) > 1
             fileType = lower(args{2});
             if length(args) > 2
                 fields = args{3};
+                if length(args) > 3
+                    subType = args{4};
+                end
             end
         end
         if ischar(fields), fields = {fields}; end
@@ -303,6 +310,9 @@ switch contextName
         addQuery = '';
         if ~isempty(fileType)
             addQuery = ['AND AnatomyFile.Type = "' fileType '" '];
+        end
+        if ~isempty(subType)
+            addQuery = ['AND AnatomyFile.SubType = "' subType '" '];
         end
         addQuery = [addQuery, 'AND Subject.'];
         % Complete query with FileName of FileID
@@ -502,7 +512,7 @@ switch contextName
         % Get fileListID and Type
         sFuncFile = db_get(sqlConn, 'FunctionalFile', iFileList, {'Id', 'Type', 'Study'});
         % Get all children files of the list
-        condQuery = struct('ParentFile', sFuncFile.Id, 'Type', strrep(sFuncFile.Type, 'list', ''), 'Study', sFuncFile.Study);
+        condQuery = struct('Parent', sFuncFile.Id, 'Type', strrep(sFuncFile.Type, 'list', ''), 'Study', sFuncFile.Study);
         varargout{1} = db_get(sqlConn, 'FunctionalFile', condQuery, fields);
 
 
@@ -585,8 +595,8 @@ switch contextName
 
 
 %% ==== STUDIES FROM SUBJECT ====        
-    % sStudies = db_get('StudiesFromSubject', iSubject,        Fields)                                   % Exclude 'intra_subject' study and 'default_study')
-    %          = db_get('StudiesFromSubject', iSubject,        Fields, 'intra_subject', 'default_study') % Include 'intra_subject' study and 'default_study')
+    % sStudies = db_get('StudiesFromSubject', iSubject,        Fields)                             % Exclude '@intra' study and '@default_study')
+    %          = db_get('StudiesFromSubject', iSubject,        Fields, '@intra', '@default_study') % Include '@intra' study and '@default_study')
     %          = db_get('StudiesFromSubject', SubjectFileName, Fields)
     %          = db_get('StudiesFromSubject', SubjectName,     Fields)
     case 'StudiesFromSubject'
@@ -616,11 +626,11 @@ switch contextName
         else
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
-        % Complete query with studies ("intra_subject" and "default_study") to exclude
-        if length(args) < 2 || ~ismember('intra_subject', args(3:end))
+        % Complete query with studies ("@intra" and "@default_study") to exclude
+        if length(args) < 2 || ~ismember('@intra', args(3:end))
             addQuery = [addQuery ' AND Study.Name <> "' bst_get('DirAnalysisIntra') '"'];
         end
-        if length(args) < 2 || ~ismember('default_study', args(3:end))
+        if length(args) < 2 || ~ismember('@default_study', args(3:end))
             addQuery = [addQuery ' AND Study.Name <> "' bst_get('DirDefaultStudy') '"'];
         end
         % Select query
@@ -630,6 +640,7 @@ switch contextName
 %% ==== DEFAULT STUDY ====       
     % sStudy = db_get('DefaultStudy', SubjectID,       Fields)
     %        = db_get('DefaultStudy', SubjectFileName, Fields)
+    %        = db_get('DefaultStudy', SubjectName,     Fields)
     %        = db_get('DefaultStudy', CondQuery,       Fields)
     case 'DefaultStudy'
         fields = '*';
@@ -730,24 +741,23 @@ switch contextName
         varargout{1} = sStudies;
 
 
-%% ==== STUDIES ====              
-    % sStudy = db_get('Studies')             % Exclude @inter and global @default_study
-    %        = db_get('Studies', 0, Fields)  % Exclude @inter and global @default_study
-    %        = db_get('Studies', 1, Fields)  % Include @inter and global @default_study
-    case 'Studies'
-        includeGlobalStudies  = [];
+%% ==== ALL STUDIES ====
+    % sStudy = db_get('AllStudies')                                      % Exclude @inter and global @default_study
+    %        = db_get('AllStudies', Fields)                              % Exclude @inter and global @default_study
+    %        = db_get('AllStudies', Fields, '@inter', '@default_study')  % Include @inter and global @default_study
+    case 'AllStudies'
         fields = '*';
         % Parse arguments
         if length(args) > 0
-            includeGlobalStudies = args{1};
-            if length(args) > 1
-                fields = args{2};
-            end
+            fields = args{1};
         end
-        % Exclude global studies if indicated
         addQuery = '';
-        if isempty(includeGlobalStudies) || (includeGlobalStudies == 0)
-            addQuery = 'AND Name <> "@inter" AND (Subject <> 0 OR Name <> "@default_study")';
+        % Complete query with studies ("@inter" and global "@default_study")
+        if length(args) < 2 || ~ismember('@inter', args(3:end))
+            addQuery = [addQuery ' AND Name <> "' bst_get('DirAnalysisInter') '"'];
+        end
+        if length(args) < 2 || ~ismember('@default_study', args(3:end))
+            addQuery = [addQuery ' AND (Subject <> 0 OR Name <> "@default_study")'];
         end
         
         varargout{1} = sql_query(sqlConn, 'SELECT', 'Study', [], fields, addQuery);
@@ -876,7 +886,7 @@ switch contextName
             fields = cellfun(@(x) ['parent.' x], fields, 'UniformOutput', 0);
         end
         % Join query
-        joinQry = 'FunctionalFile parent INNER JOIN FunctionalFile ON parent.Id = FunctionalFile.ParentFile ';
+        joinQry = 'FunctionalFile parent INNER JOIN FunctionalFile ON parent.Id = FunctionalFile.Parent ';
         % Add query
         addQuery = 'AND FunctionalFile.';
         % Complete query with FileName of FileID
@@ -915,9 +925,9 @@ switch contextName
         alsoGrandChildren = isempty(children_type) || ismember(children_type, {'timefreq', 'dipoles'});
 
         % Join query
-        joinQry = 'FunctionalFile children INNER JOIN FunctionalFile parent1 ON children.ParentFile = parent1.Id';
+        joinQry = 'FunctionalFile children INNER JOIN FunctionalFile parent1 ON children.Parent = parent1.Id';
         if alsoGrandChildren
-            joinQry = [joinQry, ' LEFT JOIN FunctionalFile parent2 ON parent1.ParentFile = parent2.Id '];
+            joinQry = [joinQry, ' LEFT JOIN FunctionalFile parent2 ON parent1.Parent = parent2.Id '];
         end
         % Add query
         addQuery = 'AND (parent1.';

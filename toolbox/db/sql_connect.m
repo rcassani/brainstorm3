@@ -20,8 +20,11 @@ function sqlConn = sql_connect(dbInfo)
 % =============================================================================@
 %
 % Authors: Martin Cousineau, 2020
+%          Raymundo Cassani, 2022
 
-debug = 1;
+global GlobalData;
+debug = GlobalData.Program.DispSqlDebug;
+
 if nargin < 1 || isempty(dbInfo)
     dbInfo = sql_get_info();
 end
@@ -37,9 +40,14 @@ switch (dbInfo.Rdbms)
         props = java.util.Properties();
         sqlConn = sqliteDriver.connect(['jdbc:sqlite:' dbInfo.Location], props);
         
-        % Set some SQLite properties to speed up remote queries
-        statement = sqlConn.createStatement();
-        statement.execute('PRAGMA synchronous=OFF; PRAGMA temp_store=MEMORY;');
+        % Set some SQLite properties to speed up remote queries and allow foreign key constraints
+        pragmas = {'PRAGMA synchronous = OFF', ...
+                   'PRAGMA temp_store = MEMORY', ...
+                   'PRAGMA foreign_keys = ON'};
+        for pragma = pragmas
+            statement = sqlConn.createStatement();
+            statement.execute(pragma);
+        end
 
     otherwise
         error('Unsupported relational database management system.');

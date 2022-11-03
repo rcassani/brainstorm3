@@ -2449,7 +2449,7 @@ function SetFiducial(hFig, FidCategory, FidName)
     % Get the file in the database
     sqlConn = sql_connect();
     sAnatFile  = db_get(sqlConn, 'AnatomyFile', sMri.FileName, {'Id', 'Subject'});
-    sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sAnatFile.Subject, 'anatomy', 'Id');
+    sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sAnatFile.Subject, 'volume', 'Id', 'Image');
     sql_close(sqlConn);
     % If it is not the first MRI: can't edit the fiducuials
     if (sAnatFile.Id ~= sAnatFiles(1).Id)
@@ -3083,20 +3083,9 @@ function [AtlasNames, AtlasFiles, iAtlas] = GetVolumeAtlases(hFig)
     iAtlas = [];
     % Get subject info
     SubjectFile = getappdata(hFig, 'SubjectFile');
-    sAnatFiles  = db_get('AnatomyFilesWithSubject', SubjectFile, 'anatomy', {'Name', 'FileName'});
-    % Find atlases based on the volume names
-    iAllAtlases = [];
-    for iAnat = 1:length(sAnatFiles)
-        if any(~cellfun(@(c)isempty(strfind(sAnatFiles(iAnat).Name, c)), {'aseg', 'svreg', 'tissues'})) || ...
-           ~isempty(strfind(sAnatFiles(iAnat).FileName, '_volatlas'))
-            iAllAtlases(end+1) = iAnat;
-        end
-    end
-    if isempty(iAllAtlases)
-        return;
-    end
-    AtlasNames = {sAnatFiles(iAllAtlases).Name};
-    AtlasFiles = {sAnatFiles(iAllAtlases).FileName};
+    sAnatFiles  = db_get('AnatomyFilesWithSubject', SubjectFile, 'volume', {'Comment', 'FileName'}, 'Atlas');
+    AtlasNames = {sAnatFiles.Comment};
+    AtlasFiles = {sAnatFiles.FileName};
     % Add an empty atlas
     if ~isempty(AtlasNames)
         AtlasNames{end+1} = 'none';

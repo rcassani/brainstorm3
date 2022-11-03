@@ -70,7 +70,7 @@ else
     sSubject = db_get('Subject', iSubject);
 end
 % Current anatomy files
-sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'anatomy');
+sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'volume');
 
 %% ===== SELECT MRI FILE =====
 % If MRI file to load was not defined : open a dialog box to select it
@@ -341,9 +341,9 @@ else
         [fPath, fBase, fExt] = bst_fileparts(MriFile);
         fBase = strrep(fBase, '.nii', '');
         if isMni
-            sMri.Comment = file_unique(fBase, {sAnatFiles.Name});
+            sMri.Comment = file_unique(fBase, {sAnatFiles.Comment});
         else
-            sMri.Comment = file_unique([fBase, fileTag], {sAnatFiles.Name});
+            sMri.Comment = file_unique([fBase, fileTag], {sAnatFiles.Comment});
         end
     end
     % Add MNI tag

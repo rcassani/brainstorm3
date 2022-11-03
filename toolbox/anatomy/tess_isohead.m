@@ -41,7 +41,7 @@ sMri = [];
 if ischar(iSubject)
     MriFile = iSubject;
     sSubject = db_get('SubjectFromAnatomyFile', MriFile);
-    %[sSubject, iSubject] = bst_get('MriFile', MriFile);
+    iSubject = sSubject.Id;
 elseif isnumeric(iSubject)
     % Get subject
     sSubject = db_get('Subject', iSubject);

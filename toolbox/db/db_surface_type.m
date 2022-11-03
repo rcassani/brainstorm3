@@ -28,7 +28,7 @@ newFileName = '';
 SurfaceFileFull = file_fullpath(SurfaceFile);
 % Find surface in database
 sAnatFile = db_get('AnatomyFile', SurfaceFile);
-initType = sAnatFile.SurfaceType;
+initType = sAnatFile.SubType;
 % Check if surface type changed
 if strcmpi(initType, targetType)
     newFileName = SurfaceFile;
@@ -65,7 +65,7 @@ newFileName = file_short(newSurfaceFileFull);
 bst_history('add', newSurfaceFileFull, 'set_type', ['Set surface type: ' targetType]);
 
 % === Update surface type and filename ===
-db_set('AnatomyFile', struct('SurfaceType', targetType, 'FileName', newFileName), sAnatFile.Id);
+db_set('AnatomyFile', struct('SubType', targetType, 'FileName', newFileName), sAnatFile.Id);
 % If the modified surface was selected : unselect it
 sSubject.iScalp      = setdiff(sSubject.iScalp,      sAnatFile.Id);
 sSubject.iCortex     = setdiff(sSubject.iCortex,     sAnatFile.Id);

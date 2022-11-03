@@ -165,6 +165,7 @@ switch contextName
             sSubject.Id = SubjectId;
             bst_set('Subject', sSubject.Id, sSubject);
         end
+        sql_close(sqlConn);
         
     case 'ProtocolStudies'
         sqlConn = sql_connect();
@@ -183,15 +184,21 @@ switch contextName
             end
 
             % Skip empty Default / Analysis studies
-            if isempty(sStudy) || ((iStudy < 1 || ismember(sStudy.Name, {'@default_study', '@intra', '@inter'})) ...
-                    && isempty(sStudy.Channel) && isempty(sStudy.Data) ...
-                    && isempty(sStudy.HeadModel) && isempty(sStudy.Result) ...
-                    && isempty(sStudy.Stat) && isempty(sStudy.Image) ...
-                    && isempty(sStudy.NoiseCov) && isempty(sStudy.Dipoles) ...
-                    && isempty(sStudy.Timefreq) && isempty(sStudy.Matrix))
-                continue
-            end
+            % TODO: If these are empty, they should be removed also from HDD
+%             if isempty(sStudy) || ((iStudy < 1 || ismember(sStudy.Name, {'@default_study', '@intra', '@inter'})) ...
+%                     && isempty(sStudy.Channel) && isempty(sStudy.Data) ...
+%                     && isempty(sStudy.HeadModel) && isempty(sStudy.Result) ...
+%                     && isempty(sStudy.Stat) && isempty(sStudy.Image) ...
+%                     && isempty(sStudy.NoiseCov) && isempty(sStudy.Dipoles) ...
+%                     && isempty(sStudy.Timefreq) && isempty(sStudy.Matrix))
+%                 continue
+%             end
 
+            % Get ID for parent Subject
+            if isempty(sStudy.Subject)
+                sSubject = db_get('Subject', sStudy.BrainStormSubject, 'Id');
+                sStudy.Subject = sSubject.Id;
+            end
             % Insert study
             sStudy.Condition = char(sStudy.Condition);
             StudyId = db_set('Study', sStudy);
@@ -213,12 +220,8 @@ switch contextName
         sSubject = varargin{3};
         sqlConn = sql_connect();
         
-        % If default subject
-        if (iSubject == 0)
-            sExistingSubject = db_get(sqlConn, 'Subject', '@default_subject', 'Id');
-        else
-            sExistingSubject = db_get(sqlConn, 'Subject', iSubject, 'Id');
-        end
+        % Get subject
+        sExistingSubject = db_get(sqlConn, 'Subject', iSubject, 'Id');
         
         % Get FileNames for currently selected Anatomy and Surface files
         categories = {'Anatomy', 'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'};
@@ -258,7 +261,7 @@ switch contextName
         if ~isempty(sExistingSubject)
             sSubject.Id = sExistingSubject.Id;
             sExistingSubject.Id = db_set(sqlConn, 'Subject', sSubject, sExistingSubject.Id);
-            if sExistingSubject.Id
+            if ~isempty(sExistingSubject.Id)
                 iSubject = sExistingSubject.Id;
                 argout1 = iSubject;
             else
@@ -277,8 +280,8 @@ switch contextName
             % Delete existing anatomy files
             db_set(sqlConn, 'AnatomyFilesWithSubject', 'Delete', iSubject);
                        
-            % Convert Anatomy & Surface files to AnatomyFiles and insert
-            sAnatFiles = [db_convert_anatomyfile(sSubject.Anatomy, 'anatomy'), ...
+            % Convert Volume & Surface files to AnatomyFiles and insert
+            sAnatFiles = [db_convert_anatomyfile(sSubject.Anatomy, 'volume'), ...
                           db_convert_anatomyfile(sSubject.Surface, 'surface')];
             db_set(sqlConn, 'AnatomyFilesWithSubject', sAnatFiles, iSubject);
 
@@ -304,8 +307,8 @@ switch contextName
         % Get studies list
         iStudies = varargin{2};
         sStudies = varargin{3};
-        iAnalysisStudy = -2;
-        iDefaultStudy  = -3;
+        iAnalysisStudy = -2; % @inter
+        iDefaultStudy  = -3; % global @default_study
         
         sqlConn = sql_connect();
         for i = 1:length(iStudies)
@@ -386,9 +389,12 @@ switch contextName
                     end
                     sFuncFiles = [sFuncFiles, sTypeFuncFiles];
                 end
-                % Insert FunctionalFiles in database
-                db_set(sqlConn, 'FunctionalFilesWithStudy', sFuncFiles, iStudy);
-
+                if ~isempty(sFuncFiles)
+                    % Remove FunctionalFiles with empty FileName
+                    iNotEmpty = ~cellfun(@isempty,{sFuncFiles.FileName});
+                    % Insert FunctionalFiles in database
+                    db_set(sqlConn, 'FunctionalFilesWithStudy', sFuncFiles(iNotEmpty), iStudy);
+                end
                 % Set selected Channel and HeadModel files
                 hasSelFiles = 0;
                 selFiles = struct();

@@ -89,10 +89,10 @@ switch lower(nodeType)
         if file_update(bst_fullfile(ProtocolInfo.SUBJECTS, fileName), 'Field', 'Comment', newComment);
             bstNode.setComment(newComment);
             % Update comment
-            [iAnatFile, sAnatFile] = db_set('AnatomyFile', struct('Name', newComment), iSurface);
+            [iAnatFile, sAnatFile] = db_set('AnatomyFile', struct('Comment', newComment), iSurface);
             % If new tess comment contains a keyword (head, cortex, scalp, brain, ...)
             % => update surface type (only if surface type changed)
-            prevType = sAnatFile.SurfaceType;
+            prevType = sAnatFile.SubType;
             % SCALP
             if ~strcmpi(prevType, 'Scalp') && (~isempty(strfind(lower(newComment), 'head')) || ~isempty(strfind(lower(newComment), 'scalp')) || ~isempty(strfind(lower(newComment), 'skin')))
                 node_set_type(bstNode, 'Scalp');
@@ -159,7 +159,7 @@ switch lower(nodeType)
         % Update File, Node display and Database
         if file_update(bst_fullfile(ProtocolInfo.STUDIES, fileName), 'Field', 'Comment', newComment);
             bstNode.setComment(newComment);
-            db_set('FunctionalFile', struct('Name', newComment), iSubItem);
+            db_set('FunctionalFile', struct('Comment', newComment), iSubItem);
             iModifiedStudies = iStudy;
             % If results file is a kernel-only file: Update links
             isUpdateLinks = strcmpi(nodeType, 'kernel');
@@ -192,7 +192,7 @@ switch lower(nodeType)
                 % Update File, Node display and Database
                 if file_update(bst_fullfile(ProtocolInfo.STUDIES, sFuncFile.FileName), 'Field', 'Comment', fileComment);
                     % Update Brainstorm database
-                    db_set('FunctionalFile', struct('Name', fileComment), iFoundData(i));
+                    db_set('FunctionalFile', struct('Comment', fileComment), iFoundData(i));
                 end
             end
             iModifiedStudies = iStudy;
