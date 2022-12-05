@@ -49,11 +49,11 @@ FemMat = bst_history('add', FemMat, 'fem_hexa2tetra', 'Converted to tetrahedral'
 [fPath, fBase, fExt] = bst_fileparts(HexaFile);
 TetraFile = file_unique(bst_fullfile(fPath, [fBase, '_hexa', fExt]));
 % Get subject
-[sSubject, iSubject] = bst_get('SurfaceFile', HexaFile);
+sAnatFile = db_get('AnatomyFile', HexaFile, 'Subject');
 % Save new surface in Brainstorm format
 bst_progress('text', 'Saving tetra mesh...');    
 bst_save(TetraFile, FemMat, 'v7');
-db_add_surface(iSubject, TetraFile, FemMat.Comment);
+db_add_surface(sAnatFile.Subject, TetraFile, FemMat.Comment);
 
 % Close progress bar
 bst_progress('stop');

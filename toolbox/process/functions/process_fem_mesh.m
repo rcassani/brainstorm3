@@ -124,8 +124,8 @@ function OutputFiles = Run(sProcess, sInputs) %#ok<DEFNU>
         return;
     end
     % Get subject
-    [sSubject, iSubject] = bst_get('Subject', SubjectName);
-    if isempty(iSubject)
+    sSubject = db_get('Subject', SubjectName);
+    if isempty(sSubject)
         bst_report('Error', sProcess, [], ['Subject "' SubjectName '" does not exist.']);
         return
     end
@@ -186,7 +186,7 @@ function OutputFiles = Run(sProcess, sInputs) %#ok<DEFNU>
     end
     
     % Call processing function
-    [isOk, errMsg] = Compute(iSubject, [], 0, OPTIONS);
+    [isOk, errMsg] = Compute(sSubject.Id, [], 0, OPTIONS);
     % Handling errors
     if ~isOk
         bst_report('Error', sProcess, [], errMsg);
@@ -292,10 +292,8 @@ function [isOk, errMsg] = Compute(iSubject, iMris, isInteractive, OPTIONS)
             % If surfaces are not passed in input: get default surfaces
             if isempty(OPTIONS.BemFiles)
                 if ~isempty(sSubject.iScalp) && ~isempty(sSubject.iOuterSkull) && ~isempty(sSubject.iInnerSkull)
-                    OPTIONS.BemFiles = {...
-                        sSubject.Surface(sSubject.iInnerSkull).FileName, ...
-                        sSubject.Surface(sSubject.iOuterSkull).FileName, ...
-                        sSubject.Surface(sSubject.iScalp).FileName};
+                    sAnatFiles = db_get('AnatomyFile', [sSubject.iInnerSkull, sSubject.iOuterSkull, sSubject.iScalp]);
+                    OPTIONS.BemFiles = {sAnatFiles.FileName};
                     TissueLabels = {'brain', 'skull', 'scalp'};
                 else
                     errMsg = ['Method "' OPTIONS.Method '" requires three surfaces: head, inner skull and outer skull.' 10 ...
@@ -306,12 +304,12 @@ function [isOk, errMsg] = Compute(iSubject, iMris, isInteractive, OPTIONS)
             else
                 % Get tissue label
                 for iBem = 1:length(OPTIONS.BemFiles)
-                    [sSubject, iSubject, iSurface] = bst_get('SurfaceFile', OPTIONS.BemFiles{iBem});
+                    sAnatFile = db_get('AnatomyFile', OPTIONS.BemFiles{iBem});
                     % Get tissue label
-                    if ~strcmpi(sSubject.Surface(iSurface).SurfaceType, 'Other')
-                        TissueLabels{iBem} = GetFemLabel(sSubject.Surface(iSurface).SurfaceType);
+                    if ~strcmpi(sAnatFile.SubType, 'Other')
+                        TissueLabels{iBem} = GetFemLabel(sAnatFile.SubType);
                     else
-                        TissueLabels{iBem} = GetFemLabel(sSubject.Surface(iSurface).Comment);
+                        TissueLabels{iBem} = GetFemLabel(sAnatFile.Comment);
                     end
                 end
                 % If there is a CSF layer but nothing inside: rename into BRAIN
@@ -453,10 +451,8 @@ function [isOk, errMsg] = Compute(iSubject, iMris, isInteractive, OPTIONS)
             % If surfaces are not passed in input: get default surfaces
             if isempty(OPTIONS.BemFiles)
                 if ~isempty(sSubject.iScalp) && ~isempty(sSubject.iOuterSkull) && ~isempty(sSubject.iInnerSkull)
-                    OPTIONS.BemFiles = {...
-                        sSubject.Surface(sSubject.iInnerSkull).FileName, ...
-                        sSubject.Surface(sSubject.iOuterSkull).FileName, ...
-                        sSubject.Surface(sSubject.iScalp).FileName};
+                    sAnatFiles = db_get('AnatomyFile', [sSubject.iInnerSkull, sSubject.iOuterSkull, sSubject.iScalp]);
+                    OPTIONS.BemFiles = {sAnatFiles.FileName};
                     TissueLabels = {'brain', 'skull', 'scalp'};
                 else
                     errMsg = [errMsg, 'Method "' OPTIONS.Method '" requires three surfaces: head, inner skull and outer skull.' 10 ...
@@ -467,11 +463,12 @@ function [isOk, errMsg] = Compute(iSubject, iMris, isInteractive, OPTIONS)
             else
                 % Get tissue label
                 for iBem = 1:length(OPTIONS.BemFiles)
-                    [sSubject, iSubject, iSurface] = bst_get('SurfaceFile', OPTIONS.BemFiles{iBem});
-                    if ~strcmpi(sSubject.Surface(iSurface).SurfaceType, 'Other')
-                        TissueLabels{iBem} = GetFemLabel(sSubject.Surface(iSurface).SurfaceType);
+                    sAnatFile = db_get('AnatomyFile', OPTIONS.BemFiles{iBem});
+                    % Get tissue label
+                    if ~strcmpi(sAnatFile.SubType, 'Other')
+                        TissueLabels{iBem} = GetFemLabel(sAnatFile.SubType);
                     else
-                        TissueLabels{iBem} = GetFemLabel(sSubject.Surface(iSurface).Comment);
+                        TissueLabels{iBem} = GetFemLabel(sAnatFile.Comment);
                     end
                 end
                 % Sort from inner to outer
@@ -787,9 +784,9 @@ function [isOk, errMsg] = Compute(iSubject, iMris, isInteractive, OPTIONS)
             end
             TissueLabels = OPTIONS.layers;
             % Get index of tissue file
-            [sSubject, iSubject, iTissue] = bst_get('MriFile', TissueFile);
+            sAnatFile = db_gett('AnatomyFile', TissueFile, 'Id', 'Subject');
             % Mesh process
-            [isOk, errFt, FemFile] = process_ft_prepare_mesh_hexa('Compute', iSubject, iTissue, OPTIONS);
+            [isOk, errFt, FemFile] = process_ft_prepare_mesh_hexa('Compute', sAnatFile.Subject, sAnatFile.Id, OPTIONS);
             if ~isOk
                 errMsg = [errMsg, errFt];
                 return;
@@ -973,65 +970,66 @@ function [sSubject, T1File, T2File, errMsg, iT1, iT2] = GetT1T2(iSubject, iMris)
         iMris = [];
     end
     % Get subject
-    sSubject = bst_get('Subject', iSubject);
+    sSubject = db_get('Subject', iSubject);
     if isempty(sSubject)
         errMsg = 'Subject does not exist.';
         return
     end
     % Check if a MRI is available for the subject
-    if isempty(sSubject.Anatomy)
+    sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'volume');
+    if isempty(sAnatFiles)
         errMsg = ['No MRI available for subject "' sSubject.Name '".'];
         return
     end
     % Get default MRI if not specified
     if isempty(iMris)
-        iMris = 1:length(sSubject.Anatomy);
         tryDefaultT2 = 0;
-    else
+    else                
+        sAnatFiles = sAnatFiles(ismember(sAnatFiles.Id, iMris));
         tryDefaultT2 = 1;
     end
     % If there are multiple MRIs: order them to put the default one first (probably a T1)
-    if (length(iMris) > 1)
+    if (length(sAnatFiles) > 1)
         % Select the default MRI as the T1
-        if ismember(sSubject.iAnatomy, iMris)
+        if ismember(sSubject.iAnatomy, [sAnatFiles.Id])
             iT1 = sSubject.iAnatomy;
-            iMris = iMris(iMris ~= sSubject.iAnatomy);
+            sAnatFiles = sAnatFiles([sAnatFiles.Id] ~= sSubject.iAnatomy);
         else
             iT1 = [];
         end
         % Find other possible T1
         if isempty(iT1)
-            iT1 = find(~cellfun(@(c)isempty(strfind(c,'t1')), lower({sSubject.Anatomy(iMris).Comment})));
+            iT1 = find(~cellfun(@(c)isempty(strfind(c,'t1')), lower({sAnatFiles.Comment})));
             if ~isempty(iT1)
-                iT1 = iMris(iT1(1));
-                iMris = iMris(iMris ~= iT1);
+                iT1 = sAnatFiles(iT1(1)).Id;
+                sAnatFiles = sAnatFiles([sAnatFiles.Id] ~= iT1);
             end
         end
         % Find any possible T2
-        iT2 = find(~cellfun(@(c)isempty(strfind(c,'t2')), lower({sSubject.Anatomy(iMris).Comment})));
+        iT2 = find(~cellfun(@(c)isempty(strfind(c,'t2')), lower({sAnatFiles.Comment})));
         if ~isempty(iT2)
-            iT2 = iMris(iT2(1));
-            iMris = iMris(iMris ~= iT2);
+            iT2 = sAnatFiles(iT2(1)).Id;
+            sAnatFiles = sAnatFiles([sAnatFiles.Id] ~= iT2);
         else
             iT2 = [];
         end
         % If not identified yet, use first MRI as T1
         if isempty(iT1)
-            iT1 = iMris(1);
-            iMris = iMris(2:end);
+            iT1 = sAnatFiles(1).Id;
+            sAnatFiles = sAnatFiles(2:end);
         end
         % If not identified yet, use following MRI as T2
         if isempty(iT2) && tryDefaultT2
-            iT2 = iMris(1);
+            iT2 = sAnatFiles(1).Id;
         end
     else
-        iT1 = iMris(1);
+        iT1 = sAnatFiles(1).Id;
         iT2 = [];
     end
     % Get full file names
-    T1File = file_fullpath(sSubject.Anatomy(iT1).FileName);
+    T1File = file_fullpath(sAnatFiles([sAnatFiles.Id] == iT1).FileName);
     if ~isempty(iT2)
-        T2File = file_fullpath(sSubject.Anatomy(iT2).FileName);
+        T2File = file_fullpath(sAnatFiles([sAnatFiles.Id] == iT1).FileName);
     else
         T2File = [];
     end
@@ -1252,8 +1250,6 @@ end
 
 %% ===== HEXA <=> TETRA =====
 function NewFemFile = SwitchHexaTetra(FemFile) %#ok<DEFNU>
-    % Get file in database
-    [sSubject, iSubject] = bst_get('SurfaceFile', FemFile);
     FemFullFile = file_fullpath(FemFile);
     % Get dimensions of the Elements variable
     elemSize = whos('-file', FemFullFile, 'Elements');
