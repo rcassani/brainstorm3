@@ -158,10 +158,10 @@ function OutputFiles = Run(sProcess, sInputs) %#ok<DEFNU>
     
     % ===== GET/CREATE SUBJECT =====
     % Get subject 
-    [sSubject, iSubject] = bst_get('Subject', SubjectName);
+    sSubject = db_get('Subject', SubjectName);
     % Create subject is it does not exist yet
-    if isempty(sSubject)
-        [sSubject, iSubject] = db_add_subject(SubjectName);
+    if isempty(sSubject.Id)
+        [~, iSubject] = db_add_subject(SubjectName);
     end
     if isempty(iSubject)
         bst_report('Error', sProcess, [], ['Cannot create subject "' SubjectName '".']);
