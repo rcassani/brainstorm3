@@ -186,7 +186,7 @@ switch contextName
         % Input is SubjectIDs or SubjectFileNames
         if ~isstruct(iSubjects)
             nSubjects = length(iSubjects);
-            sSubjects = repmat(resultStruct, 1, nSubjects);
+            sSubjects = repmat(resultStruct, 0);
             for i = 1:nSubjects
                 if iscell(iSubjects)
                     iSubjects{i} = file_short(iSubjects{i});
@@ -410,7 +410,7 @@ switch contextName
         % Input is FileIDs and FileNames
         if ~isstruct(iFiles)
             nFiles = length(iFiles);
-            sFiles = repmat(resultStruct, 1, nFiles);
+            sFiles = repmat(resultStruct, 0);
             for i = 1:nFiles
                 if iscell(iFiles)
                     condQuery.FileName = file_short(iFiles{i});
@@ -474,7 +474,7 @@ switch contextName
         % Input is FileIDs and FileNames
         if ~isstruct(iFiles)
             nFiles = length(iFiles);
-            sFiles = repmat(resultStruct, 1, nFiles);
+            sFiles = repmat(resultStruct, 0);
             for i = 1:nFiles
                 if iscell(iFiles)
                     condQuery.FileName = file_short(iFiles{i});
