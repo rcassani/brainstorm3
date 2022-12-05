@@ -88,9 +88,11 @@ bst_memory('UnloadAll', 'Forced');
 
 %% ===== DELETE PREVIOUS ANATOMY =====
 % Get subject definition
-sSubject = bst_get('Subject', iSubject);
+sSubject = db_get('Subject', iSubject);
+sAnatomies = db_get('AnatomyFilesWithSubject', iSubject, 'volume', 'Id');
+sSurfaces  = db_get('AnatomyFilesWithSubject', iSubject, 'surface', 'Id');
 % Check for existing anatomy
-if (~isempty(sSubject.Anatomy) && (isKeepMri == 0)) || (~isempty(sSubject.Surface) && (isKeepMri < 2))
+if (~isempty(sAnatomies) && (isKeepMri == 0)) || (~isempty(sSurfaces) && (isKeepMri < 2))
     % Ask user whether the previous anatomy should be removed
     if isInteractive
         isDel = java_dialog('confirm', ['Warning: There is already an anatomy defined for this subject.' 10 10 ...
@@ -163,8 +165,9 @@ end
 
 
 %% ===== IMPORT T1 MRI =====
-if isKeepMri && ~isempty(sSubject.Anatomy)
-    T1File = file_fullpath(sSubject.Anatomy(sSubject.iAnatomy).FileName);
+sAnatomies = db_get('AnatomyFilesWithSubject', iSubject, 'volume', {'Id', 'FileName'});
+if isKeepMri && ~isempty(sAnatomies)
+    T1File = file_fullpath(sAnatomies([sAnatomies.Id] == sSubject.iAnatomy).FileName);
 else
     % Read T1 MRI
     [T1File, sMriT1] = import_mri(iSubject, T1Nii, [], 0, 1, 'T1');
