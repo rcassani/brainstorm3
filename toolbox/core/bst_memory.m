@@ -511,17 +511,18 @@ end
 %  =========================================================================================
 %% ===== GET FILE INFORMATION =====
 % Get all the information related with a DataFile.
-function [sStudy, iData, ChannelFile, FileType, sItem] = GetFileInfo(DataFile)
+function [sFuncFile, sStudy, ChannelFile] = GetFileInfo(DataFile)
     % Get file in database
-    [sStudy, iStudy, iData, FileType, sItem] = bst_get('AnyFile', DataFile);
+    sFuncFile = db_get('FunctionalFile', DataFile);
+    sStudy = db_get('Study', sFuncFile.Study);
     % If this data file does not belong to any study
-    if isempty(sStudy)
+    if isempty(sFuncFile)
         error('File is not registered in database.');
     end
     % If Channel is not defined yet : get it from Study description
-    Channel = bst_get('ChannelForStudy', iStudy);
-    if ~isempty(Channel)
-        ChannelFile = Channel.FileName;
+    if ~isempty(sStudy.iChannel)
+        sFuncFileTmp = db_get('FunctionalFile', sStudy.iChannel);
+        ChannelFile = sFuncFileTmp.FileName;
     else
         ChannelFile = '';
     end
@@ -605,15 +606,16 @@ function [iDS, ChannelFile] = LoadDataFile(DataFile, isReloadForced, isTimeCheck
         isReloadForced = 0;
     end
     % Get data file information from database
-    [sStudy, iData, ChannelFile, FileType] = GetFileInfo(DataFile);
+    [sFuncFile, sStudy, ChannelFile] = GetFileInfo(DataFile);
+    sSubject = db_get('Subject', sStudy.Subject, 'FileName');
     % Get data type
-    switch lower(FileType)
+    switch lower(sFuncFile.Type)
         case 'data'
-            DataType = sStudy.Data(iData).DataType;
-            DataFile = sStudy.Data(iData).FileName;
-        case 'pdata'
+            DataType = sFuncFile.SubType; % DataType
+            DataFile = sFuncFile.FileName;
+        case 'stat'
             DataType = 'stat';
-            DataFile = sStudy.Stat(iData).FileName;
+            DataFile = sFuncFile.FileName;
             % Show "stat" tab
             gui_brainstorm('ShowToolTab', 'Stat');
         otherwise
@@ -731,7 +733,7 @@ function [iDS, ChannelFile] = LoadDataFile(DataFile, isReloadForced, isTimeCheck
     end
     % If dataset already exist AND IS DEFINED FOR THE RIGHT SUBJECT, just return its index
     if ~isempty(iDS) && ~isReloadForced
-        if ~isempty(sStudy.BrainStormSubject) && ~file_compare(sStudy.BrainStormSubject, GlobalData.DataSet(iDS).SubjectFile)
+        if ~isempty(sSubject.FileName) && ~file_compare(sSubject.FileName, GlobalData.DataSet(iDS).SubjectFile)
             iDS = [];
         else
             GlobalData.DataSet(iDS).Measures.DataType    = Measures.DataType;
@@ -775,7 +777,7 @@ function [iDS, ChannelFile] = LoadDataFile(DataFile, isReloadForced, isTimeCheck
         GlobalData.DataSet(iDS) = db_template('DataSet');
     end
     % Store DataSet in GlobalData
-    GlobalData.DataSet(iDS).SubjectFile = file_short(sStudy.BrainStormSubject);
+    GlobalData.DataSet(iDS).SubjectFile = file_short(sSubject.FileName);
     GlobalData.DataSet(iDS).StudyFile   = file_short(sStudy.FileName);
     GlobalData.DataSet(iDS).DataFile    = file_short(DataFile);
     GlobalData.DataSet(iDS).Measures    = Measures;
