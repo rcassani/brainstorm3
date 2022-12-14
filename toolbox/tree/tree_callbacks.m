@@ -290,14 +290,13 @@ switch (lower(action))
             % View results on cortex
             case {'results', 'link'}
                 % Get file pointer
-                iStudy = bstNodes(1).getStudyIndex();
-                sStudy = bst_get('Study', iStudy);
                 iResult = bstNodes(1).getItemIndex();
+                sFunctFile = db_get('FunctionalFile', iResult, 'ExtraStr2'); % HeadModelType
                 % Volume: MRI Viewer
-                if strcmpi(sStudy.Result(iResult).HeadModelType, 'volume')
-                    sSubject = bst_get('Subject', sStudy.BrainStormSubject);
-                    MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
-                    view_mri(MriFile, filenameRelative);
+                if strcmpi(sFunctFile.ExtraStr2, 'volume')
+                    sSubject  = db_get('SubjectFromFunctionalFile', iResult, 'iAnatomy');
+                    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                    view_mri(sAnatFile.FileName, filenameRelative);
                 % Otherwise: 3D display
                 else
                     view_surface_data([], filenameRelative);
@@ -305,16 +304,13 @@ switch (lower(action))
                 
             % ===== STAT/RESULTS =====
             case 'presults'
-                % Get study structure
-                iStudy = bstNodes(1).getStudyIndex();
-                sStudy = bst_get('Study', iStudy);
                 % Read the head model from the file
-                ResultsMat = in_bst_results(filenameRelative, 0, 'HeadModelType');
+                sFunctFile = db_get('FunctionalFile', filenameRelative, 'ExtraStr2'); % HeadModelType
                 % Volume: MRI Viewer
-                if strcmpi(ResultsMat.HeadModelType, 'volume')
-                    sSubject = bst_get('Subject', sStudy.BrainStormSubject);
-                    MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
-                    view_mri(MriFile, filenameRelative);
+                if strcmpi(sFunctFile.ExtraStr2, 'volume')
+                    sSubject  = db_get('SubjectFromFunctionalFile', filenameRelative, 'iAnatomy');
+                    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                    view_mri(sAnatFile.FileName, filenameRelative);
                 % Otherwise: 3D display
                 else
                     view_surface_data([], filenameRelative);
