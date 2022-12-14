@@ -1071,15 +1071,16 @@ function [iDS, iResult] = LoadResultsFile(ResultsFile, isTimeCheck)
     
     % ===== GET FILE INFORMATION =====
     % Get file information
-    [sStudy, iFile, ChannelFile, FileType] = GetFileInfo(ResultsFile);
+    [sFuncFile, sStudy, ChannelFile] = GetFileInfo(ResultsFile);
+    sSubject = db_get('Subject', sStudy.Subject, 'FileName');
     % Get associated data file
-    switch(FileType)
-        case {'results', 'link'}
-            DataFile = sStudy.Result(iFile).DataFile;
-            isLink = sStudy.Result(iFile).isLink;
+    switch(sFuncFile.Type)
+        case {'result'}
+            DataFile = sFuncFile.ExtraStr1; % DataFile
+            isLink   = sFuncFile.ExtraNum;  % isLink
             DataType = 'results';
-        case 'presults'
-            DataFile = sStudy.Stat(iFile).DataFile;
+        case 'stat'
+            DataFile = sFuncFile.ExtraStr1; % DataFile
             isLink = 0;
             DataType = 'stat';
     end
@@ -1120,7 +1121,7 @@ function [iDS, iResult] = LoadResultsFile(ResultsFile, isTimeCheck)
         GlobalData.DataSet(iDS)             = db_template('DataSet');
         GlobalData.DataSet(iDS).DataFile    = '';
     end
-    GlobalData.DataSet(iDS).SubjectFile = file_short(sStudy.BrainStormSubject);
+    GlobalData.DataSet(iDS).SubjectFile = file_short(sSubject.FileName);
     GlobalData.DataSet(iDS).StudyFile   = file_short(sStudy.FileName);
     
     % === NORMAL RESULTS FILE ===
