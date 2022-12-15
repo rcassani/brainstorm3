@@ -91,9 +91,9 @@ NewSurfaceFile = file_unique(NewSurfaceFile);
 % Save file back
 bst_save(NewSurfaceFile, sSurf, 'v7');
 % Get subject
-[sSubject, iSubject] = bst_get('SurfaceFile', SurfaceFile);
+sSubject = db_get('SubjectFromAnatomyFile', SurfaceFile, 'Id');
 % Register this file in Brainstorm database
-iSurface = db_add_surface(iSubject, NewSurfaceFile, sSurf.Comment);
+iSurface = db_add_surface(sSubject.Id, NewSurfaceFile, sSurf.Comment);
 % Close progress bar
 bst_progress('stop');
 

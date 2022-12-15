@@ -2609,7 +2609,7 @@ function [isCloseAccepted, MriFile] = SaveMri(hFig)
     
     % ==== REALIGN SURFACES ====
     if ~isempty(sMriOld)
-        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'surfaces', 'FileName');
+        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'surface', 'FileName');
         UpdateSurfaceCS({sAnatFiles.FileName}, sMriOld, sMri);
     end
 end
@@ -2707,9 +2707,9 @@ end
 function isChecked = FiducialsValidation(MriFile) %#ok<DEFNU>
     isChecked = 0;
     % Get subject
-    [sSubject, iSubject] = bst_get('MriFile', MriFile);
+    sAnatFile = db_get('AnatomyFile', MriFile, 'Subject');
     % Check that it is the default anatomy
-    if (iSubject ~= 0)
+    if (sAnatFile.Subject ~= 0)
         return
     end
     % Read the history field of the MRI file
@@ -3050,7 +3050,7 @@ function Add3DView(hFig)
     TessInfo = getappdata(hFig, 'Surface');
     MriFile = TessInfo(1).SurfaceFile;
     % Get subject
-    sSubject = bst_get('Subject', GlobalData.DataSet(iDS).SubjectFile);
+    sSubject = db_get('Subject', GlobalData.DataSet(iDS).SubjectFile);
     % Get figure modality
     Modality = GlobalData.DataSet(iDS).Figure(iFig).Id.Modality;
     selChan  = GlobalData.DataSet(iDS).Figure(iFig).SelectedChannels;
@@ -3058,9 +3058,11 @@ function Add3DView(hFig)
     if ~isempty(Modality) && strcmpi(Modality, 'ECOG')
         % SEEG or nothing: Display cortex, scalp or MRI
         if ~isempty(sSubject.iCortex)
-            hFid3d = view_surface(sSubject.Surface(sSubject.iCortex).FileName, [], [], iDS);
+            sAnatFile = db_get('AnatomyFile', sSubject.iCortex, 'FileName');
+            hFid3d = view_surface(sAnatFile.FileName, [], [], iDS);
         elseif ~isempty(sSubject.iScalp)
-            hFid3d = view_surface(sSubject.Surface(sSubject.iScalp).FileName, [], [], iDS);
+            sAnatFile = db_get('AnatomyFile', sSubject.iScalp, 'FileName');
+            hFid3d = view_surface(sAnatFile.FileName, [], [], iDS);
         else
             hFid3d = view_mri_3d(MriFile, [], [], iDS);
         end

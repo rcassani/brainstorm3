@@ -115,24 +115,24 @@ if isempty(iStudy)
         error('Surface file must be specified.');
     end
     % Get subject
-    sSubject = bst_get('SurfaceFile', SurfaceFile);
+    sSubject = db_get('SubjectFromAnatomyFile', SurfaceFile);
     % Get or create new folder "Texture"
     Condition = 'Texture';
-    [sStudy, iStudy] = bst_get('StudyWithCondition', bst_fullfile(sSubject.Name, Condition));
+    sStudy = db_get('StudyWithCondition', bst_fullfile(sSubject.Name, Condition), 'Id');
     % If does not exist yet: Create the default study
-    if isempty(iStudy)
+    if isempty(sStudy.Id)
         iStudy = db_add_condition(sSubject.Name, Condition);
         if isempty(iStudy)
             error('Study could not be created : "%s".', Condition);
         end
-        sStudy = bst_get('Study', iStudy);
+        sStudy = db_get('Study', iStudy);
     end
 % Use folder in input
 else
     % Get study
-    sStudy = bst_get('Study', iStudy);
+    sStudy = db_get('Study', iStudy);
     % Get subject
-    sSubject = bst_get('Subject', sStudy.BrainStormSubject);
+    sSubject = db_get('Subject', sStudy.Subject);
 end
 
 
@@ -146,16 +146,20 @@ end
 if isempty(SurfaceFile)
     % Volume: Inner skull, Head, Cortex
     if ismember(FileFormat, {'ALLMRI', 'ALLMRI-MNI'})
-        if ~isempty(sSubject.iInnerSkull) && (sSubject.iInnerSkull <= length(sSubject.Surface))
-            SurfaceFile = sSubject.Surface(sSubject.iInnerSkull).FileName;
-        elseif ~isempty(sSubject.iScalp) && (sSubject.iScalp <= length(sSubject.Surface))
-            SurfaceFile = sSubject.Surface(sSubject.iScalp).FileName;
-        elseif ~isempty(sSubject.iCortex) && (sSubject.iCortex <= length(sSubject.Surface))
-            SurfaceFile = sSubject.Surface(sSubject.iCortex).FileName;
+        if ~isempty(sSubject.iInnerSkull)
+            sAnatFile = db_get('AnatomyFile', sSubject.iInnerSkull, 'FileName');
+            SurfaceFile = sAnatFile.FileName;
+        elseif ~isempty(sSubject.iScalp)
+            sAnatFile = db_get('AnatomyFile', sSubject.iScalp, 'FileName');
+            SurfaceFile = sAnatFile.FileName;
+        elseif ~isempty(sSubject.iCortex)
+            sAnatFile = db_get('AnatomyFile', sSubject.iCortex, 'FileName');
+            SurfaceFile = sAnatFile.FileName;
         end
     % Surface: Cortex only
-    elseif ~isempty(sSubject.iCortex) && (sSubject.iCortex <= length(sSubject.Surface))
-        SurfaceFile = sSubject.Surface(sSubject.iCortex).FileName;
+    elseif ~isempty(sSubject.iCortex)
+        sAnatFile = db_get('AnatomyFile', sSubject.iCortex, 'FileName');
+        SurfaceFile = sAnatFile.FileName;
     end
 end
 % If no cortex available: error
@@ -213,7 +217,8 @@ for iFile = 1:length(SourceFiles)
     if ~isempty(grid)
         % Load subject MRI
         if isempty(sMri)
-            sMri = in_mri_bst(sSubject.Anatomy(sSubject.iAnatomy).FileName);
+            sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+            sMri = sAnatFile.FileName;
         end
         % Convert from RAS(source files) to RAS(subject anat)
         if isfield(sMri, 'InitTransf') && ~isempty(sMri.InitTransf) && ismember('vox2ras', sMri.InitTransf(:,1))

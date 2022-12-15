@@ -1019,6 +1019,7 @@ switch contextName
     % If isRaw is set: force to return the real brainstormsubject description
     % (ignoring wether it uses protocol's default anatomy or not)
     case 'Subject' 
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
@@ -1088,6 +1089,7 @@ switch contextName
 %% ==== SURFACE FILE ====
     % Usage : [sSubject, iSubject, iSurface] = bst_get('SurfaceFile', SurfaceFile)
     case 'SurfaceFile'
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''SubjectFromAnatomyFile'')', contextName);
         % No protocol in database
         if isempty(GlobalData) || isempty(GlobalData.DataBase) || isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1170,6 +1172,7 @@ switch contextName
 %% ==== MRI FILE ====
     % Usage : [sSubject, iSubject, iMri] = bst_get('MriFile', MriFile)
     case 'MriFile'
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''SubjectFromAnatomyFile'')', contextName);
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;

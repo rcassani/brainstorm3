@@ -534,9 +534,9 @@ bst_save(NewTessFile, NewTessMat, 'v7');
 % Make output filename relative
 NewTessFile = file_short(NewTessFile);
 % Get subject
-[sSubject, iSubject] = bst_get('SurfaceFile', TessFile);
+sSubject = db_get('SubjectFromAnatomyFile', TessFile, 'Id');
 % Register this file in Brainstorm database
-iSurface = db_add_surface(iSubject, NewTessFile, NewComment);
+iSurface = db_add_surface(sSubject.Id, NewTessFile, NewComment);
 
 % Close progress bar
 bst_progress('stop');

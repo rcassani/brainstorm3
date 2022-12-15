@@ -120,17 +120,16 @@ if isempty(SurfaceFile)
         error('Surface has to be specified for this type of files.');
     end
 end
-% Get subject
-[sSubject, iSubject, iSurf, fileType] = bst_get('AnyFile', SurfaceFile);
-% If this surface does not belong to any subject
-if isempty(sSubject)
+% Get AnatomyFile
+sAnatFile = db_get('AnatomyFile', SurfaceFile, 'SubType');
+if isempty(sAnatFile)
     error(['File not found in database: "', SurfaceFile, '"']);
 end
 % Get surface type
-if strcmpi(fileType, 'subjectimage')
+if strcmpi(sAnatFile.SubType, 'Image')
     SurfaceType = 'Anatomy';
 else
-    SurfaceType = sSubject.Surface(iSurf).SurfaceType;
+    SurfaceType = sAnatFile.SubType;
 end
 
 

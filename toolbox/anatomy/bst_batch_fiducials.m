@@ -136,10 +136,10 @@ end
 % ===== CREATE TEMP SUBJECT =====
 SubjectName = 'TmpEditFid';
 % Get subject
-[sSubject, iSubject] = bst_get('Subject', SubjectName);
+sSubject = db_get('Subject', SubjectName, 'Id');
 % Delete existing subject
 if ~isempty(sSubject)
-    db_delete_subjects(iSubject);
+    db_delete_subjects(sSubject.Id);
 end
 % Create subject again
 [sSubject, iSubject] = db_add_subject(SubjectName, [], 0, 0);
@@ -187,14 +187,15 @@ for iMri = 1:length(MriFiles)
     end
     
     % === DELETE MRI ===
-    % Get subject again
-    sSubject = bst_get('Subject', iSubject);
+    % Get anatomy files for subject
+    sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'Id');
     % Delete MRI
-    file_delete(file_fullpath({sSubject.Anatomy.FileName}), 1);
-    sSubject.Anatomy(1:end) = [];
-    sSubject.iAnatomy = [];
+    file_delete(file_fullpath({sAnatFiles.FileName}), 1);
+    for ix = 1 : length(sAnatFiles)
+        db_set('AnatomyFile', 'Delete', sAnatFiles(ix).Id);
+    end
     % Update subject structure
-    bst_set('Subject', iSubject, sSubject);
+    db_set('Subject', struct('iAnatomy', []), iSubject);
     panel_protocols('UpdateNode', 'Subject', iSubject);
 
     % === CREATE FIDUCIALS FILE ===

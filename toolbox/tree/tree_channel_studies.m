@@ -45,23 +45,23 @@ for iNode = 1:length(bstNodes)
     switch nodeType
         % ==== DATABASE (Studies/cond, Studies/subj) ====
         case {'studydbsubj', 'studydbcond'}
-            % Get all the protocol subjects
-            nbSubjects = bst_get('SubjectCount');
-            if (nbSubjects <= 0)
+            % Get all the protocol subjects (except default subject)
+            sSubjects = db_get('AllSubjects', 'Id');
+            if (length(sSubjects) <= 0)
                 return
             end
             % Get the channel studies for all the subjects of the protocol
-            iStudies = addAllSubjectsStudies(iStudies, 1:nbSubjects, NoIntra);
+            iStudies = addAllSubjectsStudies(iStudies, [sSubjects.Id], NoIntra);
             
         % ==== SUBJECT ====
         case 'studysubject'
             iStudy   = bstNodes(iNode).getStudyIndex();
             iSubject = bstNodes(iNode).getItemIndex();
-            sSubject = bst_get('Subject', iSubject);
+            sSubject = db_get('Subject', iSubject, {'Id', 'UseDefaultChannel'});
             % If subject/condition mode => 'studysubject' contains many study nodes
             % OR: subject uses default channel file
             if (iStudy == 0) || (sSubject.UseDefaultChannel ~= 0)
-                iStudies = addAllSubjectsStudies(iStudies, iSubject, NoIntra);
+                iStudies = addAllSubjectsStudies(iStudies, sSubject.Id, NoIntra);
             % Else: condition/subject mode => 'studysubject' node is a study node
             else
                 iStudies = [iStudies, iStudy];
@@ -78,8 +78,8 @@ for iNode = 1:length(bstNodes)
                 % Get condition name
                 ConditionPath = bstNodes(iNode).getFileName();
                 % Get all the studies related with the condition name
-                [sStudies, iNewStudies] = bst_get('StudyWithCondition', ConditionPath);
-                iStudies = [iStudies, iNewStudies];
+                sStudies = db_get('StudyWithCondition', ConditionPath, 'Id');
+                iStudies = [iStudies, [sStudies.Id]];
             end
             
         % ==== STUDY ====
@@ -96,17 +96,17 @@ for iNode = 1:length(bstNodes)
                 iStudies = [iStudies, iStudy];
             % Else: node is a 'Subject common files' in cond/subject view mode
             else
-                % Get all the protocol subjects
-                nbSubjects = bst_get('SubjectCount');
-                if (nbSubjects <= 0)
+                % Get all the protocol subjects (except default subject)
+                sSubjects = db_get('AllSubjects', 'Id');
+                if (length(sSubjects) <= 0)
                     return
                 end
                 % For each subject
-                for iSubject = 1:nbSubjects
-                    sSubject = bst_get('Subject', iSubject, 1); 
+                for ix = 1:length(sSubjects)
+                    sSubject = db_get('Subject', sSubjects(ix), {'Id', 'UseDefaultChannel'}, 1);
                     % If subject uses local default subject (shares Channel file but not anatomy)
                     if (sSubject.UseDefaultChannel == 1)
-                        iStudies = addAllSubjectsStudies(iStudies, iSubject, NoIntra);
+                        iStudies = addAllSubjectsStudies(iStudies, sSubject.Id, NoIntra);
                     end
                 end
             end
