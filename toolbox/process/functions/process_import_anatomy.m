@@ -158,15 +158,16 @@ function OutputFiles = Run(sProcess, sInputs) %#ok<DEFNU>
     
     % ===== GET/CREATE SUBJECT =====
     % Get subject 
-    sSubject = db_get('Subject', SubjectName);
+    sSubject = db_get('Subject', SubjectName, 'Id');
     % Create subject is it does not exist yet
-    if isempty(sSubject.Id)
-        [~, iSubject] = db_add_subject(SubjectName);
-    end
-    if isempty(iSubject)
-        bst_report('Error', sProcess, [], ['Cannot create subject "' SubjectName '".']);
+    if isempty(sSubject)
+        sSubject = db_add_subject(SubjectName);
+        if isempty(sSubject)
+            bst_report('Error', sProcess, [], ['Cannot create subject "' SubjectName '".']);
         return
+        end
     end
+    iSubject = sSubject.Id;
     
     % ===== IMPORT FILES =====
     % Import folder

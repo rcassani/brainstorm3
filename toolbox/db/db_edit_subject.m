@@ -191,7 +191,7 @@ UpdatePanel();
                 sOldSubject = db_get('Subject', sSubject.Name);
             end
             % Save edited subject
-            [sSubject, iSubject] = db_add_subject(sSubject);
+            [sSubject, iSubject] = db_add_subject(sSubject, sSubject.Id);
             % Update channel files
             if (sSubject.UseDefaultChannel ~= sOldSubject.UseDefaultChannel)
                 % Get studies where there should be channel files for this subject

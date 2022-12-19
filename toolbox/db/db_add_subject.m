@@ -1,15 +1,17 @@
 function [sSubject, iSubject] = db_add_subject( varargin )
 % DB_ADD_SUBJECT: Add a subject to data base.
 %
-% USAGE:                        db_add_subject(sSubject)
+% USAGE:                        db_add_subject(sSubject, iSubject)
 %        [sSubject, iSubject] = db_add_subject(sSubject)
 %        [sSubject, iSubject] = db_add_subject(SubjectName)
-%        [sSubject, iSubject] = db_add_subject(SubjectName)
-%        [sSubject, iSubject] = db_add_subject(SubjectName, UseDefaultAnat, UseDefaultChannel)
+%        [sSubject, iSubject] = db_add_subject(SubjectName, iSubject)
+%        [sSubject, iSubject] = db_add_subject(SubjectName, iSubject, UseDefaultAnat, UseDefaultChannel)
 %
 % INPUT:
 %     - SubjectName : Name of the subject
 %     - sSubject    : subject structure
+%     - iSubject    : Indice of the subject in the ProtocolSubjects.Subject array
+%                     Set to [] to create a new subject
 %     - UseDefaultAnat, UseDefaultChannel : values for new subject
 % OUTPUT:
 %     - sSubject : Subject structure (set to [] if an error occurs)
@@ -55,12 +57,19 @@ elseif ischar(varargin{1})
 else
     error('Invalid call to db_add_subject()');
 end
-% CALL: db_add_subject( ..., UseDefaultAnat, UseDefaultChannel )
-if (nargin >= 2)
-    sSubject.UseDefaultAnat = varargin{2};
+% CALL: db_add_subject( ..., iSubject )
+if (nargin < 2) || isempty(varargin{2})
+    % New indice
+    sSubject.Id = [];
+else
+    sSubject.Id = varargin{2};
 end
+% CALL: db_add_subject( ..., UseDefaultAnat, UseDefaultChannel )
 if (nargin >= 3)
-    sSubject.UseDefaultChannel = varargin{3};
+    sSubject.UseDefaultAnat = varargin{3};
+end
+if (nargin >= 4)
+    sSubject.UseDefaultChannel = varargin{4};
 end
 
 %% ===== UPDATE DATABASE =====
