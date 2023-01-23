@@ -213,6 +213,9 @@ switch contextName
         end
     case 'isProtocolLoaded'
         GlobalData.DataBase.isProtocolLoaded(GlobalData.DataBase.iProtocol) = contextValue;
+    case 'isProtocolModified'
+        error('TODO: Not supported anymore.');
+
 
 %% ==== SUBJECT ====
     case 'Subject'
