@@ -1,4 +1,4 @@
-function result = sql_query(varargin)
+function varargout = sql_query(varargin)
 % SQL_QUERY: Execute a query on an SQLite database
 %
 % USAGE :
@@ -99,6 +99,7 @@ if length(varargin) > 1
     args = varargin(2:end);
 end
 nargs = length(args);
+varargout = {};
 
 %% DIRECT QUERY CASE
 if nargs < 1
@@ -115,6 +116,7 @@ if nargs < 1
     if debug
         disp(['Query:  ' dirQuery]);
     end
+    varargout{1} = result;
     return;
 end
 
@@ -125,10 +127,28 @@ action = lower(varargin{1});
 table  = args{1};
 % Get table for condition
 tableCond = table;
-% Last table between 'JOIN' and 'ON'
-tmp = regexp(table, '(?<=JOIN\s+)(.*?)(?=\s+ON)', 'match');
-if ~isempty(tmp)
-    tableCond = tmp{end};
+% Select first Table (most left) and its Alias (if present)
+tmp = regexp(table, '^\w+(\s+AS\s+\w+|\w+)', 'match');
+% Get the Table name or its Alias
+tmp= regexp(tmp{1}, '\s', 'split');
+table1 = tmp{end};
+% Other tables (in case of 'JOIN')
+tables = regexp(table, '(?<=JOIN\s+)(.*?)(?=\s+ON)', 'match');
+% Get the Table name or its Alias
+for iTable = 1 : length(tables)
+    tmp = regexp(tables{iTable}, '\s', 'split');
+    tables{iTable} = tmp{end};
+end
+tables = [{table1}, tables];
+
+% Validate number of tables
+if length(tables) > 1
+    if ~ismember(action, {'select', 'exist'})
+        error(['JOIN is not supported for the "', upper(Action), '" option']);
+    else
+        % Second argument is ignored
+        args{2} = [];
+    end
 end
 
 % Argument 2
@@ -161,23 +181,65 @@ end
 
 % Run required Action
 switch action
+
+%% ==== EXIST ====
+% bool = sql_query('EXIST' , Table, Condition, AddQuery)
+    case {'exist'}
+    % Arguments
+    condition = args{2};
+    fieldsQry = '1';
+    addQuery  = args{3};
+    % String for condition
+    condQry = prepareCondQry(condition);
+    % Arrange query
+    qry = ['SELECT ' fieldsQry ' FROM ' table ' WHERE 1' condQry addQuery];
+    pstmt = sqlConn.prepareStatement(qry);
+    % Add condition values to prepared statement
+    addParams(pstmt, condition);
+
+    % Execute query
+    resultSet = pstmt.executeQuery();
+
+    result = resultSet.next();
+    varargout{1} = result;
+    if result
+        iResult = 'Exists';
+    else
+        iResult = 'Does not exist';
+    end
+
+    resultSet.close();
+    pstmt.close();
+
+    % Print query for debugging
+    if debug
+        disp(['Query:  ' toString(qry, condition)]);
+        disp(['Result: ' iResult ' in database.']);
+    end
+
 %% ==== SELECT ====
-    % data = sql_query('SELECT', Table, Condition, Fields, AddQuery)
-    % bool = sql_query('EXIST' , Table, Condition, AddQuery)
-    case {'select', 'exist'}
+% data = sql_query('SELECT', Table, Condition, Fields, AddQuery)
+    case {'select'}
         % Arguments
         condition = args{2};
         fields    = args{3};
         addQuery  = args{4};
-        % Exist case
-        if strcmpi(action, 'exist')
-            addQuery = [' ' fields];
-            fields = '1';
-        end
         % Select all columns if not specified
         if isempty(fields), fields = '*'; end
         % String for requested data fields
         if ischar(fields), fields = {fields}; end
+        % If all fields (from all tables) are required
+        if length(fields) == 1 && strcmp(fields{1}, '*')
+            fields = strcat(tables, '.*');
+        end
+        % If all requested field names do not have the 'TableName.FieldName' format
+        if all(cellfun(@isempty, regexp(fields, '\w+\..*')))
+            if length(tables) < 2
+                fields = strcat([tables{1}, '.'], fields);
+            else
+                error(['To use ' upper(action) ' and JOIN, indicate fields as "TableName.FieldName"']);
+            end
+        end
         fieldsQry = str_join(fields, ', ');
         % String for condition
         condQry = prepareCondQry(condition);
@@ -190,42 +252,54 @@ switch action
         % Execute query
         resultSet = pstmt.executeQuery();
         
-        % Exist case
-        if strcmp(fields{1}, '1')
-            result = resultSet.next();
-            iResult = result;
-        % Select case
-        else
-            % Get table for result (first table)
-            table = char(regexp(table, '^\w*', 'match'));
-            % Prepare output structure
-            defValues  = db_template(table);
-            fieldTypes = db_template(table, 'fields');
-            % All fields
-            if strcmp(fields{1}, '*')
-                outputStruct = defValues;
-                fields = fieldnames(defValues);
+        % Make {Table, Field} as pairs
+        tmp = regexp(fields, '\.', 'split')';
+        fieldPairs = vertcat(tmp{:});
+        % Default values for output strcutures. ('skip' fields are included)
+        tablesDefValue  = cellfun(@(x) db_template(regexprep(x, '\d', '')), tables, 'UniformOutput', 0);
+        % Prepare output structures
+        for iTable = 1 : length(tables)
+            tableFields = fieldPairs(strcmp(tables{iTable}, fieldPairs(:,1)), 2);
+            if length(tableFields) == 1 && ismember('*', tableFields)
+                outputStruct = tablesDefValue{iTable};
             else
                 outputStruct = struct();
-                for iField = 1:length(fields)
-                    % Remove pattern 'Table.' if it exists
-                    fields{iField} = char(regexp(fields{iField}, '[^\.]*$', 'match'));
-                    outputStruct.(fields{iField}) = defValues.(fields{iField});
+                for iField = 1:length(tableFields)
+                    outputStruct.(tableFields{iField}) =  tablesDefValue{iTable}.(tableFields{iField});
                 end
             end
-            result = repmat(outputStruct, 0);
-            % Retrieve rows
-            iResult = 1;
-            while resultSet.next()
-                for iField = 1:length(fields)
-                    % Convert to proper type
-                    result(iResult).(fields{iField}) = getResultField(resultSet, ...
-                          fields{iField}, fieldTypes.(fields{iField}));
-                end
-                iResult = iResult + 1;
-            end
-            iResult = iResult - 1;
+        result{iTable} = repmat(outputStruct, 0);
         end
+
+        % Field types for database query ('skip' fields are excluded)
+        tablesFieldType = cellfun(@(x) removeSkippedValues(db_template(regexprep(x, '\d', ''), 'fields'), regexprep(x, '\d', '')), tables, 'UniformOutput', 0);
+        % Fields for retrieve from Query
+        fieldPairsResult = {};
+        for iField = 1:size(fieldPairs, 1)
+            fieldTable = fieldPairs(iField, 1);
+            fieldName  = fieldPairs(iField, 2);
+            % Replace requested field 'Table.*' with all fields in Table
+            if strcmp(fieldName, '*')
+                iTable = strcmp(regexprep(fieldTable, '\d', ''), tables);
+                fieldName  = fieldnames(tablesFieldType{iTable});
+                fieldTable = repmat(fieldTable, length(fieldName), 1);
+            end
+            fieldPairsResult = [fieldPairsResult; [fieldTable, fieldName]];
+        end
+
+        % Retrieve fields
+        iResult = 1;
+        while resultSet.next()
+            for iField = 1:size(fieldPairsResult, 1)
+                % Convert to proper type
+                iTable = find(strcmp(fieldPairsResult{iField, 1}, tables));
+                result{iTable}(iResult).(fieldPairsResult{iField,2}) = getResultField(resultSet, iField, tablesFieldType{iTable}.(fieldPairsResult{iField,2}));
+            end
+            iResult = iResult + 1;
+        end
+        iResult = iResult - 1;
+        varargout = result;
+
         resultSet.close();
         pstmt.close();
         
@@ -268,6 +342,7 @@ switch action
             disp(['Query:  ' toString(qry, data)]);
             disp(['Result: Inserted row #' num2str(result) '.']);
         end
+        varargout{1} = result;
         
 %% ==== UPDATE ====
     % numUpdatedRows = sql_query('UPDATE', Table, Data, Condition, AddQuery)
@@ -300,6 +375,7 @@ switch action
             disp(['Query:  ' toString(qry, {data, condition})]);
             disp(['Result: ' getNRows(result) ' updated.']);
         end
+        varargout{1} = result;
         
 %% ==== DELETE ====
     % numDeletedRows = sql_query('DELETE', Table, Condition, AddQuery)
@@ -325,6 +401,7 @@ switch action
             disp(['Query:  ' toString(qry, condition)]);
             disp(['Result: ' getNRows(result) ' deleted.']);
         end
+        varargout{1} = result;
         
 %% ==== COUNT ====
     % numRows = sql_query('COUNT', Table, Condition, Field, AddQuery)
@@ -356,6 +433,7 @@ switch action
             disp(['Query:  ' toString(qry, condition)]);
             disp(['Result: Counted ' getNRows(result) '.']);
         end
+        varargout{1} = result;
         
 %% ==== RESET-AUTOINCREMENT ====
     % numRows = sql_query('RESET-AUTOINCREMENT', Table)
@@ -369,9 +447,10 @@ switch action
 
         % Print query for debugging
         if debug
-            disp(['Query2: ' qry]);
+            disp(['Query: ' qry]);
             disp(['Result: ' getNRows(result) ' updated.']);
         end
+        varargout{1} = result;
 
     otherwise
         error('Unsupported query type.');
