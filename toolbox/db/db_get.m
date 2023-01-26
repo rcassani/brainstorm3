@@ -517,19 +517,31 @@ switch contextName
 
 
 %% ==== SUBJECT FROM STUDY ====
-    % sSubject = db_get('SubjectFromStudy', StudyID,       SubjectFields)
-    %          = db_get('SubjectFromStudy', StudyFileName, SubjectFields)
+    % [sSubject, sStudy] = db_get('SubjectFromStudy', StudyID,       SubjectFields, SubjectFields, StudyFields)
+    %                    = db_get('SubjectFromStudy', StudyFileName, SubjectFields, SubjectFields, StudyFields)
     case 'SubjectFromStudy'
-        fields = '*';
+        subjectFields = '*';
+        studyFields   = '*';
         varargout{1} = [];
+        varargout{2} = [];
         if length(args) > 1
-            fields = args{2};
+            subjectFields = args{2};
+            if length(args) > 2
+                studyFields = args{3};
+            end
         end
-        if ischar(fields), fields = {fields}; end
-        % Prepend 'Subject.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['Subject.' x], fields, 'UniformOutput', 0);
+        if ischar(subjectFields), subjectFields = {subjectFields}; end
+        % Prepend 'Subject.' to requested subject fields
+        subjectFields = cellfun(@(x) ['Subject.' x], subjectFields, 'UniformOutput', 0);
+        % Get study fields ONLY if output sStudy is expected
+        if nargout > 1
+            if ischar(studyFields), studyFields = {studyFields}; end
+            % Prepend 'Study.' to requested study fields
+            studyFields = cellfun(@(x) ['Study.' x], studyFields, 'UniformOutput', 0);
+        else
+            studyFields = {};
         end
+        fields = [subjectFields, studyFields];
         % Join query
         joinQry = 'Subject LEFT JOIN Study ON Subject.Id = Study.Subject';
         % Add query
@@ -541,7 +553,7 @@ switch contextName
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
         % Select query
-        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        [varargout{1}, varargout{2}] = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
 
 
 %% ==== CHANNEL FROM STUDY ====
