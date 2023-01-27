@@ -128,21 +128,25 @@ table  = args{1};
 % Get table for condition
 tableCond = table;
 % Select first Table (most left) and its Alias (if present)
-tmp = regexp(table, '^\w+(\s+AS\s+\w+|\w+)', 'match');
-% Get the Table name or its Alias
-tmp= regexp(tmp{1}, '\s', 'split');
-table1 = tmp{end};
+table_alias = regexp(table, '^\w+(\s+AS\s+\w+|\w+)', 'match');
 % Other tables (in case of 'JOIN')
-tables = regexp(table, '(?<=JOIN\s+)(.*?)(?=\s+ON)', 'match');
+tables_aliases = regexp(table, '(?<=JOIN\s+)(.*?)(?=\s+ON)', 'match');
+tables_aliases = [table_alias, tables_aliases];
 % Get the Table name or its Alias
-for iTable = 1 : length(tables)
-    tmp = regexp(tables{iTable}, '\s', 'split');
-    tables{iTable} = tmp{end};
+tableNames   = tables_aliases;
+tableAliases = tables_aliases;
+for iTable = 1 : length(tables_aliases)
+    tmp = regexp(tables_aliases{iTable}, '\s', 'split');
+    if length(tmp) < 2
+        tableAliases(iTable) = tmp(1);
+    else
+        tableNames(iTable)   = tmp(1);
+        tableAliases(iTable) = tmp(end);
+    end
 end
-tables = [{table1}, tables];
 
 % Validate number of tables
-if length(tables) > 1
+if length(tables_aliases) > 1
     if ~ismember(action, {'select', 'exist'})
         error(['JOIN is not supported for the "', upper(Action), '" option']);
     else
@@ -230,12 +234,12 @@ switch action
         if ischar(fields), fields = {fields}; end
         % If all fields (from all tables) are required
         if length(fields) == 1 && strcmp(fields{1}, '*')
-            fields = strcat(tables, '.*');
+            fields = strcat(tableAliases, '.*');
         end
         % If all requested field names do not have the 'TableName.FieldName' format
         if all(cellfun(@isempty, regexp(fields, '\w+\..*')))
-            if length(tables) < 2
-                fields = strcat([tables{1}, '.'], fields);
+            if length(tableAliases) < 2
+                fields = strcat([tableAliases{1}, '.'], fields);
             else
                 error(['To use ' upper(action) ' and JOIN, indicate fields as "TableName.FieldName"']);
             end
@@ -256,10 +260,10 @@ switch action
         tmp = regexp(fields, '\.', 'split')';
         fieldPairs = vertcat(tmp{:});
         % Default values for output strcutures. ('skip' fields are included)
-        tablesDefValue  = cellfun(@(x) db_template(regexprep(x, '\d', '')), tables, 'UniformOutput', 0);
+        tablesDefValue  = cellfun(@(x) db_template(x), tableNames, 'UniformOutput', 0);
         % Prepare output structures
-        for iTable = 1 : length(tables)
-            tableFields = fieldPairs(strcmp(tables{iTable}, fieldPairs(:,1)), 2);
+        for iTable = 1 : length(tableAliases)
+            tableFields = fieldPairs(strcmp(tableAliases{iTable}, fieldPairs(:,1)), 2);
             if length(tableFields) == 1 && ismember('*', tableFields)
                 outputStruct = tablesDefValue{iTable};
             else
@@ -272,7 +276,7 @@ switch action
         end
 
         % Field types for database query ('skip' fields are excluded)
-        tablesFieldType = cellfun(@(x) removeSkippedValues(db_template(regexprep(x, '\d', ''), 'fields'), regexprep(x, '\d', '')), tables, 'UniformOutput', 0);
+        tablesFieldType = cellfun(@(x) removeSkippedValues(db_template(x, 'fields'), x), tableNames, 'UniformOutput', 0);
         % Fields for retrieve from Query
         fieldPairsResult = {};
         for iField = 1:size(fieldPairs, 1)
@@ -280,7 +284,7 @@ switch action
             fieldName  = fieldPairs(iField, 2);
             % Replace requested field 'Table.*' with all fields in Table
             if strcmp(fieldName, '*')
-                iTable = strcmp(regexprep(fieldTable, '\d', ''), tables);
+                iTable = strcmp(fieldTable, tableAliases);
                 fieldName  = fieldnames(tablesFieldType{iTable});
                 fieldTable = repmat(fieldTable, length(fieldName), 1);
             end
@@ -292,7 +296,7 @@ switch action
         while resultSet.next()
             for iField = 1:size(fieldPairsResult, 1)
                 % Convert to proper type
-                iTable = find(strcmp(fieldPairsResult{iField, 1}, tables));
+                iTable = find(strcmp(fieldPairsResult{iField, 1}, tableAliases));
                 result{iTable}(iResult).(fieldPairsResult{iField,2}) = getResultField(resultSet, iField, tablesFieldType{iTable}.(fieldPairsResult{iField,2}));
             end
             iResult = iResult + 1;
