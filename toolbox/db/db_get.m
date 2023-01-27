@@ -22,8 +22,8 @@ function varargout = db_get(varargin)
 %    - db_get('SubjectCount')                               : Get number of subjects in current protocol, exclude @default_subject
 %    - db_get('SubjectFromStudy', StudyID,       SubjectFields, StudyFields) : Get Subject and Study for StudyID
 %    - db_get('SubjectFromStudy', StudyFileName, SubjectFields, StudyFields) : Get Subject and Study for StudyFileName
-%    - db_get('SubjectFromFunctionalFile', FileId, SubjectFields)   : Find Subject for FunctionalFile with FileID
-%    - db_get('SubjectFromFunctionalFile', FileName, SubjectFields) : Find Subject for FunctionalFile with FileName
+%    - db_get('SubjectFromFunctionalFile', FileId, SubjectFields, StudyFields, FunctionalFileFields)   : Find Subject for FunctionalFile with FileID
+%    - db_get('SubjectFromFunctionalFile', FileName, SubjectFields, StudyFields, FunctionalFileFields) : Find Subject for FunctionalFile with FileName
 %    - db_get('SubjectFromAnatomyFile', FileId, SubjectFields, AnatomyFileFields)   : Find Subject for AnatomyFile with FileID
 %    - db_get('SubjectFromAnatomyFile', FileName, SubjectFields, AnatomyFileFields) : Find Subject for AnatomyFile with FileName
 %
@@ -780,17 +780,43 @@ switch contextName
 
 
 %% ==== SUBJECT FROM FUNCTIONAL FILE ====              
-    % sSubject = db_get('SubjectFromFunctionalFile', FileId,   SubjectFields)
-    %          = db_get('SubjectFromFunctionalFile', FileName, SubjectFields)
+    % [sSubject, sStudy, sFunctionalFile] = db_get('SubjectFromFunctionalFile', FileId,   SubjectFields, StudyFields, FunctionalFileFields)
+    %                                     = db_get('SubjectFromFunctionalFile', FileName, SubjectFields, StudyFields, FunctionalFileFields)
     case 'SubjectFromFunctionalFile'
-        fields = '*';
+        subjectFields = '*';
+        studyFields = '*';
+        functionalFileFields = '*';
         varargout{1} = [];
         if length(args) > 1
-            fields = args{2};
+            subjectFields = args{2};
+            if length(args) > 2
+                studyFields = args{3};
+                if length(args) > 3
+                    functionalFileFields = args{4};
+                end
+            end
         end
-        if ischar(fields), fields = {fields}; end
+        if ischar(subjectFields), subjectFields = {subjectFields}; end
         % Prepend 'Subject.' to requested fields
-        fields = cellfun(@(x) ['Subject.' x], fields, 'UniformOutput', 0);
+        subjectFields = cellfun(@(x) ['Subject.' x], subjectFields, 'UniformOutput', 0);
+        % Get study fields ONLY if output sStudy is expected
+        if nargout > 1
+            if ischar(studyFields), studyFields = {studyFields}; end
+            % Prepend 'Study.' to requested study fields
+            studyFields = cellfun(@(x) ['Study.' x], studyFields, 'UniformOutput', 0);
+            % Get study fields ONLY if output sStudy is expected
+            if nargout > 2
+                if ischar(functionalFileFields), functionalFileFields = {functionalFileFields}; end
+                % Prepend 'FunctionalFile.' to requested study fields
+                functionalFileFields = cellfun(@(x) ['FunctionalFile.' x], functionalFileFields, 'UniformOutput', 0);
+            else
+                functionalFileFields = {};
+            end
+        else
+            functionalFileFields = {};
+            studyFields = {};
+        end
+        fields = [subjectFields, studyFields, functionalFileFields];
         % Join query
         joinQry = ['Subject LEFT JOIN Study ON Subject.Id = Study.Subject ' ...
                    'LEFT JOIN FunctionalFile ON Study.Id = FunctionalFile.Study'];
@@ -803,7 +829,7 @@ switch contextName
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
         % Select query
-        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        [varargout{1}, varargout{2}, varargout{3}] = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
 
 
 %% ==== SUBJECT FROM ANATOMY FILE ====
@@ -842,7 +868,7 @@ switch contextName
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
         % Select query
-        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        [varargout{1}, varargout{2}] = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
 
 
 %% ==== STUDY WITH CONDITION PATH ====
