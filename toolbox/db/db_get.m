@@ -7,7 +7,7 @@ function varargout = db_get(varargin)
 %    - db_get(sqlConn, contextName)
 %
 % ====== PROTOCOLS =====================================================================
-%
+%    - db_get('Protocol', Fields) : Get current Protocol information
 %
 % ====== SUBJECTS ======================================================================
 %    - db_get('Subject', SubjectIDs,         Fields, isRaw) : Get Subject(s) by ID(s)
@@ -124,6 +124,16 @@ varargout = {};
     
 % Get required context structure
 switch contextName
+%% ==== PROTOCOL =====
+    % sProtocol = db_get('Protocol', Fields);
+    case 'Protocol'
+    fields = '*';
+    if ~isempty(args)
+        fields = args{1};
+    end
+    if ischar(fields), fields = {fields}; end
+    varargout{1} = sql_query(sqlConn, 'SELECT', 'Protocol', [], fields);
+
 %% ==== SUBJECT ====
     % sSubject = db_get('Subject', SubjectIDs,         Fields, isRaw);
     %          = db_get('Subject', SubjectFileNames,   Fields, isRaw);

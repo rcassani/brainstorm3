@@ -7,7 +7,8 @@ function varargout = db_set(varargin)
 %    - db_set(sqlConn, contextName)
 %
 % ====== PROTOCOLS =====================================================================
-%
+%    - sProtocol = db_set('Protocol', sProtocol)    : Update current Protocol information
+%    - sProtocol = db_set('Protocol', sProtocol, 1) : Insert current Protocol information
 %
 % ====== SUBJECTS ======================================================================
 %    - db_set('Subject', 'Delete')                       : Delete all Subjects
@@ -88,6 +89,21 @@ varargout = {};
    
 % Set required context structure
 switch contextName
+%% ==== PROTOCOL =====
+    % sProtocol = db_set('Protocol', Protocol, isInsert);
+    case 'Protocol'
+        action = 'UPDATE';
+        if length(args) < 1
+            error('Error in number of arguments')
+        end
+        sProtocol = args{1};
+        if length(args) > 1
+            if logical(args{2})
+                action = 'INSERT';
+            end
+        end
+        varargout{1} = sql_query(sqlConn, action, 'Protocol', sProtocol);
+
 %% ==== SUBJECT ====
     % Success              = db_set('Subject', 'Delete')
     %                      = db_set('Subject', 'Delete', SubjectId)
