@@ -1605,26 +1605,16 @@ function sInputs = GetInputStruct(FileNames)
         iGroupFiles = find(J == iPath);
         GroupFileNames = FileNames(iGroupFiles);
         % Get study and subject information using first file
-        result = sql_query(sqlConn, [
-            'SELECT Subject.Filename AS SubjectFile, ' ...
-              'Subject.Name AS SubjectName, ' ...
-              'Study.Condition AS StudyCond, ' ...
-              'Study.iChannel AS iChannel, ' ...
-              'FunctionalFile.Study AS iStudy ' ...
-            'FROM FunctionalFile ' ...
-            'LEFT JOIN Study ON Study.Id = FunctionalFile.Study ' ...
-            'LEFT JOIN Subject on Subject.Id = Study.Subject ' ...
-            'WHERE FunctionalFile.FileName = "' GroupFileNames{1} '"']);
-        if ~result.next()
+        [sSubject, sStudy, sFuncFile] = db_get(sqlConn, 'SubjectFromFunctionalFile', GroupFileNames{1}, {'FileName', 'Name'}, {'Condition', 'iChannel'}, 'Study');
+        if isempty(sSubject) || isempty(sStudy) || isempty(sFuncFile)
             sInputs = [];
             return;
         end
-        iStudy      = result.getInt('iStudy');
-        iChannel    = result.getInt('iChannel');
-        SubjectFile = char(result.getString('SubjectFile'));
-        SubjectName = char(result.getString('SubjectName'));
-        StudyCond   = char(result.getString('StudyCond'));
-        result.close();
+        iStudy      = sFuncFile.Study;
+        iChannel    = sStudy.iChannel;
+        SubjectFile = sSubject.FileName;
+        SubjectName = sSubject.Name;
+        StudyCond   = sStudy.Condition;
         % Set information for the files in this group
         [sInputs(iGroupFiles).iStudy]      = deal(iStudy);
         [sInputs(iGroupFiles).SubjectName] = deal(SubjectName);
