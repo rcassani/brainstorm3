@@ -301,9 +301,7 @@ switch contextName
         end
         if ischar(fields), fields = {fields}; end
         % Prepend 'AnatomyFile.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['AnatomyFile.' x], fields, 'UniformOutput', 0);
-        end
+        fields = cellfun(@(x) ['AnatomyFile.' x], fields, 'UniformOutput', 0);
         % Join query
         joinQry = 'AnatomyFile LEFT JOIN Subject ON AnatomyFile.Subject = Subject.Id';
         % Add query
@@ -350,9 +348,7 @@ switch contextName
         end
         if ischar(fields), fields = {fields}; end
         % Prepend 'FunctionalFile.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['FunctionalFile.' x], fields, 'UniformOutput', 0);
-        end
+        fields = cellfun(@(x) ['FunctionalFile.' x], fields, 'UniformOutput', 0);
         % Join query
         joinQry = 'FunctionalFile LEFT JOIN Study ON FunctionalFile.Study = Study.Id';
         % Add query
@@ -619,9 +615,7 @@ switch contextName
         end
         if ischar(fields), fields = {fields}; end
         % Prepend 'Study.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['Study.' x], fields, 'UniformOutput', 0);
-        end
+        fields = cellfun(@(x) ['Study.' x], fields, 'UniformOutput', 0);
         % Join query
         joinQry = 'Study LEFT JOIN Subject ON Study.Subject = Subject.Id';
         % Add query
@@ -786,9 +780,7 @@ switch contextName
         end
         if ischar(fields), fields = {fields}; end
         % Prepend 'Subject.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['Subject.' x], fields, 'UniformOutput', 0);
-        end
+        fields = cellfun(@(x) ['Subject.' x], fields, 'UniformOutput', 0);
         % Join query
         joinQry = ['Subject LEFT JOIN Study ON Subject.Id = Study.Subject ' ...
                    'LEFT JOIN FunctionalFile ON Study.Id = FunctionalFile.Study'];
@@ -815,9 +807,7 @@ switch contextName
         end
         if ischar(fields), fields = {fields}; end
         % Prepend 'Subject.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['Subject.' x], fields, 'UniformOutput', 0);
-        end
+        fields = cellfun(@(x) ['Subject.' x], fields, 'UniformOutput', 0);
         % Join query
         joinQry = 'Subject LEFT JOIN AnatomyFile ON Subject.Id = AnatomyFile.Subject ';
         % Add query
@@ -893,12 +883,10 @@ switch contextName
             fields = args{2};
         end
         if ischar(fields), fields = {fields}; end
-        % Prepend 'parent.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['parent.' x], fields, 'UniformOutput', 0);
-        end
+        % Prepend 'Parent.' to requested fields
+        fields = cellfun(@(x) ['Parent.' x], fields, 'UniformOutput', 0);
         % Join query
-        joinQry = 'FunctionalFile parent INNER JOIN FunctionalFile ON parent.Id = FunctionalFile.Parent ';
+        joinQry = 'FunctionalFile AS Parent INNER JOIN FunctionalFile ON Parent.Id = FunctionalFile.Parent ';
         % Add query
         addQuery = 'AND FunctionalFile.';
         % Complete query with FileName of FileID
@@ -929,44 +917,42 @@ switch contextName
         if length(args) > 3
             whole_protocol = args{4};
         end
-        % Prepend 'children.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['children.' x], fields, 'UniformOutput', 0);
-        end
+        % Prepend 'Children.' to requested fields
+        fields = cellfun(@(x) ['Children.' x], fields, 'UniformOutput', 0);
         % Look for children in children. E.g, data > results > timefreq
         alsoGrandChildren = isempty(children_type) || ismember(children_type, {'timefreq', 'dipoles'});
 
         % Join query
-        joinQry = 'FunctionalFile children INNER JOIN FunctionalFile parent1 ON children.Parent = parent1.Id';
+        joinQry = 'FunctionalFile AS Children INNER JOIN FunctionalFile AS Parent1 ON Children.Parent = Parent1.Id';
         if alsoGrandChildren
-            joinQry = [joinQry, ' LEFT JOIN FunctionalFile parent2 ON parent1.Parent = parent2.Id '];
+            joinQry = [joinQry, ' LEFT JOIN FunctionalFile AS Parent2 ON Parent1.Parent = Parent2.Id '];
         end
         % Add query
-        addQuery = 'AND (parent1.';
+        addQuery = 'AND (Parent1.';
         % Complete query with FileName of FileID
         if ischar(args{1})
             addQuery = [addQuery 'FileName = "' file_short(args{1}) '"'];
             if alsoGrandChildren
-                addQuery = [addQuery, ' OR parent2.FileName = "' file_short(args{1}) '"'];
+                addQuery = [addQuery, ' OR Parent2.FileName = "' file_short(args{1}) '"'];
             end
         else
             addQuery = [addQuery 'Id = ' num2str(args{1})];
             if alsoGrandChildren
-                addQuery = [addQuery, ' OR parent2.Id = "' num2str(args{1}) '"'];
+                addQuery = [addQuery, ' OR Parent2.Id = "' num2str(args{1}) '"'];
             end
         end
         addQuery = [addQuery , ')'];
         % If NOT whole protocol complete query to restrict to same study
         if ~whole_protocol
-            addQuery = [addQuery ' AND (children.Study = parent1.Study'];
+            addQuery = [addQuery ' AND (Children.Study = Parent1.Study'];
             if alsoGrandChildren
-                addQuery = [addQuery, ' OR children.Study = parent2.Study'];
+                addQuery = [addQuery, ' OR Children.Study = Parent2.Study'];
             end
         end
         addQuery = [addQuery , ')'];
         % Complete query to filter children type
         if ~isempty(children_type)
-            addQuery = [addQuery ' AND children.Type = "' children_type '"'];
+            addQuery = [addQuery ' AND Children.Type = "' children_type '"'];
         end
 
         % Select query
