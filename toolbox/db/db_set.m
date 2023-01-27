@@ -512,7 +512,7 @@ switch contextName
             if ~isempty(list_names) && (length(unique(list_names)) == length(list_names))
                 % Look for existing list
                 searchQry = struct('Comment', list_names{1}, 'Study', list_study, 'Type', [list_type, 'list']);
-                list = sql_query(sqlConn, 'SELECT', 'FunctionalFile', searchQry, 'Id');
+                list = db_get(sqlConn, 'FunctionalFile', searchQry, 'Id');
                 if ~isempty(list)
                     % Update child.Parent
                     db_set(sqlConn, 'FunctionalFile', struct('Parent', list.Id), iFuncFile);
@@ -553,7 +553,7 @@ switch contextName
             if length(unique(list_names)) == 2
                 % Look for existing list
                 searchQry = struct('Comment', list_names{2}, 'Study', list_study, 'Type', [list_type, 'list']);
-                list = sql_query(sqlConn, 'SELECT', 'FunctionalFile', searchQry, {'Id', 'NumChildren'});
+                list = db_get(sqlConn, 'FunctionalFile', searchQry, {'Id', 'NumChildren'});
                 if ~isempty(list)
                     % Update number of children
                     list.NumChildren = list.NumChildren - 1;
