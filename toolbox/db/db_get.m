@@ -20,8 +20,8 @@ function varargout = db_get(varargin)
 %    - db_get('AllSubjects', Fields)                        : Get all Subjects in current protocol, excluding @default_subject
 %    - db_get('AllSubjects', Fields, '@default_subject')    : Get all Subjects in current protocol, including @default_subject
 %    - db_get('SubjectCount')                               : Get number of subjects in current protocol, exclude @default_subject
-%    - db_get('SubjectFromStudy', StudyID, SubjectFields)       : Find SubjectID for StudyID
-%    - db_get('SubjectFromStudy', StudyFileName, SubjectFields) : Find SubjectID for StudyFileName
+%    - db_get('SubjectFromStudy', StudyID,       SubjectFields, StudyFields) : Get Subject and Study for StudyID
+%    - db_get('SubjectFromStudy', StudyFileName, SubjectFields, StudyFields) : Get Subject and Study for StudyFileName
 %    - db_get('SubjectFromFunctionalFile', FileId, SubjectFields)   : Find Subject for FunctionalFile with FileID
 %    - db_get('SubjectFromFunctionalFile', FileName, SubjectFields) : Find Subject for FunctionalFile with FileName
 %    - db_get('SubjectFromAnatomyFile', FileId, SubjectFields)   : Find Subject for AnatomyFile with FileID
@@ -513,8 +513,8 @@ switch contextName
 
 
 %% ==== SUBJECT FROM STUDY ====
-    % [sSubject, sStudy] = db_get('SubjectFromStudy', StudyID,       SubjectFields, SubjectFields, StudyFields)
-    %                    = db_get('SubjectFromStudy', StudyFileName, SubjectFields, SubjectFields, StudyFields)
+    % [sSubject, sStudy] = db_get('SubjectFromStudy', StudyID,       SubjectFields, StudyFields)
+    %                    = db_get('SubjectFromStudy', StudyFileName, SubjectFields, StudyFields)
     case 'SubjectFromStudy'
         subjectFields = '*';
         studyFields   = '*';
