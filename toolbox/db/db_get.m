@@ -24,8 +24,8 @@ function varargout = db_get(varargin)
 %    - db_get('SubjectFromStudy', StudyFileName, SubjectFields, StudyFields) : Get Subject and Study for StudyFileName
 %    - db_get('SubjectFromFunctionalFile', FileId, SubjectFields)   : Find Subject for FunctionalFile with FileID
 %    - db_get('SubjectFromFunctionalFile', FileName, SubjectFields) : Find Subject for FunctionalFile with FileName
-%    - db_get('SubjectFromAnatomyFile', FileId, SubjectFields)   : Find Subject for AnatomyFile with FileID
-%    - db_get('SubjectFromAnatomyFile', FileName, SubjectFields) : Find Subject for AnatomyFile with FileName
+%    - db_get('SubjectFromAnatomyFile', FileId, SubjectFields, AnatomyFileFields)   : Find Subject for AnatomyFile with FileID
+%    - db_get('SubjectFromAnatomyFile', FileName, SubjectFields, AnatomyFileFields) : Find Subject for AnatomyFile with FileName
 %
 % ====== ANATOMY FILES =================================================================
 %    - db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields)       : Get AnatomyFiles for SubjectID
@@ -807,17 +807,30 @@ switch contextName
 
 
 %% ==== SUBJECT FROM ANATOMY FILE ====
-    % sSubject = db_get('SubjectFromAnatomyFile', FileId,   SubjectFields)
-    %          = db_get('SubjectFromAnatomyFile', FileName, SubjectFields)
+    % [sSubject, sAnatomyFile] = db_get('SubjectFromAnatomyFile', FileId,   SubjectFields, AnatomyFileFields)
+    %                          = db_get('SubjectFromAnatomyFile', FileName, SubjectFields, AnatomyFileFields)
     case 'SubjectFromAnatomyFile'
-        fields = '*';
+        subjectFields = '*';
+        anatomyFileFields  = '*';
         varargout{1} = [];
         if length(args) > 1
-            fields = args{2};
+            subjectFields = args{2};
+            if length(args) > 2
+                anatomyFileFields = args{3};
+            end
         end
-        if ischar(fields), fields = {fields}; end
+        if ischar(subjectFields), subjectFields = {subjectFields}; end
         % Prepend 'Subject.' to requested fields
-        fields = cellfun(@(x) ['Subject.' x], fields, 'UniformOutput', 0);
+        subjectFields = cellfun(@(x) ['Subject.' x], subjectFields, 'UniformOutput', 0);
+        % Get anatomyFile fields ONLY if output sAnatomyFile is expected
+        if nargout > 1
+            if ischar(anatomyFileFields), anatomyFileFields = {anatomyFileFields}; end
+            % Prepend 'AnatomyFile.' to requested anatomyFile fields
+            anatomyFileFields = cellfun(@(x) ['AnatomyFile.' x], anatomyFileFields, 'UniformOutput', 0);
+        else
+            anatomyFileFields = {};
+        end
+        fields = [subjectFields, anatomyFileFields];
         % Join query
         joinQry = 'Subject LEFT JOIN AnatomyFile ON Subject.Id = AnatomyFile.Subject ';
         % Add query
