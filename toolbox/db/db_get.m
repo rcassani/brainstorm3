@@ -67,8 +67,8 @@ function varargout = db_get(varargin)
 %    - db_get('FilesInFileList', ListFileID, Fields)   : Get FunctionalFile belonging to a list with ID
 %    - db_get('FilesInFileList', ListFileName, Fields) : Get FunctionalFile belonging to a list with FileName
 %    - db_get('FilesInFileList', CondQuery, Fields)   : Get FunctionalFile belonging to a list with Query
-%    - db_get('ParentFromFunctionalFile', FileId,   ParentFields)   : Find ParentFile for FunctionalFile with FileId
-%    - db_get('ParentFromFunctionalFile', FileName,   ParentFields) : Find ParentFile for FunctionalFile with FileName
+%    - db_get('ParentFromFunctionalFile', FileId,   ParentFields, FunctionalFileFields)   : Find ParentFile for FunctionalFile with FileId
+%    - db_get('ParentFromFunctionalFile', FileName,   ParentFields, FunctionalFileFields) : Find ParentFile for FunctionalFile with FileName
 %    - db_get('ChildrenFromFunctionalFile', FileId,   ChildrenType, ChildrenFields, WholeProtocol) : Find ChildrenFiles for FunctionalFile with FileId
 %    - db_get('ChildrenFromFunctionalFile', FileName, ChildrenType, ChildrenFields, WholeProtocol) : Find ChildrenFiles for FunctionalFile with FileName
 %    - db_get('FilesForKernel', KernelFileId,   Type, Fields) : Find FunctionalFiles for Kernel with FileId
@@ -923,17 +923,30 @@ switch contextName
 
 
 %% ==== PARENT FILE FROM FUNCTIONAL FILE ====
-    % sFunctionalFileParent = db_get('ParentFromFunctionalFile', FileId,   ParentFields)
-    %                       = db_get('ParentFromFunctionalFile', FileName, ParentFields)
+    % [sParent, sFunctionalFile] = db_get('ParentFromFunctionalFile', FileId,   ParentFields, FunctionalFileFields)
+    %                            = db_get('ParentFromFunctionalFile', FileName, ParentFields, FunctionalFileFields)
     case 'ParentFromFunctionalFile'
-        fields = '*';
+        parentFields = '*';
+        functionalFileFields = '*';
         varargout{1} = [];
         if length(args) > 1
-            fields = args{2};
+            parentFields = args{2};
+            if length(args) > 2
+                functionalFileFields = args{3};
+            end
         end
-        if ischar(fields), fields = {fields}; end
+        if ischar(parentFields), parentFields = {parentFields}; end
         % Prepend 'Parent.' to requested fields
-        fields = cellfun(@(x) ['Parent.' x], fields, 'UniformOutput', 0);
+        parentFields = cellfun(@(x) ['Parent.' x], parentFields, 'UniformOutput', 0);
+        % Get functionalFile fields ONLY if output sFunctionalFile is expected
+        if nargout > 1
+            if ischar(functionalFileFields), functionalFileFields = {functionalFileFields}; end
+            % Prepend 'FunctionalFile.' to requested study fields
+            functionalFileFields = cellfun(@(x) ['FunctionalFile.' x], functionalFileFields, 'UniformOutput', 0);
+        else
+            functionalFileFields = {};
+        end
+        fields = [parentFields, functionalFileFields];
         % Join query
         joinQry = 'FunctionalFile AS Parent INNER JOIN FunctionalFile ON Parent.Id = FunctionalFile.Parent ';
         % Add query
@@ -945,7 +958,7 @@ switch contextName
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
         % Select query
-        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        [varargout{1}, varargout{2}] = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
 
 
 %% ==== CHILDREN FILES FROM FUNCTIONAL FILE ====
