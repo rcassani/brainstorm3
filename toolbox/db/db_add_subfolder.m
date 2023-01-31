@@ -76,15 +76,8 @@ for iStudy = iStudies
         sFile.FileName = bst_fullfile(sFuncFileParent.FileName, FolderName);
     else
         % Get Subject & Study names
-        result = sql_query(sqlConn, ['SELECT Study.Name AS StudyName, Subject.Name AS SubjectName ' ...
-            'FROM Study LEFT JOIN Subject ON Subject.Id = Study.Subject ' ...
-            'WHERE Study.Id = ' num2str(iStudy)]);
-        result.next();
-        SubjectName = char(result.getString('SubjectName'));
-        StudyName   = char(result.getString('StudyName'));
-        result.close();
-    
-        sFile.FileName = bst_fullfile(SubjectName, StudyName, FolderName);
+        [sSubject, sStudy] = db_get(sqlConn, 'SubjectFromStudy', iStudy, 'Name', 'Name');
+        sFile.FileName = bst_fullfile(sSubject.Name, sStudy.Name, FolderName);
     end
     
     % Create folder

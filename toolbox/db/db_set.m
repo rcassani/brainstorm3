@@ -7,7 +7,8 @@ function varargout = db_set(varargin)
 %    - db_set(sqlConn, contextName)
 %
 % ====== PROTOCOLS =====================================================================
-%
+%    - sProtocol = db_set('Protocol', sProtocol)    : Update current Protocol information
+%    - sProtocol = db_set('Protocol', sProtocol, 1) : Insert current Protocol information
 %
 % ====== SUBJECTS ======================================================================
 %    - db_set('Subject', 'Delete')                       : Delete all Subjects
@@ -88,6 +89,21 @@ varargout = {};
    
 % Set required context structure
 switch contextName
+%% ==== PROTOCOL =====
+    % sProtocol = db_set('Protocol', Protocol, isInsert);
+    case 'Protocol'
+        action = 'UPDATE';
+        if length(args) < 1
+            error('Error in number of arguments')
+        end
+        sProtocol = args{1};
+        if length(args) > 1
+            if logical(args{2})
+                action = 'INSERT';
+            end
+        end
+        varargout{1} = sql_query(sqlConn, action, 'Protocol', sProtocol);
+
 %% ==== SUBJECT ====
     % Success              = db_set('Subject', 'Delete')
     %                      = db_set('Subject', 'Delete', SubjectId)
@@ -512,7 +528,7 @@ switch contextName
             if ~isempty(list_names) && (length(unique(list_names)) == length(list_names))
                 % Look for existing list
                 searchQry = struct('Comment', list_names{1}, 'Study', list_study, 'Type', [list_type, 'list']);
-                list = sql_query(sqlConn, 'SELECT', 'FunctionalFile', searchQry, 'Id');
+                list = db_get(sqlConn, 'FunctionalFile', searchQry, 'Id');
                 if ~isempty(list)
                     % Update child.Parent
                     db_set(sqlConn, 'FunctionalFile', struct('Parent', list.Id), iFuncFile);
@@ -520,7 +536,7 @@ switch contextName
                     db_set(sqlConn, 'ParentCount', list.Id, '+', 1);
                 else
                     % Look for potential sibilings (including recently inserted FunctionalFile)
-                    sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', list_study, list_type, {'Id', 'Comment', 'FileName', 'Parent'});
+                    sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', list_study, {'Id', 'Comment', 'FileName', 'Parent'}, list_type);
                     if ~isempty(sFuncFiles)
                         cleanNames = cellfun(@(x) str_remove_parenth(x), {sFuncFiles.Comment}, 'UniformOutput', false);
                         % Get items with matching name
@@ -553,7 +569,7 @@ switch contextName
             if length(unique(list_names)) == 2
                 % Look for existing list
                 searchQry = struct('Comment', list_names{2}, 'Study', list_study, 'Type', [list_type, 'list']);
-                list = sql_query(sqlConn, 'SELECT', 'FunctionalFile', searchQry, {'Id', 'NumChildren'});
+                list = db_get(sqlConn, 'FunctionalFile', searchQry, {'Id', 'NumChildren'});
                 if ~isempty(list)
                     % Update number of children
                     list.NumChildren = list.NumChildren - 1;

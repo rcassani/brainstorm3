@@ -7,7 +7,7 @@ function varargout = db_get(varargin)
 %    - db_get(sqlConn, contextName)
 %
 % ====== PROTOCOLS =====================================================================
-%
+%    - db_get('Protocol', Fields) : Get current Protocol information
 %
 % ====== SUBJECTS ======================================================================
 %    - db_get('Subject', SubjectIDs,         Fields, isRaw) : Get Subject(s) by ID(s)
@@ -20,16 +20,16 @@ function varargout = db_get(varargin)
 %    - db_get('AllSubjects', Fields)                        : Get all Subjects in current protocol, excluding @default_subject
 %    - db_get('AllSubjects', Fields, '@default_subject')    : Get all Subjects in current protocol, including @default_subject
 %    - db_get('SubjectCount')                               : Get number of subjects in current protocol, exclude @default_subject
-%    - db_get('SubjectFromStudy', StudyID, SubjectFields)       : Find SubjectID for StudyID
-%    - db_get('SubjectFromStudy', StudyFileName, SubjectFields) : Find SubjectID for StudyFileName
-%    - db_get('SubjectFromFunctionalFile', FileId, SubjectFields)   : Find Subject for FunctionalFile with FileID
-%    - db_get('SubjectFromFunctionalFile', FileName, SubjectFields) : Find Subject for FunctionalFile with FileName
-%    - db_get('SubjectFromAnatomyFile', FileId, SubjectFields)   : Find Subject for AnatomyFile with FileID
-%    - db_get('SubjectFromAnatomyFile', FileName, SubjectFields) : Find Subject for AnatomyFile with FileName
+%    - db_get('SubjectFromStudy', StudyID,       SubjectFields, StudyFields) : Get Subject and Study for StudyID
+%    - db_get('SubjectFromStudy', StudyFileName, SubjectFields, StudyFields) : Get Subject and Study for StudyFileName
+%    - db_get('SubjectFromFunctionalFile', FileId, SubjectFields, StudyFields, FunctionalFileFields)   : Find Subject for FunctionalFile with FileID
+%    - db_get('SubjectFromFunctionalFile', FileName, SubjectFields, StudyFields, FunctionalFileFields) : Find Subject for FunctionalFile with FileName
+%    - db_get('SubjectFromAnatomyFile', FileId, SubjectFields, AnatomyFileFields)   : Find Subject for AnatomyFile with FileID
+%    - db_get('SubjectFromAnatomyFile', FileName, SubjectFields, AnatomyFileFields) : Find Subject for AnatomyFile with FileName
 %
 % ====== ANATOMY FILES =================================================================
-%    - db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields)       : Get AnatomyFiles for SubjectID
-%    - db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, Fields) : Get AnatomyFiles for SubjectFileName
+%    - db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileFields, AnatomyFileType, AnatomyFileSubType)       : Get AnatomyFiles for SubjectID
+%    - db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileFields, AnatomyFileType, AnatomyFileSubType) : Get AnatomyFiles for SubjectFileName
 %    - db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType, Fields)     : Get AnatomyFiles for SubjectName
 %    - db_get('AnatomyFile', FileIDs,   Fields) : Find AnatomyFile(s) by ID(s)
 %    - db_get('AnatomyFile', FileNames, Fields) : Find AnatomyFile(s) by FileName(s)
@@ -56,8 +56,8 @@ function varargout = db_get(varargin)
 %    - db_get('StudyWithCondition', ConditionPath, Fields) : Get studies for a given condition path
 %
 % ====== FUNCTIONAL FILES ==============================================================
-%    - db_get('FunctionalFilesWithStudy', StudyID, FunctionalFileType, Fields)       : Get FunctionalFiles for StudyID
-%    - db_get('FunctionalFilesWithStudy', StudyFileName, FunctionalFileType, Fields) : Get FunctionalFiles for StudyFileName
+%    - db_get('FunctionalFilesWithStudy', StudyID, FunctionalFileFields, FunctionalFileType, FunctionalFileSubtype, SubjectFields)       : Get FunctionalFiles for StudyID
+%    - db_get('FunctionalFilesWithStudy', StudyFileName, FunctionalFileFields, FunctionalFileType, FunctionalFileSubtype, SubjectFields) : Get FunctionalFiles for StudyFileName
 %    - db_get('FunctionalFile', FileIDs,   Fields) : Get FunctionalFile(s) by ID(s)
 %    - db_get('FunctionalFile', FileNames, Fields) : Get FunctionalFile(s) by FileName(s)
 %    - db_get('FunctionalFile', CondQuery, Fields) : Get FunctionalFile(s) with a Query
@@ -67,10 +67,10 @@ function varargout = db_get(varargin)
 %    - db_get('FilesInFileList', ListFileID, Fields)   : Get FunctionalFile belonging to a list with ID
 %    - db_get('FilesInFileList', ListFileName, Fields) : Get FunctionalFile belonging to a list with FileName
 %    - db_get('FilesInFileList', CondQuery, Fields)   : Get FunctionalFile belonging to a list with Query
-%    - db_get('ParentFromFunctionalFile', FileId,   ParentFields)   : Find ParentFile for FunctionalFile with FileId
-%    - db_get('ParentFromFunctionalFile', FileName,   ParentFields) : Find ParentFile for FunctionalFile with FileName
-%    - db_get('ChildrenFromFunctionalFile', FileId,   ChildrenType, ChildrenFields, WholeProtocol) : Find ChildrenFiles for FunctionalFile with FileId
-%    - db_get('ChildrenFromFunctionalFile', FileName, ChildrenType, ChildrenFields, WholeProtocol) : Find ChildrenFiles for FunctionalFile with FileName
+%    - db_get('ParentFromFunctionalFile', FileId,   ParentFields, FunctionalFileFields)   : Find ParentFile for FunctionalFile with FileId
+%    - db_get('ParentFromFunctionalFile', FileName,   ParentFields, FunctionalFileFields) : Find ParentFile for FunctionalFile with FileName
+%    - db_get('ChildrenFromFunctionalFile', FileId,   ChildrenFields, ChildrenType, WholeProtocol) : Find ChildrenFiles for FunctionalFile with FileId
+%    - db_get('ChildrenFromFunctionalFile', FileName, ChildrenFields, ChildrenType, WholeProtocol) : Find ChildrenFiles for FunctionalFile with FileName
 %    - db_get('FilesForKernel', KernelFileId,   Type, Fields) : Find FunctionalFiles for Kernel with FileId
 %    - db_get('FilesForKernel', KernelFileName, Type, Fields) : Find FunctionalFiles for Kernel with FileName
 %
@@ -124,6 +124,16 @@ varargout = {};
     
 % Get required context structure
 switch contextName
+%% ==== PROTOCOL =====
+    % sProtocol = db_get('Protocol', Fields);
+    case 'Protocol'
+    fields = '*';
+    if ~isempty(args)
+        fields = args{1};
+    end
+    if ischar(fields), fields = {fields}; end
+    varargout{1} = sql_query(sqlConn, 'SELECT', 'Protocol', [], fields);
+
 %% ==== SUBJECT ====
     % sSubject = db_get('Subject', SubjectIDs,         Fields, isRaw);
     %          = db_get('Subject', SubjectFileNames,   Fields, isRaw);
@@ -273,37 +283,38 @@ switch contextName
 
 
 %% ==== ANATOMY FILES WITH SUBJECT ====
-    % sAnatomyFiles = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields, SubType)
-    %               = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields)
-    %               = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType)
-    %               = db_get('AnatomyFilesWithSubject', SubjectID)
-    %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, Fields, SubType)
-    %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, Fields)
-    %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType)
-    %               = db_get('AnatomyFilesWithSubject', SubjectFileName)
-    %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType, Fields, SubType)
-    %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType, Fields)
-    %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType)
-    %               = db_get('AnatomyFilesWithSubject', SubjectName)
+    % [sAnatomyFiles, sSubject] = db_get('AnatomyFilesWithSubject', SubjectID,       AnatomyFileType, AnatomyFileFields, AnatomyFileSubType, SubjectFields)
+    %                           = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, AnatomyFileFields, AnatomyFileSubType, SubjectFields)
     case 'AnatomyFilesWithSubject'
+        anatomyFileFields = '*';
         fileType = '';
-        fields = '*';
         subType = '';
+        subjectFields = '*';
         varargout{1} = [];
-        if length(args) > 1
-            fileType = lower(args{2});
+        varargout{2} = [];
+        if length(args) > 1 && ~isempty(args{2})
+            anatomyFileFields = args{2};
             if length(args) > 2
-                fields = args{3};
+                fileType = lower(args{3});
                 if length(args) > 3
                     subType = args{4};
+                    if length(args) > 4 && ~isempty(args{5})
+                        subjectFields = args{5};
+                    end
                 end
             end
         end
-        if ischar(fields), fields = {fields}; end
+        if ischar(anatomyFileFields), anatomyFileFields = {anatomyFileFields}; end
         % Prepend 'AnatomyFile.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['AnatomyFile.' x], fields, 'UniformOutput', 0);
+        anatomyFileFields = cellfun(@(x) ['AnatomyFile.' x], anatomyFileFields, 'UniformOutput', 0);
+        if nargout > 1
+            if ischar(subjectFields), subjectFields = {subjectFields}; end
+            % Prepend 'Subject.' to requested study fields
+            subjectFields = cellfun(@(x) ['Subject.' x], subjectFields, 'UniformOutput', 0);
+        else
+            subjectFields = {};
         end
+        fields = [anatomyFileFields, subjectFields];
         % Join query
         joinQry = 'AnatomyFile LEFT JOIN Subject ON AnatomyFile.Subject = Subject.Id';
         % Add query
@@ -328,37 +339,54 @@ switch contextName
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
         % Select query
-        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        [varargout{1}, tmp]= sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        if nargout > 1 && ~isempty(tmp)
+            varargout{2} = tmp(1);
+        end
 
 
 %% ==== FUNCTIONAL FILES WITH STUDY ====
-    % sFunctionalFiles = db_get('FunctionalFilesWithStudy', StudyID, FunctionalFileType, Fields)
-    %                  = db_get('FunctionalFilesWithStudy', StudyID, FunctionalFileType)
-    %                  = db_get('FunctionalFilesWithStudy', StudyID)
-    % sFunctionalFiles = db_get('FunctionalFilesWithStudy', StudyFileName, FunctionalFileType, Fields)
-    %                  = db_get('FunctionalFilesWithStudy', StudyFileName, FunctionalFileType)
-    %                  = db_get('FunctionalFilesWithStudy', StudyFileName)
+    % [sFunctionalFiles, sStudy] = db_get('FunctionalFilesWithStudy', StudyID,       FunctionalFileFields, FunctionalFileType, FunctionalFileSubtype, SubjectFields)
+    %                            = db_get('FunctionalFilesWithStudy', StudyFileName, FunctionalFileFields, FunctionalFileType, FunctionalFileSubtype, SubjectFields)
     case 'FunctionalFilesWithStudy'
+        functionalFilefields = '*';
         fileType = '';
-        fields = '*';
+        subType = '';
+        studyFields = '*';
         varargout{1} = [];
-        if length(args) > 1
-            fileType = lower(args{2});
+        varargout{2} = [];
+        if length(args) > 1 && ~isempty(args{2})
+            functionalFilefields = args{2};
             if length(args) > 2
-                fields = args{3};
+                fileType = lower(args{3});
+                if length(args) > 3
+                    subType = args{4};
+                    if length(args) > 4 && ~isempty(args{5})
+                        studyFields = args{5};
+                    end
+                end
             end
         end
-        if ischar(fields), fields = {fields}; end
+        if ischar(functionalFilefields), functionalFilefields = {functionalFilefields}; end
         % Prepend 'FunctionalFile.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['FunctionalFile.' x], fields, 'UniformOutput', 0);
+        functionalFilefields = cellfun(@(x) ['FunctionalFile.' x], functionalFilefields, 'UniformOutput', 0);
+        if nargout > 1
+            if ischar(studyFields), studyFields = {studyFields}; end
+            % Prepend 'Study.' to requested study fields
+            studyFields = cellfun(@(x) ['Study.' x], studyFields, 'UniformOutput', 0);
+        else
+            studyFields = {};
         end
+        fields = [functionalFilefields, studyFields];
         % Join query
         joinQry = 'FunctionalFile LEFT JOIN Study ON FunctionalFile.Study = Study.Id';
         % Add query
         addQuery = '';
         if ~isempty(fileType)
             addQuery = ['AND FunctionalFile.Type = "' fileType '" '];
+        end
+        if ~isempty(subType)
+            addQuery = ['AND FunctionalFile.SubType = "' subType '" '];
         end
         addQuery = [addQuery, 'AND Study.'];
         % Complete query with FileName of FileID
@@ -368,7 +396,10 @@ switch contextName
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
         % Select query
-        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        [varargout{1}, tmp]= sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        if nargout > 1 && ~isempty(tmp)
+            varargout{2} = tmp(1);
+        end
 
 
 %% ==== ANATOMY FILE ====
@@ -517,19 +548,31 @@ switch contextName
 
 
 %% ==== SUBJECT FROM STUDY ====
-    % sSubject = db_get('SubjectFromStudy', StudyID,       SubjectFields)
-    %          = db_get('SubjectFromStudy', StudyFileName, SubjectFields)
+    % [sSubject, sStudy] = db_get('SubjectFromStudy', StudyID,       SubjectFields, StudyFields)
+    %                    = db_get('SubjectFromStudy', StudyFileName, SubjectFields, StudyFields)
     case 'SubjectFromStudy'
-        fields = '*';
+        subjectFields = '*';
+        studyFields   = '*';
         varargout{1} = [];
-        if length(args) > 1
-            fields = args{2};
+        varargout{2} = [];
+        if length(args) > 1 && ~isempty(args{2})
+            subjectFields = args{2};
+            if length(args) > 2 && ~isempty(args{3})
+                studyFields = args{3};
+            end
         end
-        if ischar(fields), fields = {fields}; end
-        % Prepend 'Subject.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['Subject.' x], fields, 'UniformOutput', 0);
+        if ischar(subjectFields), subjectFields = {subjectFields}; end
+        % Prepend 'Subject.' to requested subject fields
+        subjectFields = cellfun(@(x) ['Subject.' x], subjectFields, 'UniformOutput', 0);
+        % Get study fields ONLY if output sStudy is expected
+        if nargout > 1
+            if ischar(studyFields), studyFields = {studyFields}; end
+            % Prepend 'Study.' to requested study fields
+            studyFields = cellfun(@(x) ['Study.' x], studyFields, 'UniformOutput', 0);
+        else
+            studyFields = {};
         end
+        fields = [subjectFields, studyFields];
         % Join query
         joinQry = 'Subject LEFT JOIN Study ON Subject.Id = Study.Subject';
         % Add query
@@ -541,7 +584,7 @@ switch contextName
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
         % Select query
-        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        [varargout{1}, varargout{2}] = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
 
 
 %% ==== CHANNEL FROM STUDY ====
@@ -602,14 +645,12 @@ switch contextName
     case 'StudiesFromSubject'
         fields = '*';
         varargout{1} = [];
-        if length(args) > 1
+        if length(args) > 1 && ~isempty(args{2})
             fields = args{2};
         end
         if ischar(fields), fields = {fields}; end
         % Prepend 'Study.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['Study.' x], fields, 'UniformOutput', 0);
-        end
+        fields = cellfun(@(x) ['Study.' x], fields, 'UniformOutput', 0);
         % Join query
         joinQry = 'Study LEFT JOIN Subject ON Study.Subject = Subject.Id';
         % Add query
@@ -764,19 +805,43 @@ switch contextName
 
 
 %% ==== SUBJECT FROM FUNCTIONAL FILE ====              
-    % sSubject = db_get('SubjectFromFunctionalFile', FileId,   SubjectFields)
-    %          = db_get('SubjectFromFunctionalFile', FileName, SubjectFields)
+    % [sSubject, sStudy, sFunctionalFile] = db_get('SubjectFromFunctionalFile', FileId,   SubjectFields, StudyFields, FunctionalFileFields)
+    %                                     = db_get('SubjectFromFunctionalFile', FileName, SubjectFields, StudyFields, FunctionalFileFields)
     case 'SubjectFromFunctionalFile'
-        fields = '*';
+        subjectFields = '*';
+        studyFields = '*';
+        functionalFileFields = '*';
         varargout{1} = [];
-        if length(args) > 1
-            fields = args{2};
+        if length(args) > 1 && ~isempty(args{2})
+            subjectFields = args{2};
+            if length(args) > 2 && ~isempty(args{3})
+                studyFields = args{3};
+                if length(args) > 3 && ~isempty(args{4})
+                    functionalFileFields = args{4};
+                end
+            end
         end
-        if ischar(fields), fields = {fields}; end
+        if ischar(subjectFields), subjectFields = {subjectFields}; end
         % Prepend 'Subject.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['Subject.' x], fields, 'UniformOutput', 0);
+        subjectFields = cellfun(@(x) ['Subject.' x], subjectFields, 'UniformOutput', 0);
+        % Get study fields ONLY if output sStudy is expected
+        if nargout > 1
+            if ischar(studyFields), studyFields = {studyFields}; end
+            % Prepend 'Study.' to requested study fields
+            studyFields = cellfun(@(x) ['Study.' x], studyFields, 'UniformOutput', 0);
+            % Get study fields ONLY if output sStudy is expected
+            if nargout > 2
+                if ischar(functionalFileFields), functionalFileFields = {functionalFileFields}; end
+                % Prepend 'FunctionalFile.' to requested study fields
+                functionalFileFields = cellfun(@(x) ['FunctionalFile.' x], functionalFileFields, 'UniformOutput', 0);
+            else
+                functionalFileFields = {};
+            end
+        else
+            functionalFileFields = {};
+            studyFields = {};
         end
+        fields = [subjectFields, studyFields, functionalFileFields];
         % Join query
         joinQry = ['Subject LEFT JOIN Study ON Subject.Id = Study.Subject ' ...
                    'LEFT JOIN FunctionalFile ON Study.Id = FunctionalFile.Study'];
@@ -789,23 +854,34 @@ switch contextName
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
         % Select query
-        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        [varargout{1}, varargout{2}, varargout{3}] = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
 
 
 %% ==== SUBJECT FROM ANATOMY FILE ====
-    % sSubject = db_get('SubjectFromAnatomyFile', FileId,   SubjectFields)
-    %          = db_get('SubjectFromAnatomyFile', FileName, SubjectFields)
+    % [sSubject, sAnatomyFile] = db_get('SubjectFromAnatomyFile', FileId,   SubjectFields, AnatomyFileFields)
+    %                          = db_get('SubjectFromAnatomyFile', FileName, SubjectFields, AnatomyFileFields)
     case 'SubjectFromAnatomyFile'
-        fields = '*';
+        subjectFields = '*';
+        anatomyFileFields  = '*';
         varargout{1} = [];
-        if length(args) > 1
-            fields = args{2};
+        if length(args) > 1 && ~isempty(args{2})
+            subjectFields = args{2};
+            if length(args) > 2 && ~isempty(args{3})
+                anatomyFileFields = args{3};
+            end
         end
-        if ischar(fields), fields = {fields}; end
+        if ischar(subjectFields), subjectFields = {subjectFields}; end
         % Prepend 'Subject.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['Subject.' x], fields, 'UniformOutput', 0);
+        subjectFields = cellfun(@(x) ['Subject.' x], subjectFields, 'UniformOutput', 0);
+        % Get anatomyFile fields ONLY if output sAnatomyFile is expected
+        if nargout > 1
+            if ischar(anatomyFileFields), anatomyFileFields = {anatomyFileFields}; end
+            % Prepend 'AnatomyFile.' to requested anatomyFile fields
+            anatomyFileFields = cellfun(@(x) ['AnatomyFile.' x], anatomyFileFields, 'UniformOutput', 0);
+        else
+            anatomyFileFields = {};
         end
+        fields = [subjectFields, anatomyFileFields];
         % Join query
         joinQry = 'Subject LEFT JOIN AnatomyFile ON Subject.Id = AnatomyFile.Subject ';
         % Add query
@@ -817,7 +893,7 @@ switch contextName
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
         % Select query
-        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        [varargout{1}, varargout{2}] = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
 
 
 %% ==== STUDY WITH CONDITION PATH ====
@@ -834,7 +910,7 @@ switch contextName
         fields = '*';
         conditionPath = args{1};
         varargout{1} = [];
-        if length(args) > 1
+        if length(args) > 1 && ~isempty(args{2})
             fields = args{2};
         end
         if ischar(fields), fields = {fields}; end
@@ -872,21 +948,32 @@ switch contextName
 
 
 %% ==== PARENT FILE FROM FUNCTIONAL FILE ====
-    % sFunctionalFileParent = db_get('ParentFromFunctionalFile', FileId,   ParentFields)
-    %                       = db_get('ParentFromFunctionalFile', FileName, ParentFields)
+    % [sParent, sFunctionalFile] = db_get('ParentFromFunctionalFile', FileId,   ParentFields, FunctionalFileFields)
+    %                            = db_get('ParentFromFunctionalFile', FileName, ParentFields, FunctionalFileFields)
     case 'ParentFromFunctionalFile'
-        fields = '*';
+        parentFields = '*';
+        functionalFileFields = '*';
         varargout{1} = [];
         if length(args) > 1
-            fields = args{2};
+            parentFields = args{2};
+            if length(args) > 2
+                functionalFileFields = args{3};
+            end
         end
-        if ischar(fields), fields = {fields}; end
-        % Prepend 'parent.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['parent.' x], fields, 'UniformOutput', 0);
+        if ischar(parentFields), parentFields = {parentFields}; end
+        % Prepend 'Parent.' to requested fields
+        parentFields = cellfun(@(x) ['Parent.' x], parentFields, 'UniformOutput', 0);
+        % Get functionalFile fields ONLY if output sFunctionalFile is expected
+        if nargout > 1
+            if ischar(functionalFileFields), functionalFileFields = {functionalFileFields}; end
+            % Prepend 'FunctionalFile.' to requested study fields
+            functionalFileFields = cellfun(@(x) ['FunctionalFile.' x], functionalFileFields, 'UniformOutput', 0);
+        else
+            functionalFileFields = {};
         end
+        fields = [parentFields, functionalFileFields];
         % Join query
-        joinQry = 'FunctionalFile parent INNER JOIN FunctionalFile ON parent.Id = FunctionalFile.Parent ';
+        joinQry = 'FunctionalFile AS Parent INNER JOIN FunctionalFile ON Parent.Id = FunctionalFile.Parent ';
         % Add query
         addQuery = 'AND FunctionalFile.';
         % Complete query with FileName of FileID
@@ -896,65 +983,65 @@ switch contextName
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
         % Select query
-        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        [varargout{1}, varargout{2}] = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
 
 
 %% ==== CHILDREN FILES FROM FUNCTIONAL FILE ====
-    % sFunctionalFiles = db_get('ChildrenFromFunctionalFile', FileId,   ChildrenType, ChildrenFields, WholeProtocol)
-    %                  = db_get('ChildrenFromFunctionalFile', FileName, ChildrenType, ChildrenFields, WholeProtocol)
+    % sFunctionalFiles = db_get('ChildrenFromFunctionalFile', FileId,   ChildrenFields, ChildrenType, WholeProtocol)
+    %                  = db_get('ChildrenFromFunctionalFile', FileName, ChildrenFields, ChildrenType, WholeProtocol)
     case 'ChildrenFromFunctionalFile'
-        children_type = [];
         fields = '*';
+        children_type = [];
         whole_protocol = 0;
         varargout{1} = [];
-        if length(args) > 1
-            children_type = args{2};
-        end
-        if length(args) > 2
-            fields = args{3};
+        if length(args) > 1 && ~isempty(args{2})
+            fields = args{2};
+            if length(args) > 2
+                children_type = args{3};
+                if length(args) > 3
+                    whole_protocol = args{4};
+                end
+            end
         end
         if ischar(fields), fields = {fields}; end
-        if length(args) > 3
-            whole_protocol = args{4};
-        end
-        % Prepend 'children.' to requested fields
-        if ~strcmp('*', fields{1})
-            fields = cellfun(@(x) ['children.' x], fields, 'UniformOutput', 0);
-        end
+        % Prepend 'Children.' to requested fields
+        fields = cellfun(@(x) ['Children.' x], fields, 'UniformOutput', 0);
         % Look for children in children. E.g, data > results > timefreq
         alsoGrandChildren = isempty(children_type) || ismember(children_type, {'timefreq', 'dipoles'});
 
         % Join query
-        joinQry = 'FunctionalFile children INNER JOIN FunctionalFile parent1 ON children.Parent = parent1.Id';
+        % INNER JOIN: Keep ONLY FunctionalFiles and join them with their Parents
+        joinQry = 'FunctionalFile AS Children INNER JOIN FunctionalFile AS Parent1 ON Children.Parent = Parent1.Id';
         if alsoGrandChildren
-            joinQry = [joinQry, ' LEFT JOIN FunctionalFile parent2 ON parent1.Parent = parent2.Id '];
+            % LEFT JOIN: Join the GrandParent (Parent of Parent) if places it exist
+            joinQry = [joinQry, ' LEFT JOIN FunctionalFile AS Parent2 ON Parent1.Parent = Parent2.Id '];
         end
         % Add query
-        addQuery = 'AND (parent1.';
+        addQuery = 'AND (Parent1.';
         % Complete query with FileName of FileID
         if ischar(args{1})
             addQuery = [addQuery 'FileName = "' file_short(args{1}) '"'];
             if alsoGrandChildren
-                addQuery = [addQuery, ' OR parent2.FileName = "' file_short(args{1}) '"'];
+                addQuery = [addQuery, ' OR Parent2.FileName = "' file_short(args{1}) '"'];
             end
         else
             addQuery = [addQuery 'Id = ' num2str(args{1})];
             if alsoGrandChildren
-                addQuery = [addQuery, ' OR parent2.Id = "' num2str(args{1}) '"'];
+                addQuery = [addQuery, ' OR Parent2.Id = "' num2str(args{1}) '"'];
             end
         end
         addQuery = [addQuery , ')'];
         % If NOT whole protocol complete query to restrict to same study
         if ~whole_protocol
-            addQuery = [addQuery ' AND (children.Study = parent1.Study'];
+            addQuery = [addQuery ' AND (Children.Study = Parent1.Study'];
             if alsoGrandChildren
-                addQuery = [addQuery, ' OR children.Study = parent2.Study'];
+                addQuery = [addQuery, ' OR Children.Study = Parent2.Study'];
             end
         end
         addQuery = [addQuery , ')'];
         % Complete query to filter children type
         if ~isempty(children_type)
-            addQuery = [addQuery ' AND children.Type = "' children_type '"'];
+            addQuery = [addQuery ' AND Children.Type = "' children_type '"'];
         end
 
         % Select query
@@ -989,7 +1076,7 @@ switch contextName
         % For each of this result files find their children
         varargout{1} = [];
         for i = 1 : length(sResultFiles)
-            sChildrenFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', sResultFiles(i).Id, dep_type, dep_fields);
+            sChildrenFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', sResultFiles(i).Id, dep_fields, dep_type);
             varargout{1} = [varargout{1}, sChildrenFiles];
         end
 

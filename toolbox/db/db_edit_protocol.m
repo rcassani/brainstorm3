@@ -183,9 +183,7 @@ if strcmpi(action, 'load') || strcmpi(action, 'create')
 % ===== ACTION: EDIT  =====
 elseif strcmpi(action, 'edit')
     % Update SQL database
-    sql_query('UPDATE', 'Protocol', struct(...
-        'UseDefaultAnat', sProtocol.UseDefaultAnat, ...
-        'UseDefaultChannel', sProtocol.UseDefaultChannel));
+    db_set('Protocol', struct('UseDefaultAnat', sProtocol.UseDefaultAnat, 'UseDefaultChannel', sProtocol.UseDefaultChannel));
     
     % Update ProtocolInfo
     GlobalData.DataBase.ProtocolInfo = sProtocolsListInfo;

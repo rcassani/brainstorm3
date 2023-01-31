@@ -211,7 +211,7 @@ try
 
                     case 'results'
                         % Find the results associated with this data node
-                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'result', {'Id', 'FileName', 'Comment', 'ExtraNum'});
+                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), {'Id', 'FileName', 'Comment', 'ExtraNum'}, 'result');
                         iFoundResults = [sFuncFiles.Id];
                         if ~isempty(iFoundResults)
                             ResultsFiles = {sFuncFiles.FileName};
@@ -229,7 +229,7 @@ try
                     case 'timefreq'
                         iStudy = nodeStudies(iNode);
                         % Find the results associated with this data node
-                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'timefreq', {'Id', 'FileName', 'Comment'});
+                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), {'Id', 'FileName', 'Comment'}, 'timefreq');
                         iFoundTf = [sFuncFiles.Id];
                         if ~isempty(iFoundTf)
                             TimefreqFiles = {sFuncFiles.FileName};
@@ -248,7 +248,7 @@ try
                     case 'dipoles'
                         iStudy = nodeStudies(iNode);
                         % Find the files associated with this data node
-                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'dipoles', {'Id', 'FileName', 'Comment'});
+                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), {'Id', 'FileName', 'Comment'}, 'dipoles');
                         iFoundDip = [sFuncFiles.Id];
                         if ~isempty(iFoundDip)
                             DipolesFiles = {sFuncFiles.FileName};
@@ -292,7 +292,7 @@ try
                             if sql_query('EXIST', 'FunctionalFile', struct('Type', 'result', 'Study', iStudy), 'AND Parent IS NOT NULL AND ExtraStr1 IS NOT NULL')
                                 for id = 1:length(iFoundData)
                                     % Find the results associated with this data node
-                                    sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), 'result', {'Id', 'FileName', 'Comment', 'ExtraNum'});
+                                    sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), {'Id', 'FileName', 'Comment', 'ExtraNum'}, 'result');
                                     iFoundResults = [sFuncFiles.Id];
                                     ResultsFiles = {sFuncFiles.FileName};
                                     ResultsComment = {sFuncFiles.Comment};
@@ -313,7 +313,7 @@ try
                         case 'timefreq'
                             for id = 1:length(iFoundData)
                                 % Find the files associated with this data node
-                                sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), 'timefreq', {'Id', 'FileName', 'Comment'});
+                                sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), {'Id', 'FileName', 'Comment'}, 'timefreq');
                                 iFoundTf = [sFuncFiles.Id];
                                 TimefreqFiles = {sFuncFiles.FileName};
                                 TimefreqComments = {sFuncFiles.Comment};
@@ -334,7 +334,7 @@ try
                         case 'dipoles'
                             for id = 1:length(iFoundData)
                                 % Find the files associated with this data node
-                                sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), 'dipoles', {'Id', 'FileName', 'Comment'});
+                                sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iFoundData(id), {'Id', 'FileName', 'Comment'}, 'dipoles');
                                 iFoundDip = [sFuncFiles.Id];
                                 DipolesFiles = {sFuncFiles.FileName};
                                 DipolesComments = {sFuncFiles.Comment};
@@ -375,7 +375,7 @@ try
                     case 'timefreq'
                         iStudy = nodeStudies(iNode);
                         % Find the timefreq associated with this result node
-                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'timefreq', {'Id', 'FileName', 'Comment'});
+                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), {'Id', 'FileName', 'Comment'}, 'timefreq');
                         iFoundTf = [sFuncFiles.Id];
                         if ~isempty(iFoundTf)
                             TimefreqFiles = {sFuncFiles.FileName};
@@ -393,7 +393,7 @@ try
                     case 'dipoles'
                         iStudy = nodeStudies(iNode);
                         % Find the file associated with this data node
-                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'dipoles', {'Id', 'FileName', 'Comment'});
+                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), {'Id', 'FileName', 'Comment'}, 'dipoles');
                         iFoundDip = [sFuncFiles.Id];
                         if ~isempty(iFoundDip)
                             DipolesFiles = {sFuncFiles.FileName};
@@ -472,7 +472,7 @@ try
                     case 'timefreq'
                         iStudy = nodeStudies(iNode);
                         % Find the timefreq associated with this data node in same Study
-                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), 'timefreq', {'Id', 'FileName', 'Comment'});
+                        sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', nodeSubItems(iNode), {'Id', 'FileName', 'Comment'}, 'timefreq');
                         iFoundTf = [sFuncFiles.Id];
                         if ~isempty(sFuncFiles)
                             TimefreqFiles = {sFuncFiles.FileName};
@@ -511,7 +511,7 @@ try
                             for id = 1:length(iFoundMatrix)
                                 iMatrix = iFoundMatrix(id);
                                 % Find the files associated with this data node
-                                sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iMatrix, 'timefreq', {'Id', 'FileName', 'Comment'});
+                                sFuncFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', iMatrix, {'Id', 'FileName', 'Comment'}, 'timefreq');
                                 iFoundTf = [sFuncFiles.Id];
                                 TimefreqFiles = {sFuncFiles.FileName};
                                 TimefreqComments = {sFuncFiles.Comment};
@@ -576,7 +576,7 @@ if ~isempty(iTargetStudies)
             case 'results'
                 % Get all results of this study that ARE NOT SHARED KERNELS (imaging kernel not attched to a datafile)
                 % === Check file filters ===
-                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), 'result', {'Id', 'FileName', 'Comment', 'ExtraNum', 'ExtraStr1'});
+                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), {'Id', 'FileName', 'Comment', 'ExtraNum', 'ExtraStr1'}, 'result');
                 ResultsFiles = {sFuncFiles.FileName};
                 ResultsComments = {sFuncFiles.Comment};
                 ResultsTypes = {'results', 'link'};
@@ -606,7 +606,7 @@ if ~isempty(iTargetStudies)
                 
             case 'timefreq'
                 % Get all timefreq files of this study
-                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), 'timefreq', {'Id', 'FileName', 'Comment'});
+                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), {'Id', 'FileName', 'Comment'}, 'timefreq');
                 if ~isempty(sFuncFiles)
                     iFoundTf = [sFuncFiles.Id];
                     % Check file filters
@@ -657,7 +657,7 @@ if ~isempty(iTargetStudies)
 
             case 'matrix'
                 % Get all "matrix" files of this study
-                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), 'matrix', {'Id', 'FileName', 'Comment'});
+                sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudies(i), {'Id', 'FileName', 'Comment'}, 'matrix');
                 iFoundMat = [sFuncFiles.Id];
                 if ~isempty(iFoundMat)
                     % === Check file filters ===

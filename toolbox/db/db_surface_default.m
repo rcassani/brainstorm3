@@ -56,10 +56,10 @@ if (nargin < 3) || isempty(iSurface)
     if isempty(iSurface)
         if strcmpi(SurfaceType, 'Anatomy')
             % == VOLUME IMAGE ==
-            sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'volume', 'Id', 'Image');
+            sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'Id', 'volume', 'Image');
         else
             % == SURFACE ==
-            sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'surface', 'Id', SurfaceType);
+            sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'Id', 'surface', SurfaceType);
         end
         if ~isempty(sAnatFiles)
             iSurface = sAnatFiles(1).Id;
@@ -107,7 +107,7 @@ end
 % If the default MRI changes, all the surface-MRI interpolations saved in the surface files must be updated
 if strcmpi(SurfaceType, 'Anatomy')
     % Surfaces for Subject
-    sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'surface', 'FileName');
+    sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'FileName', 'surface');
     for i = 1:length(sAnatFiles)
         % Load surface
         TessFile = file_fullpath(sAnatFiles(i).FileName);

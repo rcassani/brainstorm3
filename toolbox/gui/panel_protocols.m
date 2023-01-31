@@ -574,10 +574,7 @@ function CreateStudyNode(nodeStudy) %#ok<DEFNU>
     % Get study and subject
     iStudy = nodeStudy.getStudyIndex();
     if iStudy ~= 0
-        sqlConn = sql_connect();
-        sStudy = db_get(sqlConn, 'Study', iStudy);
-        sSubject = db_get(sqlConn, 'Subject', sStudy.Subject, 'UseDefaultChannel');
-        sql_close(sqlConn);
+        [sSubject, sStudy] = db_get('SubjectFromStudy', iStudy, 'UseDefaultChannel');
         if ~isempty(sStudy)
             % Get selected search tab
             iSearch = GetSelectedSearch();
@@ -758,10 +755,7 @@ function UpdateNode(category, indices, isExpandTrials)
                             % Remove all children from this node
                             nodeStudy.removeAllChildren();
                             % Get study and associated subject
-                            sqlConn = sql_connect();
-                            sStudy = db_get(sqlConn, 'Study', iStudy);
-                            sSubject = db_get(sqlConn, 'Subject', sStudy.Subject, 'UseDefaultChannel');
-                            sql_close(sqlConn);
+                            [sSubject, sStudy] = db_get('SubjectFromStudy', iStudy, 'UseDefaultChannel');
                             % Create new study node (default node / normal node)
                             UseDefaultChannel = ~isempty(sSubject) && (sSubject.UseDefaultChannel ~= 0);
                             node_create_study(nodeStudy, [], sStudy, iStudy, [], isExpandTrials, UseDefaultChannel, iSearch);

@@ -1077,9 +1077,9 @@ switch contextName
         else                 
             % Populate Anatomy files: Volume and Surface
             sSubject.Anatomy = [repmat(db_template('Anatomy'), 0), ...
-                db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'volume'))];
+                db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, '*', 'volume'))];
             sSubject.Surface = [repmat(db_template('Surface'), 0), ...
-                db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, 'surface'))];
+                db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, '*', 'surface'))];
             
             argout1 = sSubject;
             argout2 = sSubject.Id;
@@ -1156,7 +1156,7 @@ switch contextName
                 SurfaceType = 'Image';
             end
             % AnatomyFiles (volume or surface) with specific SubType for Subject
-            sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, '', 'Id', SurfaceType);
+            sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'Id', '', SurfaceType);
             % Put the default AnatomyFile on top of the list
             iDefaults = sSubject.(field) == [sAnatFiles.Id];
             if ~isempty(iDefaults)

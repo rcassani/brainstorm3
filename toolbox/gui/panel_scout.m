@@ -4178,8 +4178,7 @@ function PlotScouts(iScouts, hFigSel)
     end
     % Get anatomy file
     sqlConn = sql_connect();
-    sAnatFile = db_get(sqlConn, 'AnatomyFile', sSurf.FileName, 'Subject');
-    sSubject  = db_get(sqlConn, 'Subject', sAnatFile.Subject, 'iAnatomy');
+    sSubject  = db_get(sqlConn, 'SubjectFromAnatomyFile', sSurf.FileName, 'iAnatomy');
     % Volume scouts: Get number of points for this atlas
     [isVolumeAtlas, nAtlasGrid] = ParseVolumeAtlas(sAtlas.Name);
     isStructAtlas = ismember(sAtlas.Name, {'Structures', 'Source model'});
@@ -4602,9 +4601,8 @@ function ReloadScouts(hFig)
     if (nargin < 1) || isempty(hFig)
         % Get current surface and/or subject MRI
         SurfaceFiles = {GlobalData.CurrentScoutsSurface};
-        %sSubject = bst_get('SurfaceFile', GlobalData.CurrentScoutsSurface);
-        sSubject = db_get('SubjectFromAnatomyFile', GlobalData.CurrentScoutsSurface);
-        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'volume');
+        sSubject = db_get('SubjectFromAnatomyFile', GlobalData.CurrentScoutsSurface, {'Id', 'iAnatomy'});
+        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, {'Id', 'FileName'}, 'volume');
         if ~isempty(sSubject) && ~isempty(sAnatFiles)
             SurfaceFiles{2} = sAnatFiles([sAnatFiles.Id] == sSubject.iAnatomy).FileName;
         end

@@ -523,7 +523,7 @@ function SetFigureStatus(hFig, isEditFiducials, isEditVolume, isOverlay, isEeg, 
     SubjectFile = getappdata(hFig, 'SubjectFile');
     sqlConn = sql_connect();
     sSubject = db_get(sqlConn, 'Subject', SubjectFile, 'Name');
-    sSurfaceFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', SubjectFile, 'surface', 'Id');
+    sSurfaceFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', SubjectFile,  'Id', 'surface');
     sStudies = db_get(sqlConn, 'StudiesFromSubject', SubjectFile, 'iChannel');
     sChannelFiles = db_get(sqlConn, 'FunctionalFile', [sStudies.iChannel], 'Id');
     sql_close(sqlConn);
@@ -2449,7 +2449,7 @@ function SetFiducial(hFig, FidCategory, FidName)
     % Get the file in the database
     sqlConn = sql_connect();
     sAnatFile  = db_get(sqlConn, 'AnatomyFile', sMri.FileName, {'Id', 'Subject'});
-    sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sAnatFile.Subject, 'volume', 'Id', 'Image');
+    sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sAnatFile.Subject, 'Id', 'volume', 'Image');
     sql_close(sqlConn);
     % If it is not the first MRI: can't edit the fiducuials
     if (sAnatFile.Id ~= sAnatFiles(1).Id)
@@ -2609,7 +2609,7 @@ function [isCloseAccepted, MriFile] = SaveMri(hFig)
     
     % ==== REALIGN SURFACES ====
     if ~isempty(sMriOld)
-        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'surface', 'FileName');
+        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'FileName', 'surface');
         UpdateSurfaceCS({sAnatFiles.FileName}, sMriOld, sMri);
     end
 end
@@ -3085,7 +3085,7 @@ function [AtlasNames, AtlasFiles, iAtlas] = GetVolumeAtlases(hFig)
     iAtlas = [];
     % Get subject info
     SubjectFile = getappdata(hFig, 'SubjectFile');
-    sAnatFiles  = db_get('AnatomyFilesWithSubject', SubjectFile, 'volume', {'Comment', 'FileName'}, 'Atlas');
+    sAnatFiles  = db_get('AnatomyFilesWithSubject', SubjectFile, {'Comment', 'FileName'}, 'volume', 'Atlas');
     AtlasNames = {sAnatFiles.Comment};
     AtlasFiles = {sAnatFiles.FileName};
     % Add an empty atlas

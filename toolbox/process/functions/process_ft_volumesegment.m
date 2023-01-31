@@ -294,7 +294,7 @@ function [isOk, errMsg, TissueFile] = Compute(iSubject, iMri, OPTIONS)
             sTess.Vertices = ftMesh(i).pos;
             sTess.Faces    = ftMesh(i).tri;
             % Set comment
-            sAnatFilesSurfaces = db_get('AnatomyFilesWithSubject', sSubject.Id, 'surface', 'Comment');
+            sAnatFilesSurfaces = db_get('AnatomyFilesWithSubject', sSubject.Id, 'Comment', 'surface');
             fileTag = sprintf('_%dV', OPTIONS.nVertices(i));
             sTess.Comment = file_unique(['bem_' bemName '_ft' fileTag], {sAnatFilesSurfaces.Comment});
             % Output file name
@@ -312,7 +312,7 @@ function [isOk, errMsg, TissueFile] = Compute(iSubject, iMri, OPTIONS)
     % Add basic labels
     sMriTissue.Labels = mri_getlabels('tissues5');
     % Set comment
-    sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'volume', 'Comment');
+    sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'Comment', 'volume');
     sMriTissue.Comment = file_unique('tissues', {sAnatFiles.Comment});
     % Copy some fields from the original MRI
     if isfield(sMri, 'SCS') 

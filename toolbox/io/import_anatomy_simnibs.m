@@ -89,8 +89,8 @@ bst_memory('UnloadAll', 'Forced');
 %% ===== DELETE PREVIOUS ANATOMY =====
 % Get subject definition
 sSubject = db_get('Subject', iSubject);
-sAnatomies = db_get('AnatomyFilesWithSubject', iSubject, 'volume', 'Id');
-sSurfaces  = db_get('AnatomyFilesWithSubject', iSubject, 'surface', 'Id');
+sAnatomies = db_get('AnatomyFilesWithSubject', iSubject, 'Id', 'volume');
+sSurfaces  = db_get('AnatomyFilesWithSubject', iSubject, 'Id', 'surface');
 % Check for existing anatomy
 if (~isempty(sAnatomies) && (isKeepMri == 0)) || (~isempty(sSurfaces) && (isKeepMri < 2))
     % Ask user whether the previous anatomy should be removed
@@ -165,7 +165,7 @@ end
 
 
 %% ===== IMPORT T1 MRI =====
-sAnatomies = db_get('AnatomyFilesWithSubject', iSubject, 'volume', {'Id', 'FileName'});
+sAnatomies = db_get('AnatomyFilesWithSubject', iSubject, {'Id', 'FileName'}, 'volume');
 if isKeepMri && ~isempty(sAnatomies)
     T1File = file_fullpath(sAnatomies([sAnatomies.Id] == sSubject.iAnatomy).FileName);
 else
