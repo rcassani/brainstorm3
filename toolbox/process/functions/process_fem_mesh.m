@@ -976,7 +976,7 @@ function [sSubject, T1File, T2File, errMsg, iT1, iT2] = GetT1T2(iSubject, iMris)
         return
     end
     % Check if a MRI is available for the subject
-    sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'volume');
+    sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, '*', 'volume');
     if isempty(sAnatFiles)
         errMsg = ['No MRI available for subject "' sSubject.Name '".'];
         return

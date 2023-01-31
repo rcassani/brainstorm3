@@ -28,8 +28,8 @@ function varargout = db_get(varargin)
 %    - db_get('SubjectFromAnatomyFile', FileName, SubjectFields, AnatomyFileFields) : Find Subject for AnatomyFile with FileName
 %
 % ====== ANATOMY FILES =================================================================
-%    - db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields)       : Get AnatomyFiles for SubjectID
-%    - db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, Fields) : Get AnatomyFiles for SubjectFileName
+%    - db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileFields, AnatomyFileType, AnatomyFileSubType)       : Get AnatomyFiles for SubjectID
+%    - db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileFields, AnatomyFileType, AnatomyFileSubType) : Get AnatomyFiles for SubjectFileName
 %    - db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType, Fields)     : Get AnatomyFiles for SubjectName
 %    - db_get('AnatomyFile', FileIDs,   Fields) : Find AnatomyFile(s) by ID(s)
 %    - db_get('AnatomyFile', FileNames, Fields) : Find AnatomyFile(s) by FileName(s)
@@ -283,35 +283,38 @@ switch contextName
 
 
 %% ==== ANATOMY FILES WITH SUBJECT ====
-    % sAnatomyFiles = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields, SubType)
-    %               = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType, Fields)
-    %               = db_get('AnatomyFilesWithSubject', SubjectID, AnatomyFileType)
-    %               = db_get('AnatomyFilesWithSubject', SubjectID)
-    %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, Fields, SubType)
-    %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, Fields)
-    %               = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType)
-    %               = db_get('AnatomyFilesWithSubject', SubjectFileName)
-    %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType, Fields, SubType)
-    %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType, Fields)
-    %               = db_get('AnatomyFilesWithSubject', SubjectName, AnatomyFileType)
-    %               = db_get('AnatomyFilesWithSubject', SubjectName)
+    % [sAnatomyFiles, sSubject] = db_get('AnatomyFilesWithSubject', SubjectID,       AnatomyFileType, AnatomyFileFields, AnatomyFileSubType, SubjectFields)
+    %                           = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, AnatomyFileFields, AnatomyFileSubType, SubjectFields)
     case 'AnatomyFilesWithSubject'
+        anatomyFileFields = '*';
         fileType = '';
-        fields = '*';
         subType = '';
+        subjectFields = '*';
         varargout{1} = [];
-        if length(args) > 1
-            fileType = lower(args{2});
+        varargout{2} = [];
+        if length(args) > 1 && ~isempty(args{2})
+            anatomyFileFields = args{2};
             if length(args) > 2
-                fields = args{3};
+                fileType = lower(args{3});
                 if length(args) > 3
                     subType = args{4};
+                    if length(args) > 4 && ~isempty(args{5})
+                        subjectFields = args{5};
+                    end
                 end
             end
         end
-        if ischar(fields), fields = {fields}; end
+        if ischar(anatomyFileFields), anatomyFileFields = {anatomyFileFields}; end
         % Prepend 'AnatomyFile.' to requested fields
-        fields = cellfun(@(x) ['AnatomyFile.' x], fields, 'UniformOutput', 0);
+        anatomyFileFields = cellfun(@(x) ['AnatomyFile.' x], anatomyFileFields, 'UniformOutput', 0);
+        if nargout > 1
+            if ischar(subjectFields), subjectFields = {subjectFields}; end
+            % Prepend 'Subject.' to requested study fields
+            subjectFields = cellfun(@(x) ['Subject.' x], subjectFields, 'UniformOutput', 0);
+        else
+            subjectFields = {};
+        end
+        fields = [anatomyFileFields, subjectFields];
         % Join query
         joinQry = 'AnatomyFile LEFT JOIN Subject ON AnatomyFile.Subject = Subject.Id';
         % Add query
@@ -336,7 +339,10 @@ switch contextName
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
         % Select query
-        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        [varargout{1}, tmp]= sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        if nargout > 1 && ~isempty(tmp)
+            varargout{2} = tmp(1);
+        end
 
 
 %% ==== FUNCTIONAL FILES WITH STUDY ====

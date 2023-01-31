@@ -127,7 +127,7 @@ function [isOk, errMsg, FemFile] = Compute(iSubject, iMri, OPTIONS)
     end
     % If not specified, use default MRI
     if isempty(iMri)
-        sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'volumne', {'Id','Comment'});
+        sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, {'Id','Comment'}, 'volumne');
         iMri = find(strcmpi({sAnatFiles.Comment}, 'tissues'), 1);
         if isempty(iMri)
             iMri = find(~cellfun(@(c)isempty(strfind(lower(c), 'tissue')), {sAnatFiles.Comment}), 1);

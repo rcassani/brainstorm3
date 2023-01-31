@@ -85,7 +85,7 @@ else
 end
 subjectSubDir = bst_fileparts(sSubject.FileName);
 % Current MRIs
-sAnatFilesMris = db_get('AnatomyFilesWithSubject', iSubject, 'volume', {'Id', 'FileName'}, 'Image');
+sAnatFilesMris = db_get('AnatomyFilesWithSubject', iSubject, {'Id', 'FileName'}, 'volume', 'Image');
 
 % Check the presence of the MRI: warning if no MRI
 if isempty(sAnatFilesMris)

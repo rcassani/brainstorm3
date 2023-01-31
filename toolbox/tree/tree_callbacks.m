@@ -3027,7 +3027,7 @@ end
 function fcnMriSegment(jPopup, sSubject, iSubject, iAnatomy, isAtlas)
     import org.brainstorm.icon.*;
     % No anatomy: nothing to do
-    if isempty(db_get('AnatomyFilesWithSubject', iSubject, 'volume', 'Id', 'Image'))
+    if isempty(db_get('AnatomyFilesWithSubject', iSubject, 'Id', 'volume', 'Image'))
         return;
     end
     % Using default anatomy

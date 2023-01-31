@@ -70,7 +70,7 @@ else
     sSubject = db_get('Subject', iSubject);
 end
 % Current anatomy files
-sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'volume');
+sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, '*', 'volume');
 
 %% ===== SELECT MRI FILE =====
 % If MRI file to load was not defined : open a dialog box to select it

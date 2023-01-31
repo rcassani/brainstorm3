@@ -4602,7 +4602,7 @@ function ReloadScouts(hFig)
         % Get current surface and/or subject MRI
         SurfaceFiles = {GlobalData.CurrentScoutsSurface};
         sSubject = db_get('SubjectFromAnatomyFile', GlobalData.CurrentScoutsSurface, {'Id', 'iAnatomy'});
-        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'volume', {'Id', 'FileName'});
+        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, {'Id', 'FileName'}, 'volume');
         if ~isempty(sSubject) && ~isempty(sAnatFiles)
             SurfaceFiles{2} = sAnatFiles([sAnatFiles.Id] == sSubject.iAnatomy).FileName;
         end

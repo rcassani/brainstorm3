@@ -188,7 +188,7 @@ for iMri = 1:length(MriFiles)
     
     % === DELETE MRI ===
     % Get anatomy files for subject
-    sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, '', {'Id', 'FileName'});
+    sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, {'Id', 'FileName'});
     % Delete MRI
     file_delete(file_fullpath({sAnatFiles.FileName}), 1);
     for ix = 1 : length(sAnatFiles)
