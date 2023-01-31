@@ -530,9 +530,9 @@ switch contextName
         studyFields   = '*';
         varargout{1} = [];
         varargout{2} = [];
-        if length(args) > 1
+        if length(args) > 1 && ~isempty(args{2})
             subjectFields = args{2};
-            if length(args) > 2
+            if length(args) > 2 && ~isempty(args{3})
                 studyFields = args{3};
             end
         end
@@ -620,7 +620,7 @@ switch contextName
     case 'StudiesFromSubject'
         fields = '*';
         varargout{1} = [];
-        if length(args) > 1
+        if length(args) > 1 && ~isempty(args{2})
             fields = args{2};
         end
         if ischar(fields), fields = {fields}; end
@@ -787,11 +787,11 @@ switch contextName
         studyFields = '*';
         functionalFileFields = '*';
         varargout{1} = [];
-        if length(args) > 1
+        if length(args) > 1 && ~isempty(args{2})
             subjectFields = args{2};
-            if length(args) > 2
+            if length(args) > 2 && ~isempty(args{3})
                 studyFields = args{3};
-                if length(args) > 3
+                if length(args) > 3 && ~isempty(args{4})
                     functionalFileFields = args{4};
                 end
             end
@@ -839,9 +839,9 @@ switch contextName
         subjectFields = '*';
         anatomyFileFields  = '*';
         varargout{1} = [];
-        if length(args) > 1
+        if length(args) > 1 && ~isempty(args{2})
             subjectFields = args{2};
-            if length(args) > 2
+            if length(args) > 2 && ~isempty(args{3})
                 anatomyFileFields = args{3};
             end
         end
@@ -885,7 +885,7 @@ switch contextName
         fields = '*';
         conditionPath = args{1};
         varargout{1} = [];
-        if length(args) > 1
+        if length(args) > 1 && ~isempty(args{2})
             fields = args{2};
         end
         if ischar(fields), fields = {fields}; end
