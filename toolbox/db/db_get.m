@@ -69,8 +69,8 @@ function varargout = db_get(varargin)
 %    - db_get('FilesInFileList', CondQuery, Fields)   : Get FunctionalFile belonging to a list with Query
 %    - db_get('ParentFromFunctionalFile', FileId,   ParentFields, FunctionalFileFields)   : Find ParentFile for FunctionalFile with FileId
 %    - db_get('ParentFromFunctionalFile', FileName,   ParentFields, FunctionalFileFields) : Find ParentFile for FunctionalFile with FileName
-%    - db_get('ChildrenFromFunctionalFile', FileId,   ChildrenType, ChildrenFields, WholeProtocol) : Find ChildrenFiles for FunctionalFile with FileId
-%    - db_get('ChildrenFromFunctionalFile', FileName, ChildrenType, ChildrenFields, WholeProtocol) : Find ChildrenFiles for FunctionalFile with FileName
+%    - db_get('ChildrenFromFunctionalFile', FileId,   ChildrenFields, ChildrenType, WholeProtocol) : Find ChildrenFiles for FunctionalFile with FileId
+%    - db_get('ChildrenFromFunctionalFile', FileName, ChildrenFields, ChildrenType, WholeProtocol) : Find ChildrenFiles for FunctionalFile with FileName
 %    - db_get('FilesForKernel', KernelFileId,   Type, Fields) : Find FunctionalFiles for Kernel with FileId
 %    - db_get('FilesForKernel', KernelFileName, Type, Fields) : Find FunctionalFiles for Kernel with FileName
 %
@@ -987,31 +987,33 @@ switch contextName
 
 
 %% ==== CHILDREN FILES FROM FUNCTIONAL FILE ====
-    % sFunctionalFiles = db_get('ChildrenFromFunctionalFile', FileId,   ChildrenType, ChildrenFields, WholeProtocol)
-    %                  = db_get('ChildrenFromFunctionalFile', FileName, ChildrenType, ChildrenFields, WholeProtocol)
+    % sFunctionalFiles = db_get('ChildrenFromFunctionalFile', FileId,   ChildrenFields, ChildrenType, WholeProtocol)
+    %                  = db_get('ChildrenFromFunctionalFile', FileName, ChildrenFields, ChildrenType, WholeProtocol)
     case 'ChildrenFromFunctionalFile'
-        children_type = [];
         fields = '*';
+        children_type = [];
         whole_protocol = 0;
         varargout{1} = [];
-        if length(args) > 1
-            children_type = args{2};
-        end
-        if length(args) > 2
-            fields = args{3};
+        if length(args) > 1 && ~isempty(args{2})
+            fields = args{2};
+            if length(args) > 2
+                children_type = args{3};
+                if length(args) > 3
+                    whole_protocol = args{4};
+                end
+            end
         end
         if ischar(fields), fields = {fields}; end
-        if length(args) > 3
-            whole_protocol = args{4};
-        end
         % Prepend 'Children.' to requested fields
         fields = cellfun(@(x) ['Children.' x], fields, 'UniformOutput', 0);
         % Look for children in children. E.g, data > results > timefreq
         alsoGrandChildren = isempty(children_type) || ismember(children_type, {'timefreq', 'dipoles'});
 
         % Join query
+        % INNER JOIN: Keep ONLY FunctionalFiles and join them with their Parents
         joinQry = 'FunctionalFile AS Children INNER JOIN FunctionalFile AS Parent1 ON Children.Parent = Parent1.Id';
         if alsoGrandChildren
+            % LEFT JOIN: Join the GrandParent (Parent of Parent) if places it exist
             joinQry = [joinQry, ' LEFT JOIN FunctionalFile AS Parent2 ON Parent1.Parent = Parent2.Id '];
         end
         % Add query
@@ -1074,7 +1076,7 @@ switch contextName
         % For each of this result files find their children
         varargout{1} = [];
         for i = 1 : length(sResultFiles)
-            sChildrenFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', sResultFiles(i).Id, dep_type, dep_fields);
+            sChildrenFiles = db_get(sqlConn, 'ChildrenFromFunctionalFile', sResultFiles(i).Id, dep_fields, dep_type);
             varargout{1} = [varargout{1}, sChildrenFiles];
         end
 
