@@ -56,8 +56,8 @@ function varargout = db_get(varargin)
 %    - db_get('StudyWithCondition', ConditionPath, Fields) : Get studies for a given condition path
 %
 % ====== FUNCTIONAL FILES ==============================================================
-%    - db_get('FunctionalFilesWithStudy', StudyID, FunctionalFileType, Fields)       : Get FunctionalFiles for StudyID
-%    - db_get('FunctionalFilesWithStudy', StudyFileName, FunctionalFileType, Fields) : Get FunctionalFiles for StudyFileName
+%    - db_get('FunctionalFilesWithStudy', StudyID, FunctionalFileFields, FunctionalFileType, FunctionalFileSubtype, SubjectFields)       : Get FunctionalFiles for StudyID
+%    - db_get('FunctionalFilesWithStudy', StudyFileName, FunctionalFileFields, FunctionalFileType, FunctionalFileSubtype, SubjectFields) : Get FunctionalFiles for StudyFileName
 %    - db_get('FunctionalFile', FileIDs,   Fields) : Get FunctionalFile(s) by ID(s)
 %    - db_get('FunctionalFile', FileNames, Fields) : Get FunctionalFile(s) by FileName(s)
 %    - db_get('FunctionalFile', CondQuery, Fields) : Get FunctionalFile(s) with a Query
@@ -346,31 +346,47 @@ switch contextName
 
 
 %% ==== FUNCTIONAL FILES WITH STUDY ====
-    % sFunctionalFiles = db_get('FunctionalFilesWithStudy', StudyID, FunctionalFileType, Fields)
-    %                  = db_get('FunctionalFilesWithStudy', StudyID, FunctionalFileType)
-    %                  = db_get('FunctionalFilesWithStudy', StudyID)
-    % sFunctionalFiles = db_get('FunctionalFilesWithStudy', StudyFileName, FunctionalFileType, Fields)
-    %                  = db_get('FunctionalFilesWithStudy', StudyFileName, FunctionalFileType)
-    %                  = db_get('FunctionalFilesWithStudy', StudyFileName)
+    % [sFunctionalFiles, sStudy] = db_get('FunctionalFilesWithStudy', StudyID,       FunctionalFileFields, FunctionalFileType, FunctionalFileSubtype, SubjectFields)
+    %                            = db_get('FunctionalFilesWithStudy', StudyFileName, FunctionalFileFields, FunctionalFileType, FunctionalFileSubtype, SubjectFields)
     case 'FunctionalFilesWithStudy'
+        functionalFilefields = '*';
         fileType = '';
-        fields = '*';
+        subType = '';
+        studyFields = '*';
         varargout{1} = [];
-        if length(args) > 1
-            fileType = lower(args{2});
+        varargout{2} = [];
+        if length(args) > 1 && ~isempty(args{2})
+            functionalFilefields = args{2};
             if length(args) > 2
-                fields = args{3};
+                fileType = lower(args{3});
+                if length(args) > 3
+                    subType = args{4};
+                    if length(args) > 4 && ~isempty(args{5})
+                        studyFields = args{5};
+                    end
+                end
             end
         end
-        if ischar(fields), fields = {fields}; end
+        if ischar(functionalFilefields), functionalFilefields = {functionalFilefields}; end
         % Prepend 'FunctionalFile.' to requested fields
-        fields = cellfun(@(x) ['FunctionalFile.' x], fields, 'UniformOutput', 0);
+        functionalFilefields = cellfun(@(x) ['FunctionalFile.' x], functionalFilefields, 'UniformOutput', 0);
+        if nargout > 1
+            if ischar(studyFields), studyFields = {studyFields}; end
+            % Prepend 'Study.' to requested study fields
+            studyFields = cellfun(@(x) ['Study.' x], studyFields, 'UniformOutput', 0);
+        else
+            studyFields = {};
+        end
+        fields = [functionalFilefields, studyFields];
         % Join query
         joinQry = 'FunctionalFile LEFT JOIN Study ON FunctionalFile.Study = Study.Id';
         % Add query
         addQuery = '';
         if ~isempty(fileType)
             addQuery = ['AND FunctionalFile.Type = "' fileType '" '];
+        end
+        if ~isempty(subType)
+            addQuery = ['AND FunctionalFile.SubType = "' subType '" '];
         end
         addQuery = [addQuery, 'AND Study.'];
         % Complete query with FileName of FileID
@@ -380,7 +396,10 @@ switch contextName
             addQuery = [addQuery 'Id = ' num2str(args{1})];
         end
         % Select query
-        varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        [varargout{1}, tmp]= sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        if nargout > 1 && ~isempty(tmp)
+            varargout{2} = tmp(1);
+        end
 
 
 %% ==== ANATOMY FILE ====

@@ -536,7 +536,7 @@ switch contextName
                     db_set(sqlConn, 'ParentCount', list.Id, '+', 1);
                 else
                     % Look for potential sibilings (including recently inserted FunctionalFile)
-                    sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', list_study, list_type, {'Id', 'Comment', 'FileName', 'Parent'});
+                    sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', list_study, {'Id', 'Comment', 'FileName', 'Parent'}, list_type);
                     if ~isempty(sFuncFiles)
                         cleanNames = cellfun(@(x) str_remove_parenth(x), {sFuncFiles.Comment}, 'UniformOutput', false);
                         % Get items with matching name
