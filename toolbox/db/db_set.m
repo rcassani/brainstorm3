@@ -303,7 +303,6 @@ switch contextName
     case 'AnatomyFilesWithSubject'
         sAnatFiles = args{1};
         iSubject = args{2};
-        disp(iSubject);
         
         % Delete all AnatomyFiles with SubjectID
         if ischar(sAnatFiles) && strcmpi(sAnatFiles, 'delete')

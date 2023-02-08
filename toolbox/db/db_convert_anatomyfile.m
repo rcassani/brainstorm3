@@ -33,7 +33,6 @@ if (nargin < 2) || isempty(type)
     type = '';
 end
 
-% Output
 nStructs = length(inStructs);
 
 % Verify the sense of the conversion
