@@ -317,11 +317,12 @@ switch contextName
             varargout{1} = 1;
         % Insert or Update AnatomyFiles to SubjectID
         else
+            [sAnatFiles.Subject] = deal(iSubject);
             sAnatFilesOld = db_get('AnatomyFilesWithSubject', iSubject);
-            % Files to update
+            % Files to Update
             [~, ia, ib] = intersect({sAnatFilesOld.FileName},{sAnatFiles.FileName});
             for ix = 1 : length(ia)
-                if ~isEqualDbStructs(sAnatFilesOld(ia), sAnatFiles(ib))
+                if ~isEqualDbStructs(sAnatFilesOld(ia(ix)), sAnatFiles(ib(ix)))
                     db_set(sqlConn, 'AnatomyFile', sAnatFiles(ib(ix)), sAnatFilesOld(ia(ix)).Id);
                 end
             end
@@ -335,7 +336,6 @@ switch contextName
             end
             % Insert AnatomyFiles entries in parsed Subject but not in DB
             for ix = 1 : length(ib)
-                sAnatFiles(ib(ix)).Subject = iSubject;
                 db_set(sqlConn, 'AnatomyFile', sAnatFiles(ib(ix)));
             end
             % If requested get current AnatomyFiles
