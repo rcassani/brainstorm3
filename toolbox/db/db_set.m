@@ -298,27 +298,49 @@ switch contextName
         end
         
 %% ==== ANATOMY FILES WITH SUBJECT ====
-    % Success       = db_set('AnatomyFilesWithSubject', 'Delete'     , SubjectID)
-    % sAnatomyFiles = db_set('AnatomyFilesWithSubject', sAnatomyFiles, SubjectID)
+    % Success                        = db_set('AnatomyFilesWithSubject', 'Delete'     , SubjectID)
+    % [AnatomyFileIds, AnatomyFiles] = db_set('AnatomyFilesWithSubject', sAnatomyFiles, SubjectID)
     case 'AnatomyFilesWithSubject'
         sAnatFiles = args{1};
         iSubject = args{2};
+        disp(iSubject);
         
         % Delete all AnatomyFiles with SubjectID
         if ischar(sAnatFiles) && strcmpi(sAnatFiles, 'delete')
             delResult = sql_query(sqlConn, 'DELETE', 'AnatomyFile', struct('Subject', iSubject));
             varargout{1} = 1;
-        % Insert AnatomyFiles to SubjectID
-        elseif isstruct(sAnatFiles)
-            nAnatomyFiles = length(sAnatFiles);
-            insertedIds = zeros(1, nAnatomyFiles);
-            for ix = 1 : nAnatomyFiles
-                sAnatFiles(ix).Subject = iSubject;
-                insertedIds(ix) = db_set(sqlConn, 'AnatomyFile', sAnatFiles(ix));
+        % Insert or Update AnatomyFiles to SubjectID
+        else
+            sAnatFilesOld = db_get('AnatomyFilesWithSubject', iSubject);
+            % Files to update
+            [~, ia, ib] = intersect({sAnatFilesOld.FileName},{sAnatFiles.FileName});
+            for ix = 1 : length(ia)
+                if ~isEqualDbStructs(sAnatFilesOld(ia), sAnatFiles(ib))
+                    db_set(sqlConn, 'AnatomyFile', sAnatFiles(ib(ix)), sAnatFilesOld(ia(ix)).Id);
+                end
             end
-            % If requested get all the inserted AnatomyFiles
+            % Files to Insert or Delete
+            [~, ia, ib] = setxor({sAnatFilesOld.FileName},{sAnatFiles.FileName});
+            ia = sort(ia);
+            ib = sort(ib);
+            % Delete AnatomyFiles entries in DB, but not in parsed Subject
+            for ix = 1 : length(ia)
+                db_set(sqlConn, 'AnatomyFile', 'Delete', sAnatFilesOld(ia(ix)).Id);
+            end
+            % Insert AnatomyFiles entries in parsed Subject but not in DB
+            for ix = 1 : length(ib)
+                sAnatFiles(ib(ix)).Subject = iSubject;
+                db_set(sqlConn, 'AnatomyFile', sAnatFiles(ib(ix)));
+            end
+            % If requested get current AnatomyFiles
             if nargout > 0
-                varargout{1} = db_get(sqlConn, 'AnatomyFile', insertedIds);
+                if nargout == 2
+                    tmp = db_get(sqlConn, 'AnatomyFilesWithSubject', iSubject);
+                    varargout{2} = tmp;
+                elseif nargout == 1
+                    tmp = db_get(sqlConn, 'AnatomyFilesWithSubject', iSubject, 'Id');
+                end
+                varargout{1} = [tmp.Id];
             end
         end
 
