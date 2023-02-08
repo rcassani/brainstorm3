@@ -233,35 +233,30 @@ switch contextName
         
         % Get subject
         sExistingSubject = db_get(sqlConn, 'Subject', iSubject, 'Id');
-        
         % Get FileNames for currently selected Anatomy and Surface files
-        categories = {'Anatomy', 'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'};
-        selectedFiles = cell(1, length(categories));
-        for iCat = 1:length(categories)
-            category = categories{iCat};
-            field = ['i' category];
-            if ~isempty(sSubject.(field)) && ischar(sSubject.(field))
-                selectedFiles{iCat} = sSubject.(field);
-            elseif ~isempty(sSubject.(field)) && isnumeric(sSubject.(field)) && sSubject.(field) > 0
-                % Get FileName with previous file ID before it's deleted
-                sAnatFile = db_get(sqlConn, 'AnatomyFile', sSubject.(field), 'FileName');
+        categories = strcat('i', {'Anatomy', 'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'});
+        for iCat = 1 : length(categories)
+            if ~isempty(sSubject.(categories{iCat}))
+                sAnatFile = db_get(sqlConn, 'AnatomyFile', sSubject.(categories{iCat}), 'FileName');
                 if ~isempty(sAnatFile)
-                    selectedFiles{iCat} = sAnatFile.FileName;
+                    sSubject.(categories{iCat}) = sAnatFile.FileName;
+                else
+                    sSubject.(categories{iCat}) = [];
                 end
             end
             % Set default selected files
-            if isempty(selectedFiles{iCat})
+            if isempty(sSubject.(categories{iCat}))
+                category = categories{iCat}(2:end);
                 switch category
                     case 'Anatomy'
                         if ~isempty(sSubject.(category))
-                            selectedFiles{iCat} = sSubject.(category)(1).FileName;
+                            sSubject.(categories{iCat}) = sSubject.(category)(1).FileName;
                         end
-
                     case {'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'}
                         if ~isempty(sSubject.Surface)
                             ix_def = find(strcmpi({sSubject.Surface.SurfaceType}, category), 1, 'first');
                             if ~isempty(ix_def)
-                                selectedFiles{iCat} = sSubject.Surface(ix_def);
+                                sSubject.(categories{iCat}) = sSubject.Surface(ix_def).FileName;
                             end
                         end
                 end
@@ -296,19 +291,18 @@ switch contextName
                           db_convert_anatomyfile(sSubject.Surface, 'surface')];
             db_set(sqlConn, 'AnatomyFilesWithSubject', sAnatFiles, iSubject);
 
-            % Set selected Anatomy and Surface files
-            hasSelFiles = 0;
-            selFiles = struct();
-            for iCat = 1:length(categories)
-                if ~isempty(selectedFiles{iCat})
-                    hasSelFiles = 1;
-                    sAnatFile = db_get(sqlConn, 'AnatomyFile', selectedFiles{iCat}, 'Id');
-                    selFiles.(['i' categories{iCat}]) = sAnatFile.Id;
+            % Update indices from filenames in sSubject for default Anatomy and Surface files
+            fieldValPairs = [categories; cell(1,length(categories))];
+            sDefSurfIds = struct(fieldValPairs{:});
+            for iCat = 1 : length(categories)
+                if isfield(sSubject, categories{iCat}) || ~isempty(sSubject.(categories{iCat}))
+                    sAnatFile = db_get(sqlConn, 'AnatomyFile', sSubject.(categories{iCat}), 'Id');
+                    if ~isempty(sAnatFile)
+                        sDefSurfIds.(categories{iCat}) = sAnatFile.Id;
+                    end
                 end
             end
-            if hasSelFiles
-                db_set(sqlConn, 'Subject', selFiles, iSubject);
-            end
+            db_set(sqlConn, 'Subject', sDefSurfIds, iSubject);
         end
         sql_close(sqlConn);
         
