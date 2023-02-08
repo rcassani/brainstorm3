@@ -145,8 +145,9 @@ switch contextName
         end
     
     case 'ProtocolSubjects'
+        warning('bst_set(''%s'') will be deprecated in new Brainstorm database system. Use db_set(''%s'')', contextName, 'ParsedSubject');
+
         sqlConn = sql_connect();
-        
         % Get filenames for default anatomy and sufaces before deleting DataBase
         sSubjects = [contextValue.DefaultSubject, contextValue.Subject];
         for ix = 1: length(sSubjects)
@@ -166,12 +167,24 @@ switch contextName
                 end
             end
         end
-        % Delete existing subjects and anatomy files
-        db_set(sqlConn, 'Subject', 'delete');
-        db_set(sqlConn, 'AnatomyFile', 'delete');
-        % Insert parsed subjects
-        for ix = 1 : length(sSubjects)
-            db_set(sqlConn, 'ParsedSubject', sSubjects(ix));
+        % Get all Subjects
+        sSubjectsOld = db_get('AllSubjects', 'Id', '@default_subject');
+        % Update Subjects and their Anatomy Files
+        [~, ~, ib] = intersect([sSubjectsOld.Id],[sSubjects.Id]);
+        for ix = 1 : length(ib)
+            db_set(sqlConn, 'ParsedSubject', sSubjects(ib(ix)), sSubjects(ib(ix)).Id);
+        end
+        % Subjects to Insert or Delete
+        [~, ia, ib] = setxor([sSubjectsOld.Id],[sSubjects.Id]);
+        ia = sort(ia);
+        ib = sort(ib);
+        % Delete Subjects (and their Anatomy Files) in DB, but not in sSubjects
+        for ix = 1 : length(ia)
+            db_set(sqlConn, 'Subject', 'Delete', sSubjectsOld(ia(ix)).Id);
+        end
+        % Insert Subjects and their Anatomy Files in sSubjects but not in DB
+        for ix = 1 : length(ib)
+            db_set(sqlConn, 'ParsedSubject', sSubjects(ib(ix)));
         end
         sql_close(sqlConn);
         
