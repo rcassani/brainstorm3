@@ -233,7 +233,8 @@ switch contextName
         
         % Get subject
         sExistingSubject = db_get(sqlConn, 'Subject', iSubject, 'Id');
-        % Get FileNames for currently selected Anatomy and Surface files
+        % Convert sSubject structure to sParsedSubject by replacing indexes for
+        % currently selected Anatomy and Surface files to their FileNames
         categories = strcat('i', {'Anatomy', 'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'});
         for iCat = 1 : length(categories)
             if ~isempty(sSubject.(categories{iCat}))
@@ -263,46 +264,15 @@ switch contextName
             end
         end
         
-        % If subject exists, UPDATE query
+        % If subject exists, UPDATE
         if ~isempty(sExistingSubject)
-            sSubject.Id = sExistingSubject.Id;
-            sExistingSubject.Id = db_set(sqlConn, 'Subject', sSubject, sExistingSubject.Id);
-            if ~isempty(sExistingSubject.Id)
-                iSubject = sExistingSubject.Id;
-                argout1 = iSubject;
-            else
-                iSubject = [];
-            end
-        % If subject is new, INSERT query
+            iSubject  = db_set('ParsedSubject', sSubject, sExistingSubject.Id);
+        % If subject is new, INSERT
         else
-            sSubject.Id = [];
-            iSubject = db_set(sqlConn, 'Subject', sSubject);
-            if ~isempty(iSubject)
-                argout1 = iSubject;
-            end
+            iSubject  = db_set('ParsedSubject', sSubject);
         end
-        
         if ~isempty(iSubject)
-            % Delete existing anatomy files
-            db_set(sqlConn, 'AnatomyFilesWithSubject', 'Delete', iSubject);
-                       
-            % Convert Volume & Surface files to AnatomyFiles and insert
-            sAnatFiles = [db_convert_anatomyfile(sSubject.Anatomy, 'volume'), ...
-                          db_convert_anatomyfile(sSubject.Surface, 'surface')];
-            db_set(sqlConn, 'AnatomyFilesWithSubject', sAnatFiles, iSubject);
-
-            % Update indices from filenames in sSubject for default Anatomy and Surface files
-            fieldValPairs = [categories; cell(1,length(categories))];
-            sDefSurfIds = struct(fieldValPairs{:});
-            for iCat = 1 : length(categories)
-                if isfield(sSubject, categories{iCat}) || ~isempty(sSubject.(categories{iCat}))
-                    sAnatFile = db_get(sqlConn, 'AnatomyFile', sSubject.(categories{iCat}), 'Id');
-                    if ~isempty(sAnatFile)
-                        sDefSurfIds.(categories{iCat}) = sAnatFile.Id;
-                    end
-                end
-            end
-            db_set(sqlConn, 'Subject', sDefSurfIds, iSubject);
+            argout1 = iSubject;
         end
         sql_close(sqlConn);
         
