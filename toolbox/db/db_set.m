@@ -11,7 +11,8 @@ function varargout = db_set(varargin)
 %    - sProtocol = db_set('Protocol', sProtocol, 1) : Insert current Protocol information
 %
 % ====== SUBJECTS ======================================================================
-%    - db_set('ParsedSubject', sParsedSubject)           : Insert or Update parsed subject, from db_parse_subject()
+%    - db_set('ParsedSubject', sParsedSubject)           : Insert parsed subject, from db_parse_subject()
+%    - db_set('ParsedSubject', sParsedSubject, iSubject) : Update parsed subject, from db_parse_subject()
 %    - db_set('Subject', 'Delete')                       : Delete all Subjects
 %    - db_set('Subject', 'Delete', SubjectId)            : Delete Subject by ID
 %    - db_set('Subject', 'Delete', CondQuery)            : Delete Subject with Query
@@ -107,9 +108,14 @@ switch contextName
 
 
 %% ==== PARSED SUBJECT ====
-    % iSubject = db_set('ParsedSubject', sParsedSubject)
+    % iSubject = db_set('ParsedSubject', sParsedSubject, iSubject)
     case 'ParsedSubject'
         sParsedSubject = varargin{2};  % sParsedSubjects is an array of old sSubject structure but iXxxx fields are be relative paths
+        iSubject = [];
+        if length(args) > 1
+            iSubject = varargin{3};
+        end
+
         % Default Anatomy and Surface files
         categories = strcat('i', {'Anatomy', 'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'});
         fieldValPairs = [categories; cell(1,length(categories))];
@@ -121,8 +127,9 @@ switch contextName
         % Anatomy and Surface files
         sAnatFiles = [db_convert_anatomyfile(sParsedSubject.Anatomy, 'volume'), ...
                       db_convert_anatomyfile(sParsedSubject.Surface, 'surface')];
-        % Check if Subject already exists
-        sSubjectOld = db_get(sqlConn, 'Subject', struct('Name', sParsedSubject.Name, 'FileName', sParsedSubject.FileName), 'Id');
+        
+        % Check if Subject with index iSubject exists
+        sSubjectOld = db_get(sqlConn, 'Subject', iSubject, 'Id');
         if isempty(sSubjectOld)
             % Insert Subject
             iSubject = db_set(sqlConn, 'Subject', sParsedSubject);
