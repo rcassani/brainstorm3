@@ -34,17 +34,13 @@ if (nargin < 2) || isempty(type)
 end
 
 % Output
-outStructs = [];
-
 nStructs = length(inStructs);
-if nStructs < 1
-    return
-end 
 
 % Verify the sense of the conversion
 % New to old
-if all(isfield(inStructs(1), {'Id', 'Type'}))
+if all(isfield(inStructs, {'Id', 'Type'}))
     % Old structures should be of the same type
+    outStructs = [];
     if length(unique({inStructs.Type})) == 1
         outStructs = repmat(db_template(inStructs(1).Type), 1, nStructs);
         for iStruct = 1 : nStructs
