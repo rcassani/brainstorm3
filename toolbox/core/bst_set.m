@@ -146,24 +146,32 @@ switch contextName
     
     case 'ProtocolSubjects'
         sqlConn = sql_connect();
+        
+        % Get filenames for default anatomy and sufaces before deleting DataBase
+        sSubjects = [contextValue.DefaultSubject, contextValue.Subject];
+        for ix = 1: length(sSubjects)
+            if isempty(sSubjects(ix))
+                continue
+            end
+            % Replace indexes for default anatomy and sufaces with their filenames
+            categories = strcat('i', {'Anatomy', 'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'});
+            for iCat = 1 : length(categories)
+                if ~isempty(sSubjects(ix).(categories{iCat}))
+                    sAnatFile = db_get(sqlConn, 'AnatomyFile', sSubjects(ix).(categories{iCat}), 'FileName');
+                    if ~isempty(sAnatFile)
+                        sSubjects(ix).(categories{iCat}) = sAnatFile.FileName;
+                    else
+                        sSubjects(ix).(categories{iCat}) = [];
+                    end
+                end
+            end
+        end
         % Delete existing subjects and anatomy files
         db_set(sqlConn, 'Subject', 'delete');
         db_set(sqlConn, 'AnatomyFile', 'delete');
-        
-        for iSubject = 0:length(contextValue.Subject)
-            if iSubject == 0
-                sSubject = contextValue.DefaultSubject;
-            else
-                sSubject = contextValue.Subject(iSubject);
-            end
-            if isempty(sSubject)
-                continue
-            end
-            
-            % Insert subject
-            SubjectId = db_set(sqlConn, 'Subject', sSubject);
-            sSubject.Id = SubjectId;
-            bst_set('Subject', sSubject.Id, sSubject);
+        % Insert parsed subjects
+        for ix = 1 : length(sSubjects)
+            db_set(sqlConn, 'ParsedSubject', sSubjects(ix));
         end
         sql_close(sqlConn);
         

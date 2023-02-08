@@ -11,6 +11,7 @@ function varargout = db_set(varargin)
 %    - sProtocol = db_set('Protocol', sProtocol, 1) : Insert current Protocol information
 %
 % ====== SUBJECTS ======================================================================
+%    - db_set('ParsedSubject', sParsedSubject)           : Insert or Update parsed subject, from db_parse_subject()
 %    - db_set('Subject', 'Delete')                       : Delete all Subjects
 %    - db_set('Subject', 'Delete', SubjectId)            : Delete Subject by ID
 %    - db_set('Subject', 'Delete', CondQuery)            : Delete Subject with Query
@@ -103,6 +104,54 @@ switch contextName
             end
         end
         varargout{1} = sql_query(sqlConn, action, 'Protocol', sProtocol);
+
+
+%% ==== PARSED SUBJECT ====
+    % iSubject = db_set('ParsedSubject', sParsedSubject)
+    case 'ParsedSubject'
+        sParsedSubject = varargin{2};  % sParsedSubjects is an array of old sSubject structure but iXxxx fields are be relative paths
+        % Default Anatomy and Surface files
+        categories = strcat('i', {'Anatomy', 'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'});
+        fieldValPairs = [categories; cell(1,length(categories))];
+        sDefSurfFiles = struct(fieldValPairs{:});
+        for iCat = 1 : length(categories)
+            sDefSurfFiles.(categories{iCat}) = sParsedSubject.(categories{iCat});
+            sParsedSubject.(categories{iCat}) = [];
+        end
+        % Anatomy and Surface files
+        sAnatFiles = [db_convert_anatomyfile(sParsedSubject.Anatomy, 'volume'), ...
+                      db_convert_anatomyfile(sParsedSubject.Surface, 'surface')];
+        % Check if Subject already exists
+        sSubjectOld = db_get(sqlConn, 'Subject', struct('Name', sParsedSubject.Name, 'FileName', sParsedSubject.FileName), 'Id');
+        if isempty(sSubjectOld)
+            % Insert Subject
+            iSubject = db_set(sqlConn, 'Subject', sParsedSubject);
+        else
+            % Update Subject (if needed)
+            iSubject = db_set(sqlConn, 'Subject', sParsedSubject, sSubjectOld.Id);
+        end
+        % Delete or  Insert / Update sAnatomyFiles
+        if ~isempty(iSubject)
+            if isempty(sAnatFiles)
+                % Delete
+                db_set(sqlConn, 'AnatomyFilesWithSubject', 'Delete', iSubject);
+            else
+                % Insert / Update
+                db_set(sqlConn, 'AnatomyFilesWithSubject', sAnatFiles, iSubject);
+            end
+        end
+        % Update indices in sSubject for default Anatomy and Surface files
+        sDefSurfIds = struct(fieldValPairs{:});
+        for iCat = 1 : length(categories)
+            if isfield(sDefSurfFiles, categories{iCat}) || ~isempty(sDefSurfFiles.(categories{iCat}))
+                sAnatFile = db_get(sqlConn, 'AnatomyFile', sDefSurfFiles.(categories{iCat}), 'Id');
+                if ~isempty(sAnatFile)
+                    sDefSurfIds.(categories{iCat}) = sAnatFile.Id;
+                end
+            end
+        end
+        varargout{1} = db_set(sqlConn, 'Subject', sDefSurfIds, iSubject);
+
 
 %% ==== SUBJECT ====
     % Success              = db_set('Subject', 'Delete')
@@ -632,5 +681,16 @@ if handleConn
     sql_close(sqlConn);
 end
 
+end
+
+%% ==== HELPERS ====
+%% Compare two structures
+function result = isEqualDbStructs(structOld, structNew)
+    % Fields to ignore
+    ignoreFields = {'Id', 'LastModified'};
+    % Remove Id and LastModified fields
+    structOld = rmfield(structOld, ignoreFields(isfield(structOld, ignoreFields)));
+    structNew = rmfield(structNew, ignoreFields(isfield(structNew, ignoreFields)));
+    result = isequal(structOld, structNew);
 end
 

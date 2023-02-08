@@ -118,14 +118,20 @@ end
 
 
 %% ===== PROCESS ALL FILES IN SUBJECTS DIRECTORY =====
-ProtocolSubjects = db_template('ProtocolSubjects');
 % Parse SUBJECTS/<DirDefaultSubject>/ directory, if it exists
-ProtocolSubjects.DefaultSubject = db_parse_subject(ProtocolInfo.SUBJECTS, bst_get('DirDefaultSubject'), 5);
+sParsedDefaultSubject = db_parse_subject(ProtocolInfo.SUBJECTS, bst_get('DirDefaultSubject'), 5);
 % Parse SUBJECTS directory ('DirDefaultSubject' directories will be ignored)
-ProtocolSubjects.Subject = db_parse_subject(ProtocolInfo.SUBJECTS, '', 45);
-% Update protocol in DataBase
-bst_set('ProtocolSubjects', ProtocolSubjects);
+sParsedSubjects = db_parse_subject(ProtocolInfo.SUBJECTS, '', 45);
 
+sqlConn = sql_connect();
+% Delete existing Subjects and AnatomyFiles
+db_set(sqlConn, 'Subject', 'delete');
+db_set(sqlConn, 'AnatomyFile', 'delete');
+% Update Subjects in DataBase
+sSubjects = [sParsedDefaultSubject, sParsedSubjects];
+for ix = 1 : length(sSubjects)
+    db_set(sqlConn, 'ParsedSubject', sSubjects(ix));
+end
 
 %% ===== SUBJECTS TEMPLATE =====
 % If Default anat status not defined for protocol

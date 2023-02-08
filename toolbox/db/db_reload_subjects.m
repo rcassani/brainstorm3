@@ -66,7 +66,7 @@ for i = 1:length(iSubjects)
         return
     end
     % Else subject was reloaded: update in database
-    bst_set('Subject', iSubjects(i), sSubject);
+    db_set(sqlConn, 'ParsedSubject', sSubject);
 end
 sql_close(sqlConn);
 
