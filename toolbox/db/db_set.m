@@ -520,8 +520,7 @@ switch contextName
 
 %% ==== FILES WITH STUDY ====
     % Success          = db_set('FunctionalFilesWithStudy', 'Delete'        , StudyID)
-    % sFunctionalFiles = db_set('FunctionalFilesWithStudy', sFunctionalFiles, StudyID) % Insert
-    % sFunctionalFiles = db_set('FunctionalFilesWithStudy', sFunctionalFiles)          % Update
+    % sFunctionalFiles = db_set('FunctionalFilesWithStudy', sFunctionalFiles, StudyID)
     case 'FunctionalFilesWithStudy'
         sFuncFiles = args{1};
         iStudy = [];
@@ -537,34 +536,70 @@ switch contextName
 
         % Insert or Update FunctionalFiles
         if isstruct(sFuncFiles) && ~isempty(iStudy)
+            [sFuncFiles.Study] = deal(iStudy);
             % Sort FunctionalFiles
             % Note: Order important here, as potential parent files (Data, Matrix, Result)
             % should be inserted or updated before potential child files (Result, Timefreq, Dipoles)
             ix_sorted = [];
-            types_db = {'channel', 'headmodel', 'datalist', 'matrixlist', 'data', 'matrix', 'result', ...
-                     'stat', 'image', 'noisecov', 'ndatacov', 'dipoles', 'timefreq'};
+            types_db = {'channel', 'headmodel', 'data', 'matrix', 'result', ...
+                        'stat', 'image', 'noisecov', 'ndatacov', 'dipoles', 'timefreq'};
             for iType = 1:length(types_db)
                 ix_sorted = [ix_sorted, find(strcmpi(types_db{iType}, {sFuncFiles.Type}))];
             end
             sFuncFiles = sFuncFiles(ix_sorted);
-            nFunctionalFiles = length(sFuncFiles);
-            insertedIds = zeros(1, nFunctionalFiles);
-
-            % Insert FunctionalFiles to StudyID
-            if ~isempty(iStudy)
-                for ix = 1 : nFunctionalFiles
-                    sFuncFiles(ix).Study = iStudy;
-                    insertedIds(ix) = db_set(sqlConn, 'FunctionalFile', sFuncFiles(ix));
-                end
-            % Update FunctionalFiles
-            else
-                for ix = 1 : nFunctionalFiles
-                    insertedIds(ix) = db_set(sqlConn, 'FunctionalFile', sFuncFiles(ix), insertedIds(ix));
+            % Get FunctionalFiles in DB for this Study
+            sFuncFilesOld = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudy);
+            % Find list:  Type = 'datalist' or 'matrixlist'
+            ixLists = or(strcmpi({sFuncFilesOld.Type}, 'datalist'), strcmpi({sFuncFilesOld.Type}, 'matrixlist'));
+            % Find links: Type = 'result' and ExtraNum = '1'
+            ixLinks = and(strcmpi({sFuncFilesOld.Type}, 'result'), cellfun(@(x) isequal(x,1),{sFuncFilesOld.ExtraNum}));
+            % Set children count to zero in all lists
+            sFuncListOld = sFuncFilesOld(ixLists);
+            for ix = 1 : length(sFuncListOld)
+                db_set(sqlConn, 'FunctionalFile', struct('NumChildren', 0), sFuncListOld(ix).Id);
+            end
+            % Ignore lists and links from old functional files
+            sFuncFilesOld = sFuncFilesOld(~or(ixLists, ixLinks));
+            % Find links: Type = 'result' and ExtraNum = '1'
+            ixLinks = and(strcmpi({sFuncFiles.Type}, 'result'), cellfun(@(x) isequal(x,1),{sFuncFiles.ExtraNum}));
+            % Ignore links from functional files
+            sFuncFiles = sFuncFiles(~ixLinks);
+            % Files to Update
+            [~, ia, ib] = intersect({sFuncFilesOld.FileName},{sFuncFiles.FileName});
+            for ix = 1 : length(ia)
+                if ~isEqualDbStructs(sFuncFilesOld(ia(ix)), sFuncFiles(ib(ix)))
+                    db_set(sqlConn, 'FunctionalFile', sFuncFiles(ib(ix)), sFuncFilesOld(ia(ix)).Id);
                 end
             end
-            % If requested get all the inserted or updated FunctionalFiles
+            % Files to Insert or Delete
+            [~, ia, ib] = setxor({sFuncFilesOld.FileName},{sFuncFiles.FileName});
+            ia = sort(ia);
+            ib = sort(ib);
+            % Delete FunctionalFiles entries in DB, but not in Study
+            for ix = 1 : length(ia)
+                db_set(sqlConn, 'FunctionalFile', 'Delete', sFuncFilesOld(ia(ix)).Id);
+            end
+            % Insert FunctionalFiles entries in Study but not in DB
+            for ix = 1 : length(ib)
+                db_set(sqlConn, 'FunctionalFile', sFuncFiles(ib(ix)));
+            end
+            % Delete list with zero children in this study
+            sFuncDatListZero = db_get(sqlConn, 'FunctionalFile', struct('Study', iStudy, 'Type', 'datalist', 'NumChildren', 0), 'Id');
+            sFuncMatListZero = db_get(sqlConn, 'FunctionalFile', struct('Study', iStudy, 'Type', 'matrixlist', 'NumChildren', 0), 'Id');
+            sFuncListZero = [sFuncDatListZero, sFuncMatListZero];
+            for ix = 1 : length(sFuncListZero)
+                db_set(sqlConn, 'FunctionalFile', 'Delete', sFuncListZero(ix).Id);
+            end
+
+            % If requested get current FunctionalFiles
             if nargout > 0
-                varargout{1} = db_get(sqlConn, 'FunctionalFile', insertedIds);
+                if nargout == 2
+                    tmp = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudy);
+                    varargout{2} = tmp;
+                elseif nargout == 1
+                    tmp = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudy, 'Id');
+                end
+                varargout{1} = [tmp.Id];
             end
         end
 
