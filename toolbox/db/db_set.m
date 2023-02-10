@@ -108,12 +108,14 @@ switch contextName
 
 
 %% ==== PARSED SUBJECT ====
+    % iSubject = db_set('ParsedSubject', sParsedSubject)
     % iSubject = db_set('ParsedSubject', sParsedSubject, iSubject)
     case 'ParsedSubject'
-        sParsedSubject = varargin{2};  % sParsedSubjects is an array of old sSubject structure but iXxxx fields are be relative paths
+        sParsedSubject = args{1};  % sParsedSubject is old sSubject structure (with Anatomy and Surface fields).
+                                   % BUT default iXxxx fields are relative paths
         iSubject = [];
         if length(args) > 1
-            iSubject = varargin{3};
+            iSubject = args{2};
         end
 
         % Default Anatomy and Surface files
@@ -124,7 +126,7 @@ switch contextName
             sDefSurfFiles.(categories{iCat}) = sParsedSubject.(categories{iCat});
             sParsedSubject.(categories{iCat}) = [];
         end
-        % Anatomy and Surface files
+        % Get AnatomyFiles
         sAnatFiles = [db_convert_anatomyfile(sParsedSubject.Anatomy, 'volume'), ...
                       db_convert_anatomyfile(sParsedSubject.Surface, 'surface')];
         
@@ -150,7 +152,7 @@ switch contextName
         % Update indices in sSubject for default Anatomy and Surface files
         sDefSurfIds = struct(fieldValPairs{:});
         for iCat = 1 : length(categories)
-            if isfield(sDefSurfFiles, categories{iCat}) || ~isempty(sDefSurfFiles.(categories{iCat}))
+            if ~isempty(sDefSurfFiles.(categories{iCat}))
                 sAnatFile = db_get(sqlConn, 'AnatomyFile', sDefSurfFiles.(categories{iCat}), 'Id');
                 if ~isempty(sAnatFile)
                     sDefSurfIds.(categories{iCat}) = sAnatFile.Id;
