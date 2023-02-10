@@ -794,10 +794,10 @@ switch contextName
         end
         addQuery = '';
         % Complete query with studies ("@inter" and global "@default_study")
-        if length(args) < 2 || ~ismember('@inter', args(3:end))
+        if length(args) < 2 || ~ismember('@inter', args(2:end))
             addQuery = [addQuery ' AND Name <> "' bst_get('DirAnalysisInter') '"'];
         end
-        if length(args) < 2 || ~ismember('@default_study', args(3:end))
+        if length(args) < 2 || ~ismember('@default_study', args(2:end))
             addQuery = [addQuery ' AND (Subject <> 0 OR Name <> "@default_study")'];
         end
         
