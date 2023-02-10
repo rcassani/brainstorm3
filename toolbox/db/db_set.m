@@ -401,7 +401,7 @@ switch contextName
         % Insert or Update AnatomyFiles to SubjectID
         else
             [sAnatFiles.Subject] = deal(iSubject);
-            sAnatFilesOld = db_get('AnatomyFilesWithSubject', iSubject);
+            sAnatFilesOld = db_get(sqlConn, 'AnatomyFilesWithSubject', iSubject);
             % Files to Update
             [~, ia, ib] = intersect({sAnatFilesOld.FileName},{sAnatFiles.FileName});
             for ix = 1 : length(ia)
@@ -413,11 +413,11 @@ switch contextName
             [~, ia, ib] = setxor({sAnatFilesOld.FileName},{sAnatFiles.FileName});
             ia = sort(ia);
             ib = sort(ib);
-            % Delete AnatomyFiles entries in DB, but not in parsed Subject
+            % Delete AnatomyFiles entries in DB, but not in Subject
             for ix = 1 : length(ia)
                 db_set(sqlConn, 'AnatomyFile', 'Delete', sAnatFilesOld(ia(ix)).Id);
             end
-            % Insert AnatomyFiles entries in parsed Subject but not in DB
+            % Insert AnatomyFiles entries in Subject but not in DB
             for ix = 1 : length(ib)
                 db_set(sqlConn, 'AnatomyFile', sAnatFiles(ib(ix)));
             end
