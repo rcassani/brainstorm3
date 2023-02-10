@@ -29,6 +29,8 @@ function varargout = db_set(varargin)
 %    - db_set('AnatomyFilesWithSubject', sAnatomyFiles, SubjectID) : Insert AnatomyFiles with SubjectID
 %
 % ====== STUDIES =======================================================================
+%    - db_set('ParsedStudy', sParsedStudy)           : Insert parsed study, from db_parse_study()
+%    - db_set('ParsedStudy', sParsedStudy, iStudy)   : Update parsed study, from db_parse_study()
 %    - db_set('Study', 'Delete')                     : Delete all Studies
 %    - db_set('Study', 'Delete', StudyId)            : Delete Study by ID
 %    - db_set('Study', 'Delete', CondQuery)          : Delete Study with Query
@@ -160,6 +162,85 @@ switch contextName
             end
         end
         varargout{1} = db_set(sqlConn, 'Subject', sDefSurfIds, iSubject);
+
+
+%% ==== PARSED STUDY ====
+    % iStudy = db_set('ParsedStudy', sParsedStudy)
+    % iStudy = db_set('ParsedStudy', sParsedStudy, iStudy)
+    case 'ParsedStudy'
+        sParsedStudy = args{1};  % sParsedStudy is old sStudy structure: (with BrainstormSubject, Channel, Data, HeadModel, Result, Stat, Image, NoiseCov, Dipoles, Timefreq and Matrix fields)
+                                 % BUT default iChannel and iHeadModel fields are relative paths
+        iStudy = [];
+        if length(args) > 1
+            iStudy = args{2};
+        end
+
+        % Get ID of parent subject
+        sSubject = db_get(sqlConn, 'Subject', sParsedStudy.BrainStormSubject, 'Id');
+        sParsedStudy.Subject = sSubject.Id;
+        % Condition must be a string
+        if ~isempty(sParsedStudy.Condition)
+            sParsedStudy.Condition = char(sParsedStudy.Condition);
+        else
+            sParsedStudy.Condition = sParsedStudy.Name;
+        end
+
+        % Default Channel and HeadModel files
+        categories = strcat('i', {'Channel', 'HeadModel'});
+        fieldValPairs = [categories; cell(1,length(categories))];
+        sDefSurfFiles = struct(fieldValPairs{:});
+        for iCat = 1 : length(categories)
+            sDefSurfFiles.(categories{iCat}) = sParsedStudy.(categories{iCat});
+            sParsedStudy.(categories{iCat}) = [];
+        end
+        % Get FunctionalFiles
+        sFuncFiles = [];
+        % Order is not relevant
+        types = {'Channel', 'HeadModel', 'Data', 'Matrix', 'Result', ...
+                 'Stat', 'Image', 'NoiseCov', 'Dipoles', 'Timefreq'};
+        for iType = 1:length(types)
+            sFiles = sParsedStudy.(types{iType});
+            type = lower(types{iType});
+            if ~isempty(sFiles)
+                sTypeFuncFiles = db_convert_functionalfile(sFiles, type);
+                % Check for noisecov and ndatacov
+                if strcmpi(type, 'noisecov') && length(sTypeFuncFiles) == 2
+                    sTypeFuncFiles(2).Type = 'ndatacov';
+                end
+                sFuncFiles = [sFuncFiles, sTypeFuncFiles];
+            end
+        end
+        % Check if Study with index iStudy exists
+        sStudyOld = db_get(sqlConn, 'Study', iStudy, 'Id');
+        if isempty(sStudyOld)
+            % Insert Study
+            iStudy = db_set(sqlConn, 'Study', sParsedStudy);
+        else
+            % Update Study (if needed)
+            iStudy = db_set(sqlConn, 'Study', sParsedStudy, sStudyOld.Id);
+        end
+        % Delete or  Insert / Update sFuncFiles
+        if ~isempty(iStudy)
+            if isempty(sFuncFiles)
+                % Delete
+                db_set(sqlConn, 'FunctionalFilesWithStudy', 'Delete', iStudy);
+            else
+                % Insert / Update
+                db_set(sqlConn, 'FunctionalFilesWithStudy', sFuncFiles, iStudy);
+                db_links('Study', iStudy);
+            end
+        end
+        % Update indices in sStudy for default Channel and HeadModel files
+        sDefSurfIds = struct(fieldValPairs{:});
+        for iCat = 1 : length(categories)
+            if ~isempty(sDefSurfFiles.(categories{iCat}))
+                sFuncFile = db_get(sqlConn, 'FunctionalFile', sDefSurfFiles.(categories{iCat}), 'Id');
+                if ~isempty(sFuncFile)
+                    sDefSurfIds.(categories{iCat}) = sFuncFile.Id;
+                end
+            end
+        end
+        varargout{1} = db_set(sqlConn, 'Study', sDefSurfIds, iStudy);
 
 
 %% ==== SUBJECT ====
