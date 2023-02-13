@@ -178,11 +178,11 @@ switch contextName
         [~, ia, ib] = setxor([sSubjectsOld.Id],[sSubjects.Id]);
         ia = sort(ia);
         ib = sort(ib);
-        % Delete Subjects (and their Anatomy Files) in DB, but not in sSubjects
+        % Delete Subjects (and their Anatomy Files) present in DB but not in sSubjects
         for ix = 1 : length(ia)
             db_set(sqlConn, 'Subject', 'Delete', sSubjectsOld(ia(ix)).Id);
         end
-        % Insert Subjects and their Anatomy Files in sSubjects but not in DB
+        % Insert Subjects (and their Anatomy Files) present in sSubjects but not in DB
         for ix = 1 : length(ib)
             db_set(sqlConn, 'ParsedSubject', sSubjects(ib(ix)));
         end
