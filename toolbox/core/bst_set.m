@@ -189,43 +189,51 @@ switch contextName
         sql_close(sqlConn);
         
     case 'ProtocolStudies'
+        warning('bst_set(''%s'') will be deprecated in new Brainstorm database system. Use db_set(''%s'')', contextName, 'ParsedStudy');
+
         sqlConn = sql_connect();
-        % Delete existing studies and functional files
-        db_set(sqlConn, 'Study', 'delete');
-        db_set(sqlConn, 'FunctionalFile', 'delete');
-        sql_close(sqlConn);
-
-        for iStudy = -1:length(contextValue.Study)
-            if iStudy == -1
-                sStudy = contextValue.DefaultStudy;
-            elseif iStudy == 0
-                sStudy = contextValue.AnalysisStudy;
-            else
-                sStudy = contextValue.Study(iStudy);
+        % Get filenames for default channel and head model before deleting DataBase
+        sStudies = [contextValue.DefaultStudy, contextValue.AnalysisStudy, contextValue.Study];
+        for ix = 1: length(sStudies)
+            if isempty(sStudies(ix))
+                continue
             end
-
-            % Skip empty Default / Analysis studies
-            % TODO: If these are empty, they should be removed also from HDD
-%             if isempty(sStudy) || ((iStudy < 1 || ismember(sStudy.Name, {'@default_study', '@intra', '@inter'})) ...
-%                     && isempty(sStudy.Channel) && isempty(sStudy.Data) ...
-%                     && isempty(sStudy.HeadModel) && isempty(sStudy.Result) ...
-%                     && isempty(sStudy.Stat) && isempty(sStudy.Image) ...
-%                     && isempty(sStudy.NoiseCov) && isempty(sStudy.Dipoles) ...
-%                     && isempty(sStudy.Timefreq) && isempty(sStudy.Matrix))
-%                 continue
-%             end
-
-            % Get ID for parent Subject
-            if isempty(sStudy.Subject)
-                sSubject = db_get('Subject', sStudy.BrainStormSubject, 'Id');
-                sStudy.Subject = sSubject.Id;
+            % Replace indexes for channel and head model with their filenames
+            categories = strcat('i', {'Channel', 'HeadModel'});
+            for iCat = 1 : length(categories)
+                if ~isempty(sStudies(ix).(categories{iCat}))
+                    sFuncFile = db_get(sqlConn, 'FunctionalFile', sStudies(ix).(categories{iCat}), 'FileName');
+                    if ~isempty(sFuncFile)
+                        sStudies(ix).(categories{iCat}) = sFuncFile.FileName;
+                    else
+                        sStudies(ix).(categories{iCat}) = [];
+                    end
+                end
             end
-            % Insert study
-            sStudy.Condition = char(sStudy.Condition);
-            StudyId = db_set('Study', sStudy);
-            sStudy.Id = StudyId;
-            bst_set('Study', sStudy.Id, sStudy);
         end
+        % Get all Studies
+        sStudiesOld = db_get('AllStudies', 'Id', '@inter', '@default_study');
+
+        % Update Studies and their Functional Files
+        [~, ~, ib] = intersect([sStudiesOld.Id],[sStudies.Id]);
+        for ix = 1 : length(ib)
+            db_set(sqlConn, 'ParsedStudy', sStudies(ib(ix)), sStudies(ib(ix)).Id);
+        end
+        % Studies to Insert or Delete
+        [~, ia, ib] = setxor([sStudiesOld.Id],[sStudies.Id]);
+        ia = sort(ia);
+        ib = sort(ib);
+        % Delete Studies (and their Functional Files) present in DB but not in sStudies
+        for ix = 1 : length(ia)
+            db_set(sqlConn, 'Study', 'Delete', sStudiesOld(ia(ix)).Id);
+        end
+        % Insert Studies (and their Functional Files) present in sStudies but not in DB
+        for ix = 1 : length(ib)
+            db_set(sqlConn, 'ParsedStudy', sStudies(ib(ix)));
+        end
+        sql_close(sqlConn);
+        % Update links
+        db_links();
         
         
     case 'ProtocolInfo'
