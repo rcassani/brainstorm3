@@ -303,110 +303,47 @@ switch contextName
         % Get studies list
         iStudies = varargin{2};
         sStudies = varargin{3};
-        iAnalysisStudy = -2; % @inter
-        iDefaultStudy  = -3; % global @default_study
-        
+        iStudiesOut = [];
         sqlConn = sql_connect();
-        for i = 1:length(iStudies)
-            % Inter-subject analysis study
-            if iStudies(i) == iAnalysisStudy
-                sExistingStudy = db_get(sqlConn, 'Study', '@inter', 'Id');
-            % Default study
-            elseif iStudies(i) == iDefaultStudy
-                sExistingStudy = db_get(sqlConn, 'Study', '@default_study', 'Id');
-            % Normal study
-            else
-                sExistingStudy = db_get(sqlConn, 'Study', iStudies(i), 'Id');
-            end
-            
-            % Get ID of parent subject
-            sSubject = db_get(sqlConn, 'Subject', sStudies(i).BrainStormSubject, 'Id');
-            sStudies(i).Subject = sSubject.Id;
-            
-            % Get FileNames for currently selected Channel and HeadModel files
-            categories = {'Channel', 'HeadModel'};
-            selectedFiles = cell(1, length(categories));
-            for iCat = 1:length(categories)
-                category = categories{iCat};
-                field = ['i' category];
-                if ~isempty(sStudies(i).(field)) && ischar(sStudies(i).(field))
-                    selectedFiles{iCat} = sStudies(i).(field);
-                elseif ~isempty(sStudies(i).(field)) && isnumeric(sStudies(i).(field)) && sStudies(i).(field) > 0
-                    % Get FileName with previous file ID before it's deleted
-                    sFuncFile = db_get(sqlConn, 'FunctionalFile', sStudies(i).(field), 'FileName');
+
+        for ix = 1:length(iStudies)
+            % Get study
+            sExistingStudy = db_get(sqlConn, 'Study', iStudies(ix), 'Id');
+            sStudy = sStudies(ix);
+            % Convert sStudy structure to sParsedStudy by replacing indexes for
+            % currently selected Channel and HeadModel files to their FileNames
+            categories = strcat('i', {'Channel', 'HeadModel'});
+            for iCat = 1 : length(categories)
+                if ~isempty(sStudy.(categories{iCat}))
+                    sFuncFile = db_get(sqlConn, 'FunctionalFile', sStudy.(categories{iCat}), 'FileName');
                     if ~isempty(sFuncFile)
-                        selectedFiles{iCat} = sFuncFile.FileName;
+                        sStudy.(categories{iCat}) = sFuncFile.FileName;
+                    else
+                        sStudy.(categories{iCat}) = [];
                     end
                 end
                 % Set default selected files
-                if isempty(selectedFiles{iCat}) && ~isempty(sStudies(i).(category))
-                    selectedFiles{iCat} = sStudies(i).(category)(1).FileName;
+                if isempty(sStudy.(categories{iCat}))
+                    category = categories{iCat}(2:end);
+                    if ~isempty(sStudy.(category))
+                        sStudy.(categories{iCat}) = sStudy.(category)(1).FileName;
+                    end
                 end
             end
-            
-            sStudies(i).Condition = char(sStudies(i).Condition);
-            % If study exists, UPDATE query
+            % If study exists, UPDATE
             if ~isempty(sExistingStudy)
-                sStudies(i).Id = sExistingStudy.Id;
-                sExistingStudy.Id = db_set(sqlConn, 'Study', sStudies(i), sExistingStudy.Id);
-                if sExistingStudy.Id
-                    iStudy = sExistingStudy.Id;
-                    argout1(end + 1) = iStudy;
-                else
-                    iStudy = [];
-                end
-            % If study is new, INSERT query
+                iStudy  = db_set('ParsedStudy', sStudy, sExistingStudy.Id);
+            % If subject is new, INSERT
             else
-                sStudies(i).Id = [];
-                iStudy = db_set(sqlConn, 'Study', sStudies(i));
-                if ~isempty(iStudy)
-                    argout1(end + 1) = iStudy;
-                end
+                iStudy  = db_set('ParsedStudy', sStudy);
             end
-            
-            if ~isempty(iStudy)
-                % Delete existing functional files for this study
-                db_set(sqlConn, 'FunctionalFilesWithStudy', 'Delete', iStudy);
-                sFuncFiles = [];
-                % Order is not relevant
-                types = {'Channel', 'HeadModel', 'Data', 'Matrix', 'Result', ...
-                         'Stat', 'Image', 'NoiseCov', 'Dipoles', 'Timefreq'};
-                for iType = 1:length(types)
-                    sFiles = sStudies(i).(types{iType});
-                    type = lower(types{iType});
-                    if isempty(sFiles)
-                        continue
-                    end
-                    % Convert to FunctionalFile structure
-                    sTypeFuncFiles = db_convert_functionalfile(sFiles, type);
-                    % Check for noisecov and ndatacov
-                    if strcmpi(type, 'noisecov') && length(sTypeFuncFiles) == 2
-                        sTypeFuncFiles(2).Type = 'ndatacov';
-                    end
-                    sFuncFiles = [sFuncFiles, sTypeFuncFiles];
-                end
-                if ~isempty(sFuncFiles)
-                    % Remove FunctionalFiles with empty FileName
-                    iNotEmpty = ~cellfun(@isempty,{sFuncFiles.FileName});
-                    % Insert FunctionalFiles in database
-                    db_set(sqlConn, 'FunctionalFilesWithStudy', sFuncFiles(iNotEmpty), iStudy);
-                end
-                % Set selected Channel and HeadModel files
-                hasSelFiles = 0;
-                selFiles = struct();
-                for iCat = 1:length(categories)
-                    if ~isempty(selectedFiles{iCat})
-                        hasSelFiles = 1;
-                        sFuncFile = db_get(sqlConn, 'FunctionalFile', selectedFiles{iCat}, 'Id');
-                        selFiles.(['i' categories{iCat}]) = sFuncFile.Id;
-                    end
-                end
-                if hasSelFiles
-                    db_set(sqlConn, 'Study', selFiles, iStudy);
-                end
-            end
+            iStudiesOut = [iStudiesOut, iStudy];
+        end
+        if ~isempty(iStudiesOut)
+            argout1 = iStudiesOut;
         end
         sql_close(sqlConn);
+        db_links('Study', iStudiesOut);
         
         
 %% ==== GUI ====
