@@ -248,6 +248,7 @@ switch contextName
 
 %% ==== SUBJECT ====
     case 'Subject'
+        warning('bst_set(''%s'') will be deprecated in new Brainstorm database system. Use db_set(''%s'')', contextName, 'ParsedSubject or Subject');
         iSubject = varargin{2};
         sSubject = varargin{3};
         sqlConn = sql_connect();
@@ -300,6 +301,8 @@ switch contextName
         
 %% ==== STUDY ====
     case 'Study'
+        warning('bst_set(''%s'') will be deprecated in new Brainstorm database system. Use db_set(''%s'')', contextName, 'ParsedStudy or Study');
+
         % Get studies list
         iStudies = varargin{2};
         sStudies = varargin{3};
