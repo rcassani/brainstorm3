@@ -138,18 +138,14 @@ switch contextName
             % Insert Subject
             iSubject = db_set(sqlConn, 'Subject', sParsedSubject);
         else
-            % Update Subject (if needed)
+            % Update Subject
             iSubject = db_set(sqlConn, 'Subject', sParsedSubject, sSubjectOld.Id);
         end
-        % Delete or  Insert / Update sAnatomyFiles
-        if ~isempty(iSubject)
-            if isempty(sAnatFiles)
-                % Delete
-                db_set(sqlConn, 'AnatomyFilesWithSubject', 'Delete', iSubject);
-            else
-                % Insert / Update
-                db_set(sqlConn, 'AnatomyFilesWithSubject', sAnatFiles, iSubject);
-            end
+        % Delete current sAnatFiles in iSubject
+        db_set(sqlConn, 'AnatomyFilesWithSubject', 'Delete', iSubject);
+        if ~isempty(sAnatFiles)
+            % Insert sAnatFiles in iSubject
+            db_set(sqlConn, 'AnatomyFilesWithSubject', sAnatFiles, iSubject);
         end
         % Update indices in sSubject for default Anatomy and Surface files
         sDefSurfIds = struct(fieldValPairs{:});
@@ -216,19 +212,14 @@ switch contextName
             % Insert Study
             iStudy = db_set(sqlConn, 'Study', sParsedStudy);
         else
-            % Update Study (if needed)
+            % Update Study
             iStudy = db_set(sqlConn, 'Study', sParsedStudy, sStudyOld.Id);
         end
-        % Delete or  Insert / Update sFuncFiles
-        if ~isempty(iStudy)
-            if isempty(sFuncFiles)
-                % Delete
-                db_set(sqlConn, 'FunctionalFilesWithStudy', 'Delete', iStudy);
-            else
-                % Insert / Update
-                db_set(sqlConn, 'FunctionalFilesWithStudy', sFuncFiles, iStudy);
-                db_links('Study', iStudy);
-            end
+        % Delete current sFuncFiles in iStudy
+        db_set(sqlConn, 'FunctionalFilesWithStudy', 'Delete', iStudy);
+        if ~isempty(sFuncFiles)
+            % Insert sFuncFiles in iStudy
+            db_set(sqlConn, 'FunctionalFilesWithStudy', sFuncFiles, iStudy);
         end
         % Update indices in sStudy for default Channel and HeadModel files
         sDefSurfIds = struct(fieldValPairs{:});
@@ -388,8 +379,8 @@ switch contextName
         end
         
 %% ==== ANATOMY FILES WITH SUBJECT ====
-    % Success                        = db_set('AnatomyFilesWithSubject', 'Delete'     , SubjectID)
-    % [AnatomyFileIds, AnatomyFiles] = db_set('AnatomyFilesWithSubject', sAnatomyFiles, SubjectID)
+    % Success        = db_set('AnatomyFilesWithSubject', 'Delete'     , SubjectID)
+    % AnatomyFileIds = db_set('AnatomyFilesWithSubject', sAnatomyFiles, SubjectID)
     case 'AnatomyFilesWithSubject'
         sAnatFiles = args{1};
         iSubject = args{2};
@@ -398,38 +389,18 @@ switch contextName
         if ischar(sAnatFiles) && strcmpi(sAnatFiles, 'delete')
             delResult = sql_query(sqlConn, 'DELETE', 'AnatomyFile', struct('Subject', iSubject));
             varargout{1} = 1;
-        % Insert or Update AnatomyFiles to SubjectID
-        else
+        end
+        % Insert AnatomyFiles to SubjectID
+        if isstruct(sAnatFiles) && ~isempty(iSubject)
             [sAnatFiles.Subject] = deal(iSubject);
-            sAnatFilesOld = db_get(sqlConn, 'AnatomyFilesWithSubject', iSubject);
-            % Files to Update
-            [~, ia, ib] = intersect({sAnatFilesOld.FileName},{sAnatFiles.FileName});
-            for ix = 1 : length(ia)
-                if ~isEqualDbStructs(sAnatFilesOld(ia(ix)), sAnatFiles(ib(ix)))
-                    db_set(sqlConn, 'AnatomyFile', sAnatFiles(ib(ix)), sAnatFilesOld(ia(ix)).Id);
-                end
+            insertedIds = zeros(length(sAnatFiles));
+            % Insert AnatomyFiles
+            for ix = 1 : length(sAnatFiles)
+                insertedIds(ix) = db_set(sqlConn, 'AnatomyFile', sAnatFiles(ix));
             end
-            % Files to Insert or Delete
-            [~, ia, ib] = setxor({sAnatFilesOld.FileName},{sAnatFiles.FileName});
-            ia = sort(ia);
-            ib = sort(ib);
-            % Delete AnatomyFiles entries in DB, but not in Subject
-            for ix = 1 : length(ia)
-                db_set(sqlConn, 'AnatomyFile', 'Delete', sAnatFilesOld(ia(ix)).Id);
-            end
-            % Insert AnatomyFiles entries in Subject but not in DB
-            for ix = 1 : length(ib)
-                db_set(sqlConn, 'AnatomyFile', sAnatFiles(ib(ix)));
-            end
-            % If requested get current AnatomyFiles
+            % If requested, get inserted AnatomyFilesIds
             if nargout > 0
-                if nargout == 2
-                    tmp = db_get(sqlConn, 'AnatomyFilesWithSubject', iSubject);
-                    varargout{2} = tmp;
-                elseif nargout == 1
-                    tmp = db_get(sqlConn, 'AnatomyFilesWithSubject', iSubject, 'Id');
-                end
-                varargout{1} = [tmp.Id];
+                varargout{1} = insertedIds;
             end
         end
 
@@ -518,9 +489,9 @@ switch contextName
         end
 
 
-%% ==== FILES WITH STUDY ====
-    % Success          = db_set('FunctionalFilesWithStudy', 'Delete'        , StudyID)
-    % sFunctionalFiles = db_set('FunctionalFilesWithStudy', sFunctionalFiles, StudyID)
+%% ==== FUNCTIONAL FILES WITH STUDY ====
+    % Success           = db_set('FunctionalFilesWithStudy', 'Delete'        , StudyID)
+    % FunctionalFileIds = db_set('FunctionalFilesWithStudy', sFunctionalFiles, StudyID)
     case 'FunctionalFilesWithStudy'
         sFuncFiles = args{1};
         iStudy = [];
@@ -534,72 +505,31 @@ switch contextName
             varargout{1} = 1;
         end
 
-        % Insert or Update FunctionalFiles
+        % Insert FunctionalFiles
         if isstruct(sFuncFiles) && ~isempty(iStudy)
             [sFuncFiles.Study] = deal(iStudy);
             % Sort FunctionalFiles
             % Note: Order important here, as potential parent files (Data, Matrix, Result)
             % should be inserted or updated before potential child files (Result, Timefreq, Dipoles)
             ix_sorted = [];
+            % Ignore 'datalist' and 'matrixlist', they are handled in db_set('FunctionalFile')
             types_db = {'channel', 'headmodel', 'data', 'matrix', 'result', ...
                         'stat', 'image', 'noisecov', 'ndatacov', 'dipoles', 'timefreq'};
             for iType = 1:length(types_db)
                 ix_sorted = [ix_sorted, find(strcmpi(types_db{iType}, {sFuncFiles.Type}))];
             end
             sFuncFiles = sFuncFiles(ix_sorted);
-            % Get FunctionalFiles in DB for this Study
-            sFuncFilesOld = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudy);
-            % Find list:  Type = 'datalist' or 'matrixlist'
-            ixLists = or(strcmpi({sFuncFilesOld.Type}, 'datalist'), strcmpi({sFuncFilesOld.Type}, 'matrixlist'));
-            % Find links: Type = 'result' and ExtraNum = '1'
-            ixLinks = and(strcmpi({sFuncFilesOld.Type}, 'result'), cellfun(@(x) isequal(x,1),{sFuncFilesOld.ExtraNum}));
-            % Set children count to zero in all lists
-            sFuncListOld = sFuncFilesOld(ixLists);
-            for ix = 1 : length(sFuncListOld)
-                db_set(sqlConn, 'FunctionalFile', struct('NumChildren', 0), sFuncListOld(ix).Id);
-            end
-            % Ignore lists and links from old functional files
-            sFuncFilesOld = sFuncFilesOld(~or(ixLists, ixLinks));
-            % Find links: Type = 'result' and ExtraNum = '1'
+            % Ignore links ('result' with ExtraNum = '1'), they are handled in db_links()
             ixLinks = and(strcmpi({sFuncFiles.Type}, 'result'), cellfun(@(x) isequal(x,1),{sFuncFiles.ExtraNum}));
-            % Ignore links from functional files
             sFuncFiles = sFuncFiles(~ixLinks);
-            % Files to Update
-            [~, ia, ib] = intersect({sFuncFilesOld.FileName},{sFuncFiles.FileName});
-            for ix = 1 : length(ia)
-                if ~isEqualDbStructs(sFuncFilesOld(ia(ix)), sFuncFiles(ib(ix)))
-                    db_set(sqlConn, 'FunctionalFile', sFuncFiles(ib(ix)), sFuncFilesOld(ia(ix)).Id);
-                end
+            % Insert FunctionalFiles
+            insertedIds = zeros(length(sFuncFiles));
+            for ix = 1 : length(sFuncFiles)
+                insertedIds(ix) = db_set(sqlConn, 'FunctionalFile', sFuncFiles(ix));
             end
-            % Files to Insert or Delete
-            [~, ia, ib] = setxor({sFuncFilesOld.FileName},{sFuncFiles.FileName});
-            ia = sort(ia);
-            ib = sort(ib);
-            % Delete FunctionalFiles entries in DB, but not in Study
-            for ix = 1 : length(ia)
-                db_set(sqlConn, 'FunctionalFile', 'Delete', sFuncFilesOld(ia(ix)).Id);
-            end
-            % Insert FunctionalFiles entries in Study but not in DB
-            for ix = 1 : length(ib)
-                db_set(sqlConn, 'FunctionalFile', sFuncFiles(ib(ix)));
-            end
-            % Delete list with zero children in this study
-            sFuncDatListZero = db_get(sqlConn, 'FunctionalFile', struct('Study', iStudy, 'Type', 'datalist', 'NumChildren', 0), 'Id');
-            sFuncMatListZero = db_get(sqlConn, 'FunctionalFile', struct('Study', iStudy, 'Type', 'matrixlist', 'NumChildren', 0), 'Id');
-            sFuncListZero = [sFuncDatListZero, sFuncMatListZero];
-            for ix = 1 : length(sFuncListZero)
-                db_set(sqlConn, 'FunctionalFile', 'Delete', sFuncListZero(ix).Id);
-            end
-
-            % If requested get current FunctionalFiles
+            % If requested, get inserted FunctionalFilesIds
             if nargout > 0
-                if nargout == 2
-                    tmp = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudy);
-                    varargout{2} = tmp;
-                elseif nargout == 1
-                    tmp = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudy, 'Id');
-                end
-                varargout{1} = [tmp.Id];
+                varargout{1} = insertedIds;
             end
         end
 
@@ -829,14 +759,4 @@ end
 
 end
 
-%% ==== HELPERS ====
-%% Compare two structures
-function result = isEqualDbStructs(structOld, structNew)
-    % Fields to ignore
-    ignoreFields = {'Id', 'LastModified'};
-    % Remove Id and LastModified fields
-    structOld = rmfield(structOld, ignoreFields(isfield(structOld, ignoreFields)));
-    structNew = rmfield(structNew, ignoreFields(isfield(structNew, ignoreFields)));
-    result = isequal(structOld, structNew);
-end
 
