@@ -145,66 +145,95 @@ switch contextName
         end
     
     case 'ProtocolSubjects'
+        warning('bst_set(''%s'') will be deprecated in new Brainstorm database system. Use db_set(''%s'')', contextName, 'ParsedSubject');
+
         sqlConn = sql_connect();
-        % Delete existing subjects and anatomy files
-        db_set(sqlConn, 'Subject', 'delete');
-        db_set(sqlConn, 'AnatomyFile', 'delete');
-        
-        for iSubject = 0:length(contextValue.Subject)
-            if iSubject == 0
-                sSubject = contextValue.DefaultSubject;
-            else
-                sSubject = contextValue.Subject(iSubject);
-            end
-            if isempty(sSubject)
+        % Get filenames for default anatomy and sufaces before deleting DataBase
+        sSubjects = [contextValue.DefaultSubject, contextValue.Subject];
+        for ix = 1: length(sSubjects)
+            if isempty(sSubjects(ix))
                 continue
             end
-            
-            % Insert subject
-            SubjectId = db_set(sqlConn, 'Subject', sSubject);
-            sSubject.Id = SubjectId;
-            bst_set('Subject', sSubject.Id, sSubject);
+            % Replace indexes for default anatomy and sufaces with their filenames
+            categories = strcat('i', {'Anatomy', 'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'});
+            for iCat = 1 : length(categories)
+                if ~isempty(sSubjects(ix).(categories{iCat}))
+                    sAnatFile = db_get(sqlConn, 'AnatomyFile', sSubjects(ix).(categories{iCat}), 'FileName');
+                    if ~isempty(sAnatFile)
+                        sSubjects(ix).(categories{iCat}) = sAnatFile.FileName;
+                    else
+                        sSubjects(ix).(categories{iCat}) = [];
+                    end
+                end
+            end
+        end
+        % Get all Subjects
+        sSubjectsOld = db_get(sqlConn, 'AllSubjects', 'Id', '@default_subject');
+        % Update Subjects and their Anatomy Files
+        [~, ~, ib] = intersect([sSubjectsOld.Id],[sSubjects.Id]);
+        for ix = 1 : length(ib)
+            db_set(sqlConn, 'ParsedSubject', sSubjects(ib(ix)), sSubjects(ib(ix)).Id);
+        end
+        % Subjects to Insert or Delete
+        [~, ia, ib] = setxor([sSubjectsOld.Id],[sSubjects.Id]);
+        ia = sort(ia);
+        ib = sort(ib);
+        % Delete Subjects (and their Anatomy Files) present in DB but not in sSubjects
+        for ix = 1 : length(ia)
+            db_set(sqlConn, 'Subject', 'Delete', sSubjectsOld(ia(ix)).Id);
+        end
+        % Insert Subjects (and their Anatomy Files) present in sSubjects but not in DB
+        for ix = 1 : length(ib)
+            db_set(sqlConn, 'ParsedSubject', sSubjects(ib(ix)));
         end
         sql_close(sqlConn);
         
     case 'ProtocolStudies'
+        warning('bst_set(''%s'') will be deprecated in new Brainstorm database system. Use db_set(''%s'')', contextName, 'ParsedStudy');
+
         sqlConn = sql_connect();
-        % Delete existing studies and functional files
-        db_set(sqlConn, 'Study', 'delete');
-        db_set(sqlConn, 'FunctionalFile', 'delete');
-        sql_close(sqlConn);
-
-        for iStudy = -1:length(contextValue.Study)
-            if iStudy == -1
-                sStudy = contextValue.DefaultStudy;
-            elseif iStudy == 0
-                sStudy = contextValue.AnalysisStudy;
-            else
-                sStudy = contextValue.Study(iStudy);
+        % Get filenames for default channel and head model before deleting DataBase
+        sStudies = [contextValue.DefaultStudy, contextValue.AnalysisStudy, contextValue.Study];
+        for ix = 1: length(sStudies)
+            if isempty(sStudies(ix))
+                continue
             end
-
-            % Skip empty Default / Analysis studies
-            % TODO: If these are empty, they should be removed also from HDD
-%             if isempty(sStudy) || ((iStudy < 1 || ismember(sStudy.Name, {'@default_study', '@intra', '@inter'})) ...
-%                     && isempty(sStudy.Channel) && isempty(sStudy.Data) ...
-%                     && isempty(sStudy.HeadModel) && isempty(sStudy.Result) ...
-%                     && isempty(sStudy.Stat) && isempty(sStudy.Image) ...
-%                     && isempty(sStudy.NoiseCov) && isempty(sStudy.Dipoles) ...
-%                     && isempty(sStudy.Timefreq) && isempty(sStudy.Matrix))
-%                 continue
-%             end
-
-            % Get ID for parent Subject
-            if isempty(sStudy.Subject)
-                sSubject = db_get('Subject', sStudy.BrainStormSubject, 'Id');
-                sStudy.Subject = sSubject.Id;
+            % Replace indexes for channel and head model with their filenames
+            categories = strcat('i', {'Channel', 'HeadModel'});
+            for iCat = 1 : length(categories)
+                if ~isempty(sStudies(ix).(categories{iCat}))
+                    sFuncFile = db_get(sqlConn, 'FunctionalFile', sStudies(ix).(categories{iCat}), 'FileName');
+                    if ~isempty(sFuncFile)
+                        sStudies(ix).(categories{iCat}) = sFuncFile.FileName;
+                    else
+                        sStudies(ix).(categories{iCat}) = [];
+                    end
+                end
             end
-            % Insert study
-            sStudy.Condition = char(sStudy.Condition);
-            StudyId = db_set('Study', sStudy);
-            sStudy.Id = StudyId;
-            bst_set('Study', sStudy.Id, sStudy);
         end
+        % Get all Studies
+        sStudiesOld = db_get(sqlConn, 'AllStudies', 'Id', '@inter', '@default_study');
+
+        % Update Studies and their Functional Files
+        [~, ~, ib] = intersect([sStudiesOld.Id],[sStudies.Id]);
+        for ix = 1 : length(ib)
+            db_set(sqlConn, 'ParsedStudy', sStudies(ib(ix)), sStudies(ib(ix)).Id);
+        end
+        % Studies to Insert or Delete
+        [~, ia, ib] = setxor([sStudiesOld.Id],[sStudies.Id]);
+        ia = sort(ia);
+        ib = sort(ib);
+        % Delete Studies (and their Functional Files) present in DB but not in sStudies
+        for ix = 1 : length(ia)
+            db_set(sqlConn, 'Study', 'Delete', sStudiesOld(ia(ix)).Id);
+        end
+        % Insert Studies (and their Functional Files) present in sStudies but not in DB
+        for ix = 1 : length(ib)
+            db_set(sqlConn, 'ParsedStudy', sStudies(ib(ix)));
+        end
+        % Update links
+        db_links(sqlConn);
+        sql_close(sqlConn);
         
         
     case 'ProtocolInfo'
@@ -219,200 +248,104 @@ switch contextName
 
 %% ==== SUBJECT ====
     case 'Subject'
+        warning('bst_set(''%s'') will be deprecated in new Brainstorm database system. Use db_set(''%s'')', contextName, 'ParsedSubject or Subject');
         iSubject = varargin{2};
         sSubject = varargin{3};
         sqlConn = sql_connect();
         
         % Get subject
         sExistingSubject = db_get(sqlConn, 'Subject', iSubject, 'Id');
-        
-        % Get FileNames for currently selected Anatomy and Surface files
-        categories = {'Anatomy', 'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'};
-        selectedFiles = cell(1, length(categories));
-        for iCat = 1:length(categories)
-            category = categories{iCat};
-            field = ['i' category];
-            if ~isempty(sSubject.(field)) && ischar(sSubject.(field))
-                selectedFiles{iCat} = sSubject.(field);
-            elseif ~isempty(sSubject.(field)) && isnumeric(sSubject.(field)) && sSubject.(field) > 0
-                % Get FileName with previous file ID before it's deleted
-                sAnatFile = db_get(sqlConn, 'AnatomyFile', sSubject.(field), 'FileName');
+        % Convert sSubject structure to sParsedSubject by replacing indexes for
+        % currently selected Anatomy and Surface files to their FileNames
+        categories = strcat('i', {'Anatomy', 'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'});
+        for iCat = 1 : length(categories)
+            if ~isempty(sSubject.(categories{iCat}))
+                sAnatFile = db_get(sqlConn, 'AnatomyFile', sSubject.(categories{iCat}), 'FileName');
                 if ~isempty(sAnatFile)
-                    selectedFiles{iCat} = sAnatFile.FileName;
+                    sSubject.(categories{iCat}) = sAnatFile.FileName;
+                else
+                    sSubject.(categories{iCat}) = [];
                 end
             end
             % Set default selected files
-            if isempty(selectedFiles{iCat})
+            if isempty(sSubject.(categories{iCat}))
+                category = categories{iCat}(2:end);
                 switch category
                     case 'Anatomy'
                         if ~isempty(sSubject.(category))
-                            selectedFiles{iCat} = sSubject.(category)(1).FileName;
+                            sSubject.(categories{iCat}) = sSubject.(category)(1).FileName;
                         end
-
                     case {'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'}
                         if ~isempty(sSubject.Surface)
                             ix_def = find(strcmpi({sSubject.Surface.SurfaceType}, category), 1, 'first');
                             if ~isempty(ix_def)
-                                selectedFiles{iCat} = sSubject.Surface(ix_def);
+                                sSubject.(categories{iCat}) = sSubject.Surface(ix_def).FileName;
                             end
                         end
                 end
             end
         end
         
-        % If subject exists, UPDATE query
+        % If subject exists, UPDATE
         if ~isempty(sExistingSubject)
-            sSubject.Id = sExistingSubject.Id;
-            sExistingSubject.Id = db_set(sqlConn, 'Subject', sSubject, sExistingSubject.Id);
-            if ~isempty(sExistingSubject.Id)
-                iSubject = sExistingSubject.Id;
-                argout1 = iSubject;
-            else
-                iSubject = [];
-            end
-        % If subject is new, INSERT query
+            iSubject  = db_set(sqlConn, 'ParsedSubject', sSubject, sExistingSubject.Id);
+        % If subject is new, INSERT
         else
-            sSubject.Id = [];
-            iSubject = db_set(sqlConn, 'Subject', sSubject);
-            if ~isempty(iSubject)
-                argout1 = iSubject;
-            end
+            iSubject  = db_set(sqlConn, 'ParsedSubject', sSubject);
         end
-        
         if ~isempty(iSubject)
-            % Delete existing anatomy files
-            db_set(sqlConn, 'AnatomyFilesWithSubject', 'Delete', iSubject);
-                       
-            % Convert Volume & Surface files to AnatomyFiles and insert
-            sAnatFiles = [db_convert_anatomyfile(sSubject.Anatomy, 'volume'), ...
-                          db_convert_anatomyfile(sSubject.Surface, 'surface')];
-            db_set(sqlConn, 'AnatomyFilesWithSubject', sAnatFiles, iSubject);
-
-            % Set selected Anatomy and Surface files
-            hasSelFiles = 0;
-            selFiles = struct();
-            for iCat = 1:length(categories)
-                if ~isempty(selectedFiles{iCat})
-                    hasSelFiles = 1;
-                    sAnatFile = db_get(sqlConn, 'AnatomyFile', selectedFiles{iCat}, 'Id');
-                    selFiles.(['i' categories{iCat}]) = sAnatFile.Id;
-                end
-            end
-            if hasSelFiles
-                db_set(sqlConn, 'Subject', selFiles, iSubject);
-            end
+            argout1 = iSubject;
         end
         sql_close(sqlConn);
         
         
 %% ==== STUDY ====
     case 'Study'
+        warning('bst_set(''%s'') will be deprecated in new Brainstorm database system. Use db_set(''%s'')', contextName, 'ParsedStudy or Study');
+
         % Get studies list
         iStudies = varargin{2};
         sStudies = varargin{3};
-        iAnalysisStudy = -2; % @inter
-        iDefaultStudy  = -3; % global @default_study
-        
+        iStudiesOut = [];
         sqlConn = sql_connect();
-        for i = 1:length(iStudies)
-            % Inter-subject analysis study
-            if iStudies(i) == iAnalysisStudy
-                sExistingStudy = db_get(sqlConn, 'Study', '@inter', 'Id');
-            % Default study
-            elseif iStudies(i) == iDefaultStudy
-                sExistingStudy = db_get(sqlConn, 'Study', '@default_study', 'Id');
-            % Normal study
-            else
-                sExistingStudy = db_get(sqlConn, 'Study', iStudies(i), 'Id');
-            end
-            
-            % Get ID of parent subject
-            sSubject = db_get(sqlConn, 'Subject', sStudies(i).BrainStormSubject, 'Id');
-            sStudies(i).Subject = sSubject.Id;
-            
-            % Get FileNames for currently selected Channel and HeadModel files
-            categories = {'Channel', 'HeadModel'};
-            selectedFiles = cell(1, length(categories));
-            for iCat = 1:length(categories)
-                category = categories{iCat};
-                field = ['i' category];
-                if ~isempty(sStudies(i).(field)) && ischar(sStudies(i).(field))
-                    selectedFiles{iCat} = sStudies(i).(field);
-                elseif ~isempty(sStudies(i).(field)) && isnumeric(sStudies(i).(field)) && sStudies(i).(field) > 0
-                    % Get FileName with previous file ID before it's deleted
-                    sFuncFile = db_get(sqlConn, 'FunctionalFile', sStudies(i).(field), 'FileName');
+
+        for ix = 1:length(iStudies)
+            % Get study
+            sExistingStudy = db_get(sqlConn, 'Study', iStudies(ix), 'Id');
+            sStudy = sStudies(ix);
+            % Convert sStudy structure to sParsedStudy by replacing indexes for
+            % currently selected Channel and HeadModel files to their FileNames
+            categories = strcat('i', {'Channel', 'HeadModel'});
+            for iCat = 1 : length(categories)
+                if ~isempty(sStudy.(categories{iCat}))
+                    sFuncFile = db_get(sqlConn, 'FunctionalFile', sStudy.(categories{iCat}), 'FileName');
                     if ~isempty(sFuncFile)
-                        selectedFiles{iCat} = sFuncFile.FileName;
+                        sStudy.(categories{iCat}) = sFuncFile.FileName;
+                    else
+                        sStudy.(categories{iCat}) = [];
                     end
                 end
                 % Set default selected files
-                if isempty(selectedFiles{iCat}) && ~isempty(sStudies(i).(category))
-                    selectedFiles{iCat} = sStudies(i).(category)(1).FileName;
+                if isempty(sStudy.(categories{iCat}))
+                    category = categories{iCat}(2:end);
+                    if ~isempty(sStudy.(category))
+                        sStudy.(categories{iCat}) = sStudy.(category)(1).FileName;
+                    end
                 end
             end
-            
-            sStudies(i).Condition = char(sStudies(i).Condition);
-            % If study exists, UPDATE query
+            % If study exists, UPDATE
             if ~isempty(sExistingStudy)
-                sStudies(i).Id = sExistingStudy.Id;
-                sExistingStudy.Id = db_set(sqlConn, 'Study', sStudies(i), sExistingStudy.Id);
-                if sExistingStudy.Id
-                    iStudy = sExistingStudy.Id;
-                    argout1(end + 1) = iStudy;
-                else
-                    iStudy = [];
-                end
-            % If study is new, INSERT query
+                iStudy  = db_set(sqlConn, 'ParsedStudy', sStudy, sExistingStudy.Id);
+            % If subject is new, INSERT
             else
-                sStudies(i).Id = [];
-                iStudy = db_set(sqlConn, 'Study', sStudies(i));
-                if ~isempty(iStudy)
-                    argout1(end + 1) = iStudy;
-                end
+                iStudy  = db_set(sqlConn, 'ParsedStudy', sStudy);
             end
-            
-            if ~isempty(iStudy)
-                % Delete existing functional files for this study
-                db_set(sqlConn, 'FunctionalFilesWithStudy', 'Delete', iStudy);
-                sFuncFiles = [];
-                % Order is not relevant
-                types = {'Channel', 'HeadModel', 'Data', 'Matrix', 'Result', ...
-                         'Stat', 'Image', 'NoiseCov', 'Dipoles', 'Timefreq'};
-                for iType = 1:length(types)
-                    sFiles = sStudies(i).(types{iType});
-                    type = lower(types{iType});
-                    if isempty(sFiles)
-                        continue
-                    end
-                    % Convert to FunctionalFile structure
-                    sTypeFuncFiles = db_convert_functionalfile(sFiles, type);
-                    % Check for noisecov and ndatacov
-                    if strcmpi(type, 'noisecov') && length(sTypeFuncFiles) == 2
-                        sTypeFuncFiles(2).Type = 'ndatacov';
-                    end
-                    sFuncFiles = [sFuncFiles, sTypeFuncFiles];
-                end
-                if ~isempty(sFuncFiles)
-                    % Remove FunctionalFiles with empty FileName
-                    iNotEmpty = ~cellfun(@isempty,{sFuncFiles.FileName});
-                    % Insert FunctionalFiles in database
-                    db_set(sqlConn, 'FunctionalFilesWithStudy', sFuncFiles(iNotEmpty), iStudy);
-                end
-                % Set selected Channel and HeadModel files
-                hasSelFiles = 0;
-                selFiles = struct();
-                for iCat = 1:length(categories)
-                    if ~isempty(selectedFiles{iCat})
-                        hasSelFiles = 1;
-                        sFuncFile = db_get(sqlConn, 'FunctionalFile', selectedFiles{iCat}, 'Id');
-                        selFiles.(['i' categories{iCat}]) = sFuncFile.Id;
-                    end
-                end
-                if hasSelFiles
-                    db_set(sqlConn, 'Study', selFiles, iStudy);
-                end
-            end
+            iStudiesOut = [iStudiesOut, iStudy];
         end
+        if ~isempty(iStudiesOut)
+            argout1 = iStudiesOut;
+        end
+        db_links(sqlConn, 'Study', iStudiesOut);
         sql_close(sqlConn);
         
         

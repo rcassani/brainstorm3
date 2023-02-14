@@ -638,8 +638,9 @@ switch contextName
 
 
 %% ==== STUDIES FROM SUBJECT ====        
-    % sStudies = db_get('StudiesFromSubject', iSubject,        Fields)                             % Exclude '@intra' study and '@default_study')
-    %          = db_get('StudiesFromSubject', iSubject,        Fields, '@intra', '@default_study') % Include '@intra' study and '@default_study')
+    % sStudies = db_get('StudiesFromSubject', iSubject,        Fields)                             % Exclude '@intra' study and '@default_study'
+    %          = db_get('StudiesFromSubject', iSubject,        Fields, '@intra', '@default_study') % Include '@intra' study and '@default_study'
+    %          = db_get('StudiesFromSubject', iSubject,        Fields, '@inter', '@default_study') % Include '@inter' study and global '@default_study', only for iSubject = 0
     %          = db_get('StudiesFromSubject', SubjectFileName, Fields)
     %          = db_get('StudiesFromSubject', SubjectName,     Fields)
     case 'StudiesFromSubject'
@@ -673,6 +674,9 @@ switch contextName
         end
         if length(args) < 2 || ~ismember('@default_study', args(3:end))
             addQuery = [addQuery ' AND Study.Name <> "' bst_get('DirDefaultStudy') '"'];
+        end
+        if length(args) < 2 || ~ismember('@inter', args(3:end))
+            addQuery = [addQuery ' AND Study.Name <> "' bst_get('DirAnalysisInter') '"'];
         end
         % Select query
         varargout{1} = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
@@ -794,10 +798,10 @@ switch contextName
         end
         addQuery = '';
         % Complete query with studies ("@inter" and global "@default_study")
-        if length(args) < 2 || ~ismember('@inter', args(3:end))
+        if length(args) < 2 || ~ismember('@inter', args(2:end))
             addQuery = [addQuery ' AND Name <> "' bst_get('DirAnalysisInter') '"'];
         end
-        if length(args) < 2 || ~ismember('@default_study', args(3:end))
+        if length(args) < 2 || ~ismember('@default_study', args(2:end))
             addQuery = [addQuery ' AND (Subject <> 0 OR Name <> "@default_study")'];
         end
         

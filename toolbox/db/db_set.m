@@ -11,6 +11,8 @@ function varargout = db_set(varargin)
 %    - sProtocol = db_set('Protocol', sProtocol, 1) : Insert current Protocol information
 %
 % ====== SUBJECTS ======================================================================
+%    - db_set('ParsedSubject', sParsedSubject)           : Insert parsed subject, from db_parse_subject()
+%    - db_set('ParsedSubject', sParsedSubject, iSubject) : Update parsed subject, from db_parse_subject()
 %    - db_set('Subject', 'Delete')                       : Delete all Subjects
 %    - db_set('Subject', 'Delete', SubjectId)            : Delete Subject by ID
 %    - db_set('Subject', 'Delete', CondQuery)            : Delete Subject with Query
@@ -27,6 +29,8 @@ function varargout = db_set(varargin)
 %    - db_set('AnatomyFilesWithSubject', sAnatomyFiles, SubjectID) : Insert AnatomyFiles with SubjectID
 %
 % ====== STUDIES =======================================================================
+%    - db_set('ParsedStudy', sParsedStudy)           : Insert parsed study, from db_parse_study()
+%    - db_set('ParsedStudy', sParsedStudy, iStudy)   : Update parsed study, from db_parse_study()
 %    - db_set('Study', 'Delete')                     : Delete all Studies
 %    - db_set('Study', 'Delete', StudyId)            : Delete Study by ID
 %    - db_set('Study', 'Delete', CondQuery)          : Delete Study with Query
@@ -103,6 +107,132 @@ switch contextName
             end
         end
         varargout{1} = sql_query(sqlConn, action, 'Protocol', sProtocol);
+
+
+%% ==== PARSED SUBJECT ====
+    % iSubject = db_set('ParsedSubject', sParsedSubject)
+    % iSubject = db_set('ParsedSubject', sParsedSubject, iSubject)
+    case 'ParsedSubject'
+        sParsedSubject = args{1};  % sParsedSubject is old sSubject structure (with Anatomy and Surface fields).
+                                   % BUT default iXxxx fields are relative paths
+        iSubject = [];
+        if length(args) > 1
+            iSubject = args{2};
+        end
+
+        % Default Anatomy and Surface files
+        categories = strcat('i', {'Anatomy', 'Scalp', 'Cortex', 'InnerSkull', 'OuterSkull', 'Fibers', 'FEM'});
+        fieldValPairs = [categories; cell(1,length(categories))];
+        sDefSurfFiles = struct(fieldValPairs{:});
+        for iCat = 1 : length(categories)
+            sDefSurfFiles.(categories{iCat}) = sParsedSubject.(categories{iCat});
+            sParsedSubject.(categories{iCat}) = [];
+        end
+        % Get AnatomyFiles
+        sAnatFiles = [db_convert_anatomyfile(sParsedSubject.Anatomy, 'volume'), ...
+                      db_convert_anatomyfile(sParsedSubject.Surface, 'surface')];
+        
+        % Check if Subject with index iSubject exists
+        sSubjectOld = db_get(sqlConn, 'Subject', iSubject, 'Id');
+        if isempty(sSubjectOld)
+            % Insert Subject
+            iSubject = db_set(sqlConn, 'Subject', sParsedSubject);
+        else
+            % Update Subject
+            iSubject = db_set(sqlConn, 'Subject', sParsedSubject, sSubjectOld.Id);
+        end
+        % Delete current sAnatFiles in iSubject
+        db_set(sqlConn, 'AnatomyFilesWithSubject', 'Delete', iSubject);
+        if ~isempty(sAnatFiles)
+            % Insert sAnatFiles in iSubject
+            db_set(sqlConn, 'AnatomyFilesWithSubject', sAnatFiles, iSubject);
+        end
+        % Update indices in sSubject for default Anatomy and Surface files
+        sDefSurfIds = struct(fieldValPairs{:});
+        for iCat = 1 : length(categories)
+            if ~isempty(sDefSurfFiles.(categories{iCat}))
+                sAnatFile = db_get(sqlConn, 'AnatomyFile', sDefSurfFiles.(categories{iCat}), 'Id');
+                if ~isempty(sAnatFile)
+                    sDefSurfIds.(categories{iCat}) = sAnatFile.Id;
+                end
+            end
+        end
+        varargout{1} = db_set(sqlConn, 'Subject', sDefSurfIds, iSubject);
+
+
+%% ==== PARSED STUDY ====
+    % iStudy = db_set('ParsedStudy', sParsedStudy)
+    % iStudy = db_set('ParsedStudy', sParsedStudy, iStudy)
+    case 'ParsedStudy'
+        sParsedStudy = args{1};  % sParsedStudy is old sStudy structure: (with BrainstormSubject, Channel, Data, HeadModel, Result, Stat, Image, NoiseCov, Dipoles, Timefreq and Matrix fields)
+                                 % BUT default iChannel and iHeadModel fields are relative paths
+        iStudy = [];
+        if length(args) > 1
+            iStudy = args{2};
+        end
+
+        % Get ID of parent subject
+        sSubject = db_get(sqlConn, 'Subject', sParsedStudy.BrainStormSubject, 'Id');
+        sParsedStudy.Subject = sSubject.Id;
+        % Condition must be a string
+        if ~isempty(sParsedStudy.Condition)
+            sParsedStudy.Condition = char(sParsedStudy.Condition);
+        else
+            sParsedStudy.Condition = sParsedStudy.Name;
+        end
+
+        % Default Channel and HeadModel files
+        categories = strcat('i', {'Channel', 'HeadModel'});
+        fieldValPairs = [categories; cell(1,length(categories))];
+        sDefSurfFiles = struct(fieldValPairs{:});
+        for iCat = 1 : length(categories)
+            sDefSurfFiles.(categories{iCat}) = sParsedStudy.(categories{iCat});
+            sParsedStudy.(categories{iCat}) = [];
+        end
+        % Get FunctionalFiles
+        sFuncFiles = [];
+        % Order is not relevant
+        types = {'Channel', 'HeadModel', 'Data', 'Matrix', 'Result', ...
+                 'Stat', 'Image', 'NoiseCov', 'Dipoles', 'Timefreq'};
+        for iType = 1:length(types)
+            sFiles = sParsedStudy.(types{iType});
+            type = lower(types{iType});
+            if ~isempty(sFiles)
+                sTypeFuncFiles = db_convert_functionalfile(sFiles, type);
+                % Check for noisecov and ndatacov
+                if strcmpi(type, 'noisecov') && length(sTypeFuncFiles) == 2
+                    sTypeFuncFiles(2).Type = 'ndatacov';
+                end
+                sFuncFiles = [sFuncFiles, sTypeFuncFiles];
+            end
+        end
+        % Check if Study with index iStudy exists
+        sStudyOld = db_get(sqlConn, 'Study', iStudy, 'Id');
+        if isempty(sStudyOld)
+            % Insert Study
+            iStudy = db_set(sqlConn, 'Study', sParsedStudy);
+        else
+            % Update Study
+            iStudy = db_set(sqlConn, 'Study', sParsedStudy, sStudyOld.Id);
+        end
+        % Delete current sFuncFiles in iStudy
+        db_set(sqlConn, 'FunctionalFilesWithStudy', 'Delete', iStudy);
+        if ~isempty(sFuncFiles)
+            % Insert sFuncFiles in iStudy
+            db_set(sqlConn, 'FunctionalFilesWithStudy', sFuncFiles, iStudy);
+        end
+        % Update indices in sStudy for default Channel and HeadModel files
+        sDefSurfIds = struct(fieldValPairs{:});
+        for iCat = 1 : length(categories)
+            if ~isempty(sDefSurfFiles.(categories{iCat}))
+                sFuncFile = db_get(sqlConn, 'FunctionalFile', sDefSurfFiles.(categories{iCat}), 'Id');
+                if ~isempty(sFuncFile)
+                    sDefSurfIds.(categories{iCat}) = sFuncFile.Id;
+                end
+            end
+        end
+        varargout{1} = db_set(sqlConn, 'Study', sDefSurfIds, iStudy);
+
 
 %% ==== SUBJECT ====
     % Success              = db_set('Subject', 'Delete')
@@ -249,8 +379,8 @@ switch contextName
         end
         
 %% ==== ANATOMY FILES WITH SUBJECT ====
-    % Success       = db_set('AnatomyFilesWithSubject', 'Delete'     , SubjectID)
-    % sAnatomyFiles = db_set('AnatomyFilesWithSubject', sAnatomyFiles, SubjectID)
+    % Success        = db_set('AnatomyFilesWithSubject', 'Delete'     , SubjectID)
+    % AnatomyFileIds = db_set('AnatomyFilesWithSubject', sAnatomyFiles, SubjectID)
     case 'AnatomyFilesWithSubject'
         sAnatFiles = args{1};
         iSubject = args{2};
@@ -259,17 +389,18 @@ switch contextName
         if ischar(sAnatFiles) && strcmpi(sAnatFiles, 'delete')
             delResult = sql_query(sqlConn, 'DELETE', 'AnatomyFile', struct('Subject', iSubject));
             varargout{1} = 1;
+        end
         % Insert AnatomyFiles to SubjectID
-        elseif isstruct(sAnatFiles)
-            nAnatomyFiles = length(sAnatFiles);
-            insertedIds = zeros(1, nAnatomyFiles);
-            for ix = 1 : nAnatomyFiles
-                sAnatFiles(ix).Subject = iSubject;
+        if isstruct(sAnatFiles) && ~isempty(iSubject)
+            [sAnatFiles.Subject] = deal(iSubject);
+            insertedIds = zeros(length(sAnatFiles));
+            % Insert AnatomyFiles
+            for ix = 1 : length(sAnatFiles)
                 insertedIds(ix) = db_set(sqlConn, 'AnatomyFile', sAnatFiles(ix));
             end
-            % If requested get all the inserted AnatomyFiles
+            % If requested, get inserted AnatomyFilesIds
             if nargout > 0
-                varargout{1} = db_get(sqlConn, 'AnatomyFile', insertedIds);
+                varargout{1} = insertedIds;
             end
         end
 
@@ -358,10 +489,9 @@ switch contextName
         end
 
 
-%% ==== FILES WITH STUDY ====
-    % Success          = db_set('FunctionalFilesWithStudy', 'Delete'        , StudyID)
-    % sFunctionalFiles = db_set('FunctionalFilesWithStudy', sFunctionalFiles, StudyID) % Insert
-    % sFunctionalFiles = db_set('FunctionalFilesWithStudy', sFunctionalFiles)          % Update
+%% ==== FUNCTIONAL FILES WITH STUDY ====
+    % Success           = db_set('FunctionalFilesWithStudy', 'Delete'        , StudyID)
+    % FunctionalFileIds = db_set('FunctionalFilesWithStudy', sFunctionalFiles, StudyID)
     case 'FunctionalFilesWithStudy'
         sFuncFiles = args{1};
         iStudy = [];
@@ -375,48 +505,44 @@ switch contextName
             varargout{1} = 1;
         end
 
-        % Insert or Update FunctionalFiles
+        % Insert FunctionalFiles
         if isstruct(sFuncFiles) && ~isempty(iStudy)
+            [sFuncFiles.Study] = deal(iStudy);
             % Sort FunctionalFiles
             % Note: Order important here, as potential parent files (Data, Matrix, Result)
             % should be inserted or updated before potential child files (Result, Timefreq, Dipoles)
             ix_sorted = [];
-            types_db = {'channel', 'headmodel', 'datalist', 'matrixlist', 'data', 'matrix', 'result', ...
-                     'stat', 'image', 'noisecov', 'ndatacov', 'dipoles', 'timefreq'};
+            % Ignore 'datalist' and 'matrixlist', they are handled in db_set('FunctionalFile')
+            types_db = {'channel', 'headmodel', 'data', 'matrix', 'result', ...
+                        'stat', 'image', 'noisecov', 'ndatacov', 'dipoles', 'timefreq'};
             for iType = 1:length(types_db)
                 ix_sorted = [ix_sorted, find(strcmpi(types_db{iType}, {sFuncFiles.Type}))];
             end
             sFuncFiles = sFuncFiles(ix_sorted);
-            nFunctionalFiles = length(sFuncFiles);
-            insertedIds = zeros(1, nFunctionalFiles);
-
-            % Insert FunctionalFiles to StudyID
-            if ~isempty(iStudy)
-                for ix = 1 : nFunctionalFiles
-                    sFuncFiles(ix).Study = iStudy;
-                    insertedIds(ix) = db_set(sqlConn, 'FunctionalFile', sFuncFiles(ix));
-                end
-            % Update FunctionalFiles
-            else
-                for ix = 1 : nFunctionalFiles
-                    insertedIds(ix) = db_set(sqlConn, 'FunctionalFile', sFuncFiles(ix), insertedIds(ix));
-                end
+            % Ignore links ('result' with ExtraNum = '1'), they are handled in db_links()
+            ixLinks = and(strcmpi({sFuncFiles.Type}, 'result'), cellfun(@(x) isequal(x,1),{sFuncFiles.ExtraNum}));
+            sFuncFiles = sFuncFiles(~ixLinks);
+            % Insert FunctionalFiles
+            insertedIds = zeros(length(sFuncFiles));
+            for ix = 1 : length(sFuncFiles)
+                insertedIds(ix) = db_set(sqlConn, 'FunctionalFile', sFuncFiles(ix));
             end
-            % If requested get all the inserted or updated FunctionalFiles
+            % If requested, get inserted FunctionalFilesIds
             if nargout > 0
-                varargout{1} = db_get(sqlConn, 'FunctionalFile', insertedIds);
+                varargout{1} = insertedIds;
             end
         end
 
         
 %% ==== FUNCTIONAL FILES ====
-    % Success                           = db_set('FunctionalFile', 'Delete')
-    %                                   = db_set('FunctionalFile', 'Delete', FunctionalFileId)
-    %                                   = db_set('FunctionalFile', 'Delete', CondQuery)
-    % FunctionalFileId, FunctionalFile] = db_set('FunctionalFile', FunctionalFile)
-    %                                   = db_set('FunctionalFile', FunctionalFile, FunctionalFileId)
+    % Success                            = db_set('FunctionalFile', 'Delete')
+    %                                    = db_set('FunctionalFile', 'Delete', FunctionalFileId)
+    %                                    = db_set('FunctionalFile', 'Delete', CondQuery)
+    % [FunctionalFileId, FunctionalFile] = db_set('FunctionalFile', FunctionalFile)
+    %                                    = db_set('FunctionalFile', FunctionalFile, FunctionalFileId)
     case 'FunctionalFile'
         % Minimum number of data (or matrix) files to create a datalist (or matrixlist)
+        % TODORC: How many items to create list?
         minListChildren = 2;
         list_names = [];
         % Default parameters
@@ -633,4 +759,5 @@ if handleConn
 end
 
 end
+
 

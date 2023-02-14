@@ -24,6 +24,7 @@ function iNewStudies = db_reload_conditions(iSubjects)
 % =============================================================================@
 %
 % Authors: Francois Tadel, 2009-2013
+%          Raymundo Cassani, 2022-2023
 
 % Parse inputs
 if isempty(iSubjects)
@@ -32,22 +33,20 @@ end
 iNewStudies = [];
 % Get protocol information
 ProtocolInfo = bst_get('ProtocolInfo');
-ProtocolStudies = bst_get('ProtocolStudies');
 
 % If no progressbar is visible: create one
 isProgressBar = ~bst_progress('isVisible');
 if isProgressBar
     bst_progress('start', 'Reload subject', 'Reloading datasets...', 0, 100 * length(iSubjects));
 end
+
+sqlConn = sql_connect();
 % Process all the subjects
 for i = 1:length(iSubjects)
     % Get subject
-    sSubject = bst_get('Subject', iSubjects(i), 1);
+    sSubject = db_get(sqlConn, 'Subject', iSubjects(i), '*', 1);
     % Get all the dependent studies at the moment
-    [sOldStudies, iOldStudies] = bst_get('StudyWithSubject', sSubject.FileName, 'intra_subject', 'default_study');
-    % Remove them all from protocol
-    ProtocolStudies.Study(iOldStudies) = [];
-
+    sOldStudies = db_get(sqlConn, 'StudiesFromSubject', sSubject.Id, {'Id', 'FileName'}, '@inter', '@intra', '@default_study');
     % Get subject directory for studies
     subjectSubDir = bst_fileparts(sSubject.FileName);
     % Protocol error
@@ -65,13 +64,30 @@ for i = 1:length(iSubjects)
     
     % Read all the studies in the subject directory
     sReadStudies = db_parse_study(ProtocolInfo.STUDIES, subjectSubDir, 100);
-    % Add all the new studies to the protocol
-    ProtocolStudies.Study = [ProtocolStudies.Study, sReadStudies];
-    % Update database
-    bst_set('ProtocolStudies', ProtocolStudies);
+    % Place studies in protocol DataBase
+    for ix = 1 : length(sReadStudies)
+        % Update Studies and their Functional Files
+        [~, ~, ib] = intersect({sOldStudies.FileName},{sReadStudies.FileName});
+        for iy = 1 : length(ib)
+            db_set(sqlConn, 'ParsedStudy', sReadStudies(ib(iy)), sOldStudies(ib(iy)).Id);
+        end
+        % Studies to Insert or Delete
+        [~, ia, ib] = setxor({sOldStudies.FileName},{sReadStudies.FileName});
+        ia = sort(ia);
+        ib = sort(ib);
+        % Delete Studies (and their Functional Files) present in DB but not in sStudies
+        for iy = 1 : length(ia)
+            db_set(sqlConn, 'Study', 'Delete', sOldStudies(ia(iy)).Id);
+        end
+        % Insert Studies (and their Functional Files) present in sStudies but not in DB
+        for iy = 1 : length(ib)
+            db_set(sqlConn, 'ParsedStudy', sReadStudies(ib(iy)));
+        end
+    end
     % Update links
-    db_links('Subject', iSubjects(i));
+    db_links(sqlConn, 'Subject', iSubjects(i));
 end
+sql_close(sqlConn);
 
 % Save database to disk
 db_save();

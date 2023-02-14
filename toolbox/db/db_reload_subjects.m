@@ -66,14 +66,14 @@ for i = 1:length(iSubjects)
         return
     end
     % Else subject was reloaded: update in database
-    bst_set('Subject', iSubjects(i), sSubject);
+    db_set(sqlConn, 'ParsedSubject', sSubject, iSubjects(i));
 end
 sql_close(sqlConn);
 
 % Update display
 panel_protocols('UpdateNode', 'Subject', iSubjects);
 % Save database
-db_save();
+% db_save();
 % Hide progress bar if it was started here
 if isProgressBar
     bst_progress('stop');

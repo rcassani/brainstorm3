@@ -692,7 +692,7 @@ switch contextName
                 
                 % === Populate functional files data
                 sFuncFiles = db_get(sqlConn, 'FunctionalFilesWithStudy', iStudy);
-                % Names of fields in sStudy for types of functional files
+                % Names of fields in sStudy for types of functional files (datalist and matrixlist are ignored)
                 types = {'Channel', 'Data', 'HeadModel', 'Result', 'Stat', ...
                          'Image', 'NoiseCov', 'Dipoles', 'Timefreq', 'Matrix'};
                 for ix_type = 1 : length(types)

@@ -53,6 +53,7 @@ function db_load_studies(isTreeUpdate, isFix)
 % =============================================================================@
 %
 % Authors: Francois Tadel, 2008-2013
+%          Raymundo Cassani, 2022-2023
 
 % Process inputs
 if (nargin < 1) || isempty(isTreeUpdate)
@@ -75,12 +76,6 @@ elseif ~file_exist(bst_fullfile(ProtocolInfo.STUDIES, bst_get('DirDefaultStudy')
        ~file_exist(bst_fullfile(ProtocolInfo.STUDIES, bst_get('DirAnalysisInter')))
     if isFix
         db_fix_protocol();
-    else
-        % Empty protocol
-        ProtocolSubjects = db_template('ProtocolSubjects');
-        ProtocolStudies = db_template('ProtocolStudies');
-        bst_set('ProtocolSubjects', ProtocolSubjects);
-        bst_set('ProtocolStudies', ProtocolStudies);
     end
     bst_progress('stop');
     return;
@@ -136,34 +131,40 @@ end
 
 
 %% ===== LOAD ALL STUDIES =====
-ProtocolStudies = db_template('ProtocolStudies');
 % Parse STUDIES folder
-ProtocolStudies.Study = db_parse_study(ProtocolInfo.STUDIES, '', 130);
+sParsedStudies = db_parse_study(ProtocolInfo.STUDIES, '', 130);
+
 % Parse INTER-SUBJECT folder
-ProtocolStudies.AnalysisStudy = db_parse_study(ProtocolInfo.STUDIES, bst_get('DirAnalysisInter'), 10);
-if (length(ProtocolStudies.AnalysisStudy) > 1)        
+sParsedAnalysisStudy = db_parse_study(ProtocolInfo.STUDIES, bst_get('DirAnalysisInter'), 10);
+if (length(sParsedAnalysisStudy) > 1)
     disp('BST> Database error: multiple @inter studies found for the same protocol, please keep only one of the following:');
-    for i = 1:length(ProtocolStudies.AnalysisStudy)
-        disp(['BST>    ' ProtocolStudies.AnalysisStudy(i).FileName]);
+    for i = 1:length(sParsedAnalysisStudy)
+        disp(['BST>    ' sParsedAnalysisStudy(i).FileName]);
     end
-    ProtocolStudies.AnalysisStudy = ProtocolStudies.AnalysisStudy(1);
+    sParsedAnalysisStudy = sParsedAnalysisStudy(1);
 end
+
 % Parse DEFAULT_STUDY folder
-ProtocolStudies.DefaultStudy = db_parse_study(ProtocolInfo.STUDIES, bst_get('DirDefaultStudy'), 10);
-if (length(ProtocolStudies.DefaultStudy) > 1)        
+sParsedDefaultStudy = db_parse_study(ProtocolInfo.STUDIES, bst_get('DirDefaultStudy'), 10);
+if (length(sParsedDefaultStudy) > 1)
     disp('BST> Database error: multiple @default_study folders found for the same protocol, please keep only one of the following:');
-    for i = 1:length(ProtocolStudies.DefaultStudy)
-        disp(['BST>    ' ProtocolStudies.DefaultStudy(i).FileName]);
+    for i = 1:length(sParsedDefaultStudy)
+        disp(['BST>    ' sParsedDefaultStudy(i).FileName]);
     end
-    ProtocolStudies.DefaultStudy = ProtocolStudies.DefaultStudy(1);
+    sParsedDefaultStudy = sParsedDefaultStudy(1);
 end
 
+sqlConn = sql_connect();
+% Delete existing Study and FunctionalFile Tables
+db_set(sqlConn, 'Study', 'delete');
+db_set(sqlConn, 'FunctionalFile', 'delete');
+% Update Studies in DataBase
+sStudies = [sParsedDefaultStudy, sParsedAnalysisStudy, sParsedStudies];
+for ix = 1 : length(sStudies)
+    db_set(sqlConn, 'ParsedStudy', sStudies(ix));
+end
+sql_close(sqlConn);
 
-%% ===== SAVE CHANGES =====
-% Update protocol in DataBase
-bst_set('ProtocolStudies', ProtocolStudies);
-% Update all results links
-db_links();
 % Refresh tree display
 if isTreeUpdate
     panel_protocols('UpdateTree');
