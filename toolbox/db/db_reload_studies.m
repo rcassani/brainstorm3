@@ -44,9 +44,14 @@ end
 % Process
 for iStudy = iStudies
     % Get study
-    sStudy = bst_get('Study', iStudy);
+    sStudy = db_get('Study', iStudy);
     if isempty(sStudy)
         continue;
+    end
+    % Get HeadModel filename
+    if ~isempty(sStudy.iHeadModel)
+        sHeadModelFile = db_get('FunctionalFile', sStudy.iHeadModel, 'FileName');
+        sStudy.iHeadModel = sHeadModelFile.FileName;
     end
     % Get study directory
     studySubDir = bst_fileparts(sStudy.FileName);
@@ -65,14 +70,11 @@ for iStudy = iStudies
         return
     end
     % Try to reuse the existing selection of headmodel (which is not saved on the hard drive)
-    if ~isempty(sStudy.HeadModel) && ~isempty(sStudy.iHeadModel) && ~isempty(sStudyNew.HeadModel)
-        sStudyNew.iHeadModel = find(strcmp(sStudy.HeadModel(sStudy.iHeadModel).FileName, {sStudyNew.HeadModel.FileName}));
-    end
-    if ~isempty(sStudy.iHeadModel) && (sStudy.iHeadModel <= length(sStudyNew.HeadModel)) && isempty(sStudyNew.iHeadModel)
+    if ~isempty(sStudy.iHeadModel) && ~isempty(sStudyNew.HeadModel) && ismember(sStudy.iHeadModel, {sStudyNew.HeadModel.FileName})
         sStudyNew.iHeadModel = sStudy.iHeadModel;
     end
     % Else study was reloaded
-    bst_set('Study', iStudy, sStudyNew);
+    db_set('ParsedStudy', sStudyNew, iStudy);
 end
 
 % Update display
