@@ -168,7 +168,7 @@ switch contextName
             end
         end
         % Get all Subjects
-        sSubjectsOld = db_get('AllSubjects', 'Id', '@default_subject');
+        sSubjectsOld = db_get(sqlConn, 'AllSubjects', 'Id', '@default_subject');
         % Update Subjects and their Anatomy Files
         [~, ~, ib] = intersect([sSubjectsOld.Id],[sSubjects.Id]);
         for ix = 1 : length(ib)
@@ -212,7 +212,7 @@ switch contextName
             end
         end
         % Get all Studies
-        sStudiesOld = db_get('AllStudies', 'Id', '@inter', '@default_study');
+        sStudiesOld = db_get(sqlConn, 'AllStudies', 'Id', '@inter', '@default_study');
 
         % Update Studies and their Functional Files
         [~, ~, ib] = intersect([sStudiesOld.Id],[sStudies.Id]);
@@ -231,9 +231,9 @@ switch contextName
         for ix = 1 : length(ib)
             db_set(sqlConn, 'ParsedStudy', sStudies(ib(ix)));
         end
-        sql_close(sqlConn);
         % Update links
-        db_links();
+        db_links(sqlConn);
+        sql_close(sqlConn);
         
         
     case 'ProtocolInfo'
@@ -288,10 +288,10 @@ switch contextName
         
         % If subject exists, UPDATE
         if ~isempty(sExistingSubject)
-            iSubject  = db_set('ParsedSubject', sSubject, sExistingSubject.Id);
+            iSubject  = db_set(sqlConn, 'ParsedSubject', sSubject, sExistingSubject.Id);
         % If subject is new, INSERT
         else
-            iSubject  = db_set('ParsedSubject', sSubject);
+            iSubject  = db_set(sqlConn, 'ParsedSubject', sSubject);
         end
         if ~isempty(iSubject)
             argout1 = iSubject;
@@ -335,18 +335,18 @@ switch contextName
             end
             % If study exists, UPDATE
             if ~isempty(sExistingStudy)
-                iStudy  = db_set('ParsedStudy', sStudy, sExistingStudy.Id);
+                iStudy  = db_set(sqlConn, 'ParsedStudy', sStudy, sExistingStudy.Id);
             % If subject is new, INSERT
             else
-                iStudy  = db_set('ParsedStudy', sStudy);
+                iStudy  = db_set(sqlConn, 'ParsedStudy', sStudy);
             end
             iStudiesOut = [iStudiesOut, iStudy];
         end
         if ~isempty(iStudiesOut)
             argout1 = iStudiesOut;
         end
+        db_links(sqlConn, 'Study', iStudiesOut);
         sql_close(sqlConn);
-        db_links('Study', iStudiesOut);
         
         
 %% ==== GUI ====
