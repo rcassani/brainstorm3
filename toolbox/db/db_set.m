@@ -535,13 +535,14 @@ switch contextName
 
         
 %% ==== FUNCTIONAL FILES ====
-    % Success                           = db_set('FunctionalFile', 'Delete')
-    %                                   = db_set('FunctionalFile', 'Delete', FunctionalFileId)
-    %                                   = db_set('FunctionalFile', 'Delete', CondQuery)
-    % FunctionalFileId, FunctionalFile] = db_set('FunctionalFile', FunctionalFile)
-    %                                   = db_set('FunctionalFile', FunctionalFile, FunctionalFileId)
+    % Success                            = db_set('FunctionalFile', 'Delete')
+    %                                    = db_set('FunctionalFile', 'Delete', FunctionalFileId)
+    %                                    = db_set('FunctionalFile', 'Delete', CondQuery)
+    % [FunctionalFileId, FunctionalFile] = db_set('FunctionalFile', FunctionalFile)
+    %                                    = db_set('FunctionalFile', FunctionalFile, FunctionalFileId)
     case 'FunctionalFile'
         % Minimum number of data (or matrix) files to create a datalist (or matrixlist)
+        % TODORC: How many items to create list?
         minListChildren = 2;
         list_names = [];
         % Default parameters
