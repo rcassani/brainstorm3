@@ -18,8 +18,8 @@ function db_load_subjects(isTreeUpdate, isFix)
 %           => If there is such a file, create a new subject subdirectory and
 %              move all the MAT files in this directory.
 %        2. Look for a 'DirDefaultSubject' directory. If it exists, parse its contents
-%           and stores it in the DefaultSubject field of the protocol subjects structure (ProtocolSubjects).
-%           All the other subjects will be stored in the ProtocolSubjects.Subject array.
+%           and stores it in the DefaultSubject Id (0) field of the protocol DataBase.
+%           All the other subjects will be stored in the protocol DataBase with Id > 0.
 %        3. Process all the subjects (ie. all the subdirectories) 
 %           => Call to : db_parse_subject()
 
@@ -63,12 +63,6 @@ elseif ~file_exist(ProtocolInfo.SUBJECTS)
 elseif ~file_exist(bst_fullfile(ProtocolInfo.SUBJECTS, bst_get('DirDefaultSubject')))
     if isFix
         db_fix_protocol();
-    else
-        % Empty protocol
-        ProtocolSubjects = db_template('ProtocolSubjects');
-        ProtocolStudies = db_template('ProtocolStudies');
-        bst_set('ProtocolSubjects', ProtocolSubjects);
-        bst_set('ProtocolStudies', ProtocolStudies);
     end
     bst_progress('stop');
     return;
@@ -124,7 +118,7 @@ sParsedDefaultSubject = db_parse_subject(ProtocolInfo.SUBJECTS, bst_get('DirDefa
 sParsedSubjects = db_parse_subject(ProtocolInfo.SUBJECTS, '', 45);
 
 sqlConn = sql_connect();
-% Delete existing Subjects and AnatomyFiles
+% Delete existing Subjects and AnatomyFiles Tables
 db_set(sqlConn, 'Subject', 'delete');
 db_set(sqlConn, 'AnatomyFile', 'delete');
 % Update Subjects in DataBase
@@ -132,18 +126,19 @@ sSubjects = [sParsedDefaultSubject, sParsedSubjects];
 for ix = 1 : length(sSubjects)
     db_set(sqlConn, 'ParsedSubject', sSubjects(ix));
 end
+sql_close(sqlConn);
 
 %% ===== SUBJECTS TEMPLATE =====
 % If Default anat status not defined for protocol
 if isempty(ProtocolInfo.UseDefaultAnat)
     % Subjects are available : use majority
-    if ~isempty(ProtocolSubjects.Subject) 
+    if ~isempty(sParsedSubjects)
         % Default anatomy
-        ProtocolInfo.UseDefaultAnat = (nnz([ProtocolSubjects.Subject.UseDefaultAnat]) / length((ProtocolSubjects.Subject)) > 0.5);
+        ProtocolInfo.UseDefaultAnat = (nnz([sParsedSubjects.UseDefaultAnat]) / length((sParsedSubjects)) > 0.5);
         % Default channel file
-        nbCat = [nnz([ProtocolSubjects.Subject.UseDefaultChannel] == 0), ...
-                 nnz([ProtocolSubjects.Subject.UseDefaultChannel] == 1), ...
-                 nnz([ProtocolSubjects.Subject.UseDefaultChannel] == 2)];
+        nbCat = [nnz([sParsedSubjects.UseDefaultChannel] == 0), ...
+                 nnz([sParsedSubjects.UseDefaultChannel] == 1), ...
+                 nnz([sParsedSubjects.UseDefaultChannel] == 2)];
         ProtocolInfo.UseDefaultChannel = find(nbCat == max(nbCat), 1) - 1;
     else
         ProtocolInfo.UseDefaultAnat    = 1;
