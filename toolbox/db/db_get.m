@@ -54,6 +54,9 @@ function varargout = db_get(varargin)
 %    - db_get('AllStudies', Fields)  : Get all Studies in current protocol, excluding @inter and global @default_study
 %    - db_get('AllStudies', Fields, '@inter', '@default_study')  : Get all Studies in current protocol including @inter and global @default_study
 %    - db_get('StudyWithCondition', ConditionPath, Fields) : Get studies for a given condition path
+%    - db_get('ChannelStudiesWithSubject', SubjectIDs) : Get all studies (except @intra) where there should be a channel file all iSubjects
+%    - db_get('ChannelStudiesWithSubject', SubjectIDs, Fields) : Get Fields of all studies (except @intra) where there should be a channel file all iSubjects
+%    - db_get('ChannelStudiesWithSubject', SubjectIDs. Fields, @intrac) : Get Fields all studies (including @intra) where there should be a channel file all iSubjects
 %
 % ====== FUNCTIONAL FILES ==============================================================
 %    - db_get('FunctionalFilesWithStudy', StudyID, FunctionalFileFields, FunctionalFileType, FunctionalFileSubtype, SubjectFields)       : Get FunctionalFiles for StudyID
@@ -1121,6 +1124,43 @@ switch contextName
         end
         varargout{1} = db_get(sqlConn, table, fileName, fields);
         varargout{2} = table;
+
+
+%% ==== CHANNEL STUDIES WITH SUBJECT ====
+    % sStudies = db_get('ChannelStudiesWithSubject', iSubjects)                   % Get all studies (except @intra) where there should be a channel file all iSubjects
+    % sStudies = db_get('ChannelStudiesWithSubject', iSubjects, fields)           % Get specific sStudy fields
+    % sStudies = db_get('ChannelStudiesWithSubject', iSubjects, fields, '@intra') % Include @intra study
+    case 'ChannelStudiesWithSubject'
+        fields = '*';
+        iSubjects = args{1};
+        if length(args) > 1
+            fields = args{2};
+            if length(args) > 2 && strcmpi(varargin{3}, '@intra')
+                getIntra = 1;
+            else
+                getIntra = 0;
+            end
+        end
+        % Process all subjects
+        sSubjects = db_get(sqlConn, 'Subject', iSubjects, {'Id', 'UseDefaultChannel'});
+        sStudies = [];
+        for ix = 1 : length(sSubjects)
+            % If subject uses default channel file
+            if (sSubjects(ix).UseDefaultChannel ~= 0)
+                % Get default study for this subject
+                sStudy = db_get(sqlConn, 'DefaultStudy', sSubjects(ix).Id, fields);
+                sStudies = [sStudies, sStudy];
+            % Else: get all the studies belonging to this subject
+            else
+                if getIntra
+                    sStudiesSub = db_get(sqlConn, 'StudiesFromSubject', sSubjects(ix).Id, fields, '@intra');
+                else
+                    sStudiesSub = db_get(sqlConn, 'StudiesFromSubject', sSubjects(ix).Id, fields);
+                end
+                sStudies = [sStudies, sStudiesSub];
+            end
+        end
+        varargout{1} = sStudies;
 
 
 %% ==== ERROR ====      

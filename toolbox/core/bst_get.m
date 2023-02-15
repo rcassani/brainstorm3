@@ -854,6 +854,7 @@ switch contextName
 %% ==== CHANNEL STUDIES WITH SUBJECT ====
     % Usage: iStudies = bst_get('ChannelStudiesWithSubject', iSubjects, 'NoIntra')
     case 'ChannelStudiesWithSubject'
+        warning('bst_set(''%s'') will be deprecated in new Brainstorm database system. Use db_set(''%s'')', contextName, contextName);
         % Parse inputs
         if (nargin >= 2) && isnumeric(varargin{2})
             iSubjects = varargin{2};
@@ -861,36 +862,12 @@ switch contextName
             error('Invalid call to bst_get()');
         end
         if (nargin == 3) && strcmpi(varargin{3}, 'NoIntra')
-            NoIntra = 1;
+            intra_str = '';
         else
-            NoIntra = 0;
+            intra_str = '@intra';
         end
-        % Process all subjects
-        iStudies = [];
-        sqlConn = sql_connect();
-        for i=1:length(iSubjects)
-            iSubject = iSubjects(i);
-            sSubject = db_get(sqlConn, 'Subject', iSubject, 'UseDefaultChannel');
-            % No subject: error
-            if isempty(sSubject) 
-                continue
-            % If subject uses default channel file    
-            elseif (sSubject.UseDefaultChannel ~= 0)
-                % Get default study for this subject
-                sStudy = db_get(sqlConn, 'DefaultStudy', iSubject, 'Id');
-                iStudies = [iStudies, sStudy.Id];
-            % Else: get all the studies belonging to this subject
-            else
-                if NoIntra
-                    sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, 'Id');
-                else
-                    sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, 'Id', '@intra');
-                end
-                iStudies = [iStudies, sStudies.Id];
-            end
-        end
-        sql_close(sqlConn);
-        argout1 = iStudies;
+        sStudies = db_get('ChannelStudiesWithSubject', iSubjects, 'Id', intra_str);
+        argout1 = [sStudies.Id];
     
         
 %% ==== STUDIES COUNT ====
