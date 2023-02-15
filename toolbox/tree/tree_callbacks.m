@@ -661,7 +661,7 @@ switch (lower(action))
                 % Get subject
                 iStudy = bstNodes(1).getStudyIndex();
                 iSubject = bstNodes(1).getItemIndex();
-                sSubject = bst_get('Subject', iSubject);
+                sSubject = db_get('Subject', iSubject);
                 % If node is a directory node
                 isDirNode = (bstNodes(1).getStudyIndex() == 0);
                 % === EDIT SUBJECT ===
