@@ -544,7 +544,7 @@ switch contextName
         argout1 = GlobalData.DataBase.(contextName)(argout2);
 
     case 'ProtocolSubjects'
-        warning('bst_get(\''%s'') is deprecated with the new Brainstorm database system.', contextName);
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'AllSubjects');
         argout1 = db_template('ProtocolSubjects');
         if GlobalData.DataBase.iProtocol == 0
             % No protocol loaded
@@ -578,7 +578,7 @@ switch contextName
         argout1.Subject = sSubjects;
         
     case 'ProtocolStudies'
-        warning('bst_get(\''%s'') is deprecated with the new Brainstorm database system.', contextName);
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'AllStudies');
         argout1 = db_template('ProtocolStudies');
         if GlobalData.DataBase.iProtocol == 0
             % No protocol loaded
