@@ -37,6 +37,8 @@ if (length(varargin) >= 1)
 else
     NoIntra = 0;
 end
+
+sqlConn = sql_connect();
 % Process all nodes
 iStudies = [];
 for iNode = 1:length(bstNodes)
@@ -46,22 +48,22 @@ for iNode = 1:length(bstNodes)
         % ==== DATABASE (Studies/cond, Studies/subj) ====
         case {'studydbsubj', 'studydbcond'}
             % Get all the protocol subjects (except default subject)
-            sSubjects = db_get('AllSubjects', 'Id');
+            sSubjects = db_get(sqlConn, 'AllSubjects', 'Id');
             if (length(sSubjects) <= 0)
                 return
             end
             % Get the channel studies for all the subjects of the protocol
-            iStudies = addAllSubjectsStudies(iStudies, [sSubjects.Id], NoIntra);
+            iStudies = addAllSubjectsStudies(sqlConn, sqlConniStudies, [sSubjects.Id], NoIntra);
             
         % ==== SUBJECT ====
         case 'studysubject'
             iStudy   = bstNodes(iNode).getStudyIndex();
             iSubject = bstNodes(iNode).getItemIndex();
-            sSubject = db_get('Subject', iSubject, {'Id', 'UseDefaultChannel'});
+            sSubject = db_get(sqlConn, 'Subject', iSubject, {'Id', 'UseDefaultChannel'});
             % If subject/condition mode => 'studysubject' contains many study nodes
             % OR: subject uses default channel file
             if (iStudy == 0) || (sSubject.UseDefaultChannel ~= 0)
-                iStudies = addAllSubjectsStudies(iStudies, sSubject.Id, NoIntra);
+                iStudies = addAllSubjectsStudies(sqlConn, iStudies, sSubject.Id, NoIntra);
             % Else: condition/subject mode => 'studysubject' node is a study node
             else
                 iStudies = [iStudies, iStudy];
@@ -78,7 +80,7 @@ for iNode = 1:length(bstNodes)
                 % Get condition name
                 ConditionPath = bstNodes(iNode).getFileName();
                 % Get all the studies related with the condition name
-                sStudies = db_get('StudyWithCondition', ConditionPath, 'Id');
+                sStudies = db_get(sqlConn, 'StudyWithCondition', ConditionPath, 'Id');
                 iStudies = [iStudies, [sStudies.Id]];
             end
             
@@ -97,16 +99,16 @@ for iNode = 1:length(bstNodes)
             % Else: node is a 'Subject common files' in cond/subject view mode
             else
                 % Get all the protocol subjects (except default subject)
-                sSubjects = db_get('AllSubjects', 'Id');
+                sSubjects = db_get(sqlConn, 'AllSubjects', 'Id');
                 if (length(sSubjects) <= 0)
                     return
                 end
                 % For each subject
                 for ix = 1:length(sSubjects)
-                    sSubject = db_get('Subject', sSubjects(ix), {'Id', 'UseDefaultChannel'}, 1);
+                    sSubject = db_get(sqlConn, 'Subject', sSubjects(ix), {'Id', 'UseDefaultChannel'}, 1);
                     % If subject uses local default subject (shares Channel file but not anatomy)
                     if (sSubject.UseDefaultChannel == 1)
-                        iStudies = addAllSubjectsStudies(iStudies, sSubject.Id, NoIntra);
+                        iStudies = addAllSubjectsStudies(sqlConn, iStudies, sSubject.Id, NoIntra);
                     end
                 end
             end
@@ -135,12 +137,13 @@ end
 iStudies = unique(iStudies);
 iChanStudies = [];
 for i = 1:length(iStudies)
-    [sChannels, iChanStudy] = db_get('ChannelFromStudy', iStudies(i));
+    [sChannels, iChanStudy] = db_get(sqlConn, 'ChannelFromStudy', iStudies(i));
     if ~isempty(iChanStudy)
         iChanStudies(end + 1) = iChanStudy;
     end
 end
 iStudies = unique(iChanStudies);
+sql_close(sqlConn);
 
 end
 
@@ -150,13 +153,14 @@ end
 %  ===== HELPERS =================================================================
 %  ===============================================================================
 %% ===== ADD ALL SUBJECT STUDIES =====
-function iStudies = addAllSubjectsStudies(iStudies, iSubject, NoIntra)
+function iStudies = addAllSubjectsStudies(sqlConn, iStudies, iSubject, NoIntra)
     % Get the studies in which the channel file should be imported
     if NoIntra
-        iStudies = [iStudies, bst_get('ChannelStudiesWithSubject', iSubject, 'NoIntra')];
+        sStudies = db_get(sqlConn, 'ChannelStudiesWithSubject', iSubject, 'Id');
     else
-        iStudies = [iStudies, bst_get('ChannelStudiesWithSubject', iSubject)];
+        sStudies = db_get(sqlConn, 'ChannelStudiesWithSubject', iSubject, 'Id', '@intra');
     end
+    iStudies = [iStudies, [sStudies.Id]];
 end
 
 
