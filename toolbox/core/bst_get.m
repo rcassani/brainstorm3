@@ -1202,14 +1202,15 @@ switch contextName
         % Get study in database
         sqlConn = sql_connect();
         iStudy = [];
-        sStudy = db_get(sqlConn, 'Study', StudyFile, 'Id');
+        isStudy = sql_query(sqlConn, 'EXIST', 'Study', struct('FileName', StudyFile));
         % If data file instead on Study file
-        if isempty(sStudy)
+        if ~isStudy
             sFuncFile = db_get(sqlConn, 'FunctionalFile', StudyFile, 'Study');
             if ~isempty(sFuncFile)
                 iStudy = sFuncFile.Study;
             end
         else
+            sStudy = db_get(sqlConn, 'Study', StudyFile, 'Id');
             iStudy = sStudy.Id;
         end
         sql_close(sqlConn);
