@@ -621,6 +621,8 @@ switch contextName
     %        [sStudy, iStudy] = bst_get('Study')
     %        [sStudy, iStudy] = bst_get('Study', iStudies)
     case 'Study'
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
@@ -854,7 +856,7 @@ switch contextName
 %% ==== CHANNEL STUDIES WITH SUBJECT ====
     % Usage: iStudies = bst_get('ChannelStudiesWithSubject', iSubjects, 'NoIntra')
     case 'ChannelStudiesWithSubject'
-        warning('bst_set(''%s'') will be deprecated in new Brainstorm database system. Use db_set(''%s'')', contextName, contextName);
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
         % Parse inputs
         if (nargin >= 2) && isnumeric(varargin{2})
             iSubjects = varargin{2};
@@ -1066,7 +1068,7 @@ switch contextName
 %% ==== SURFACE FILE ====
     % Usage : [sSubject, iSubject, iSurface] = bst_get('SurfaceFile', SurfaceFile)
     case 'SurfaceFile'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''SubjectFromAnatomyFile'')', contextName);
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get('''')', contextName, 'SubjectFromAnatomyFile');
         % No protocol in database
         if isempty(GlobalData) || isempty(GlobalData.DataBase) || isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1091,6 +1093,7 @@ switch contextName
     %         [sSurface, iSurface] = bst_get('SurfaceFileByType', MriFile,     SurfaceType)
     %         [sSurface, iSurface] = bst_get('SurfaceFileByType', ...,         SurfaceType, isDefaultOnly)
     case 'SurfaceFileByType'
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'AnatomyFilesWithSubject');
         % By default: return only the default surfaces of the category
         if (nargin < 4)
             isDefaultOnly = 1;
