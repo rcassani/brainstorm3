@@ -590,10 +590,15 @@ if ~isempty(iTargetStudies)
                         iValidResult = ~isPureKernel(sFuncFiles);
                     end
                     % Remove bad trials
-                    for iRes = 1:length(iValidResult)
-                        if iValidResult(iRes)
-                            sFuncFileData = db_get(sqlConn, 'ParentFromFunctionalFile', ResultsIds(iRes), 'ExtraNum');
-                            iValidResult(iRes) = ~sFuncFileData.ExtraNum;
+                    if ~GetBadTrials
+                        for iRes = 1:length(iValidResult)
+                            if iValidResult(iRes)
+                                % Search for Data parent
+                                sFuncFileData = db_get(sqlConn, 'ParentFromFunctionalFile', ResultsIds(iRes), 'ExtraNum');
+                                if ~isempty(sFuncFileData)
+                                    iValidResult(iRes) = ~sFuncFileData.ExtraNum;
+                                end
+                            end
                         end
                     end
                     % Return selected files
