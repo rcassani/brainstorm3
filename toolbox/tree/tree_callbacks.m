@@ -204,7 +204,7 @@ switch (lower(action))
             % Mark/unmark (items selected : 1/category)
             case {'scalp', 'outerskull', 'innerskull', 'cortex', 'fibers', 'fem'}
                 iSubject = bstNodes(1).getStudyIndex();
-                sSubject = bst_get('Subject', iSubject);
+                sSubject = db_get('Subject', iSubject);
                 iSurface = bstNodes(1).getItemIndex();
                 % If surface is not selected yet
                 switch lower(nodeType)
@@ -260,15 +260,14 @@ switch (lower(action))
             % Mark/unmark (items selected : 1)
             case 'headmodel'
                 iStudy     = bstNodes(1).getStudyIndex();
-                sStudy     = bst_get('Study', iStudy);
+                sStudy     = db_get('Study', iStudy);
                 iHeadModel = bstNodes(1).getItemIndex();
                 % If item is not marked yet : mark it (and unmark all the other nodes)
                 if (~ismember(iHeadModel, sStudy.iHeadModel) || ~bstNodes(1).isMarked())
                     % Select this node (and unselect all the others)
                     panel_protocols('MarkUniqueNode', bstNodes(1));
                     % Save in database selected file
-                    sStudy.iHeadModel = iHeadModel;
-                    bst_set('Study', iStudy, sStudy);
+                    db_set('Study', struct('iHeadModel', iHeadModel), iStudy);
                 % Else, this item is already marked : keep it marked
                 end
                 
@@ -305,9 +304,9 @@ switch (lower(action))
             % ===== STAT/RESULTS =====
             case 'presults'
                 % Read the head model from the file
-                sFunctFile = db_get('FunctionalFile', filenameRelative, 'ExtraStr2'); % HeadModelType
+                ResultsMat = in_bst_results(filenameRelative, 0, 'HeadModelType');
                 % Volume: MRI Viewer
-                if strcmpi(sFunctFile.ExtraStr2, 'volume')
+                if strcmpi(ResultsMat.HeadModelType, 'volume')
                     sSubject  = db_get('SubjectFromFunctionalFile', filenameRelative, 'iAnatomy');
                     sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
                     view_mri(sAnatFile.FileName, filenameRelative);
@@ -330,7 +329,7 @@ switch (lower(action))
                 % Get study
                 iStudy = bstNodes(1).getStudyIndex();
                 iTimefreq = bstNodes(1).getItemIndex();
-                sStudy = bst_get('Study', iStudy);
+                sTimeFreq = db_get('FunctionalFile', iTimefreq, {'SubType', 'ExtraStr1'});
                 % Get data type
                 if strcmpi(char(bstNodes(1).getType()), 'ptimefreq')
                     TimefreqMat = in_bst_timefreq(filenameRelative, 0, 'DataType');
@@ -341,8 +340,8 @@ switch (lower(action))
                     end
                     DataFile = [];
                 else
-                    DataType = sStudy.Timefreq(iTimefreq).DataType;
-                    DataFile = sStudy.Timefreq(iTimefreq).DataFile;
+                    DataType = sTimeFreq.SubType;
+                    DataFile = sTimeFreq.ExtraStr1;
                 end
                 % PAC and DPAC
                 if ~isempty(strfind(filenameRelative, '_pac_fullmaps'))
@@ -353,7 +352,7 @@ switch (lower(action))
                     return;
                 end
                 % Get subject 
-                sSubject = bst_get('Subject', sStudy.BrainStormSubject);
+                sSubject = db_get('SubjectFromStudy', iStudy);
                 switch DataType
                     % Results: display on cortex or MRI
                     case 'results'
@@ -365,9 +364,9 @@ switch (lower(action))
                         else
                             % Get head model type for the sources file
                             if ~isempty(DataFile)
-                                [sStudyData, iStudyData, iResult] = bst_get('AnyFile', DataFile);
-                                if ~isempty(sStudyData)
-                                    isVolume = strcmpi(sStudyData.Result(iResult).HeadModelType, 'volume');
+                                sResult = db_get('FunctionalFile', DataFile);
+                                if ~isempty(sResult)
+                                    isVolume = strcmpi(sResult.ExtraStr2, 'volume');
                                 else
                                     disp('BST> Error: This file was linked to a source file that was deleted.');
                                     isVolume = 0;
@@ -383,9 +382,9 @@ switch (lower(action))
                                 view_surface_data([], filenameRelative);
                             % MRI
                             elseif isVolume && ~isempty(sSubject) && ~isempty(sSubject.iAnatomy)
-                                MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
-                                % view_surface_data(MriFile, filenameRelative);
-                                view_mri(MriFile, filenameRelative);
+                                sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                                % view_surface_data(sAnatFile.FileName, filenameRelative);
+                                view_mri(sAnatFile.FileName, filenameRelative);
                             % Else: single sensor
                             else
                                 view_timefreq(filenameRelative, 'SingleSensor');
@@ -425,7 +424,7 @@ switch (lower(action))
                 % Get study
                 iStudy = bstNodes(1).getStudyIndex();
                 iTimefreq = bstNodes(1).getItemIndex();
-                sStudy = bst_get('Study', iStudy);
+                sTimeFreq = db_get('FunctionalFile', iTimefreq, {'SubType', 'ExtraStr1'});
                 % Get data type
                 if strcmpi(nodeType, 'pspectrum')
                     TimefreqMat = in_bst_timefreq(filenameRelative, 0, 'DataType');
@@ -436,18 +435,18 @@ switch (lower(action))
                     end
                     DataFile = [];
                 else
-                    DataType = sStudy.Timefreq(iTimefreq).DataType;
-                    DataFile = sStudy.Timefreq(iTimefreq).DataFile;
+                    DataType = sTimeFreq.DataType;
+                    DataFile = sTimeFreq.DataFile;
                 end
                 % Get subject 
-                sSubject = bst_get('Subject', sStudy.BrainStormSubject);
+                sSubject = db_get('SubjectFromStudy', iStudy);
                 switch (DataType)
                     % Results: display on cortex or MRI
                     case 'results'
                         % Get head model type for the sources file
                         if ~isempty(DataFile)
-                            [sStudyData, iStudyData, iResult] = bst_get('AnyFile', DataFile);
-                            isVolume = strcmpi(sStudyData.Result(iResult).HeadModelType, 'volume');
+                            sResult = db_get('FunctionalFile', DataFile);
+                            isVolume = strcmpi(sResult.ExtraStr2, 'volume');
                         % Get the default head model
                         else
                             wloc    = whos('-file', filenameFull, 'GridLoc');
@@ -458,9 +457,9 @@ switch (lower(action))
                         if ~isempty(sSubject) && ~isempty(sSubject.iCortex) && ~isVolume
                             view_surface_data([], filenameRelative);
                         elseif ~isempty(sSubject) && ~isempty(sSubject.iAnatomy)
-                            MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
-                            %view_surface_data(MriFile, filenameRelative);
-                            view_mri(MriFile, filenameRelative);
+                            sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                            %view_surface_data(sAnatFile.FileName, filenameRelative);
+                            view_mri(sAnatFile.FileName, filenameRelative);
                         else
                             view_timefreq(filenameRelative, 'SingleSensor');
                         end
