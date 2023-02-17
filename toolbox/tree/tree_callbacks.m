@@ -2608,15 +2608,17 @@ end % END SWITCH( ACTION )
                 iStudies(iNode) = bstNodes(iNode).getStudyIndex();
             end
             % Get all the studies
-            sStudies = bst_get('Study', iStudies);
+            sStudies = db_get('Study', iStudies);
             % Get first file in the datbase
-            [sStudy,iStudy,iTf] = bst_get('TimefreqFile', ResultFiles{1});
+            sTimefreqFile = db_get('FunctionalFile', ResultFiles{1});
             % Try to get source model type from the parent file
-            if ~isempty(sStudy) && ~isempty(sStudy.Timefreq(iTf).DataFile) && strcmpi(sStudy.Timefreq(iTf).DataType, 'results')
+            if ~isempty(sTimefreqFile.SubType) && strcmpi(sTimefreqFile.SubType, 'results')
                 % Get parent source file
-                [sStudy,iStudy,iRes] = bst_get('ResultsFile', sStudy.Timefreq(iTf).DataFile);
-                if ~isempty(sStudy) && ~isempty(sStudy.Result(iRes).HeadModelType)
-                    HeadModelType = sStudy.Result(iRes).HeadModelType;
+                if ~isempty(sTimefreqFile.Parent)
+                    sResultFile = db_get('FunctionalFile', sTimefreqFile.Parent, 'ExtraStr2');
+                    if ~isempty(sResultFile.ExtraStr2) % HeadModelType
+                        HeadModelType = sResultFile.ExtraStr2;
+                    end
                 end
             end
         else
@@ -2629,53 +2631,56 @@ end % END SWITCH( ACTION )
                 return;
             end
             % Get all the studies
-            sStudies = bst_get('Study', iStudies);
+            sStudies = db_get('Study', iStudies);
+            sResultFiles = db_get('FunctionalFile', iResults);
             % Build results files list
             for iRes = 1:length(iResults)
-                ResultFiles{iRes} = sStudies(iRes).Result(iResults(iRes)).FileName;
+                ResultFiles{iRes} = sResultFiles(iRes).FileName;
                 if isempty(HeadModelType) || strcmpi(HeadModelType, 'unknown')
-                    HeadModelType = sStudies(iRes).Result(iResults(iRes)).HeadModelType;
-                elseif ~isequal(HeadModelType, sStudies(iRes).Result(iResults(iRes)).HeadModelType)
+                    HeadModelType = sResultFiles(iRes).ExtraStr2; % HeadModelType
+                elseif ~isequal(HeadModelType, sResultFiles(iRes).ExtraStr2)
                     % disp('PROJECT> Selected node contains different type of source files. Cannot be handled together.');
                     return;
                 end
             end
         end
         % Get all the subjects
-        SubjectFiles = unique({sStudies.BrainStormSubject});
+        SubjectIds = unique([sStudies.Subject]);
         nCortex = 0;
         
         % ===== SINGLE SUBJECT =====
         sCortex = [];
         isGroupAnalysis = 0;
         % If only one subject: offer to reproject the sources on it
-        if (length(SubjectFiles) == 1)
+        if (length(SubjectIds) == 1)
             % Get subject
-            [sSubject, iSubject] = bst_get('Subject', SubjectFiles{1});
+            sSingleSubject = db_get('Subject', SubjectIds(1));
             % If not using default anat and there is more than one cortex
-            if ~sSubject.UseDefaultAnat && ~isempty(sSubject.iCortex)
+            if ~sSingleSubject.UseDefaultAnat && ~isempty(sSingleSubject.iCortex)
                 % Get all cortex surfaces
-                sCortex = bst_get('SurfaceFileByType', iSubject, 'Cortex', 0);
+                sCortex = db_get('AnatomyFilesWithSubject', sSingleSubject.Id, '*', 'Surface', 'Cortex');
                 nCortex = length(sCortex);
             end
-            UseDefaultAnat = sSubject.UseDefaultAnat;
+            UseDefaultAnat = sSingleSubject.UseDefaultAnat;
             % Is this the group analysis subject
-            if strcmpi(sSubject.Name, bst_get('NormalizedSubjectName'))
+            if strcmpi(sSingleSubject.Name, bst_get('NormalizedSubjectName'))
                 isGroupAnalysis = 1;
             end
         % If more than one subject: just check if the subjects are using default anatomy
         else
-            for iSubj = 1:length(SubjectFiles)
-                sSubjects(iSubj) = bst_get('Subject', SubjectFiles{iSubj});
+            for iSubj = 1:length(SubjectIds)
+                sSubjects = db_get('Subject', SubjectIds);
             end
             UseDefaultAnat = any([sSubjects.UseDefaultAnat]);
         end
 
         % ===== DEFAULT ANATOMY =====
         % Get default subject
-        sDefSubject = bst_get('Subject',0);
+        sDefSubject = db_get('Subject',0);
+        % Get all anatomies for default subject
+        sDefAnats = db_get('AnatomyFilesWithSubject', sDefSubject.Id, '*', 'Anatomy');
         % Get all cortex surfaces for default subject
-        sDefCortex = bst_get('SurfaceFileByType', 0, 'Cortex', 0);
+        sDefCortex = db_get('AnatomyFilesWithSubject', sDefSubject.Id, '*', 'Surface', 'Cortex');
         nCortex = nCortex + length(sDefCortex);
         
         % ===== CREATE MENUS =====
@@ -2702,7 +2707,7 @@ end % END SWITCH( ACTION )
             end
             % === INDIVIDUAL SUBJECT ===
             if ~isempty(sCortex)
-                jMenuSubj = gui_component('Menu', jMenu, [], sSubject.Name, IconLoader.ICON_SUBJECT, [], []);
+                jMenuSubj = gui_component('Menu', jMenu, [], sSingleSubject.Name, IconLoader.ICON_SUBJECT, [], []);
                 % Loop on all the cortex surfaces
                 for iCort = 1:length(sCortex)
                     gui_component('MenuItem', jMenuSubj, [], sCortex(iCort).Comment, IconLoader.ICON_CORTEX, [], @(h,ev)bst_project_sources(ResultFiles, sCortex(iCort).FileName));
@@ -2714,7 +2719,7 @@ end % END SWITCH( ACTION )
             end
         end
         % VOLUME: Menu "project on template grid"
-        if ismember(HeadModelType, {'unknown','volume'}) && ~isempty(sDefSubject) && ~isempty(sDefSubject.Anatomy)
+        if ismember(HeadModelType, {'unknown','volume'}) && ~isempty(sDefSubject) && ~isempty(sDefAnats)
             if isSeparator
                 AddSeparator(jPopup);
             end
@@ -2755,20 +2760,21 @@ end % END SWITCH( ACTION )
     function fcnPopupAlign()
         import org.brainstorm.icon.*;
 
+        iSubjectAlign = bstNodes(1).getStudyIndex();
+        sAnatsAlign = db_get('AnatomyFilesWithSubject', iSubjectAlign, {'Comment', 'FileName'}, 'Volume', 'Image');
+        sSurfsAlign = db_get('AnatomyFilesWithSubject', iSubjectAlign, {'Comment', 'FileName'}, 'Surface');
         jMenuAlignManual = gui_component('Menu', jPopup, [], 'Align manually on...', IconLoader.ICON_ALIGN_SURFACES, [], []);
         % ADD ANATOMIES
-        for iAnat = 1:length(sSubject.Anatomy)
-            if isempty(strfind(sSubject.Anatomy(iAnat).FileName, '_volatlas'))
-                fullAnatFile = bst_fullfile(ProtocolInfo.SUBJECTS, sSubject.Anatomy(iAnat).FileName);
-                gui_component('MenuItem', jMenuAlignManual, [], sSubject.Anatomy(iAnat).Comment, IconLoader.ICON_ANATOMY, [], @(h,ev)tess_align_manual(fullAnatFile, filenameFull));
-            end
+        for ix = 1:length(sAnatsAlign)
+            fullAnatFile = bst_fullfile(ProtocolInfo.SUBJECTS, sAnatsAlign(ix).FileName);
+            gui_component('MenuItem', jMenuAlignManual, [], sAnatsAlign(ix).Comment, IconLoader.ICON_ANATOMY, [], @(h,ev)tess_align_manual(fullAnatFile, filenameFull));
         end
         % ADD SURFACES
-        for iSurf = 1:length(sSubject.Surface)
+        for ix = 1:length(sSurfsAlign)
             % Ignore itself
-            fullSurfFile = bst_fullfile(ProtocolInfo.SUBJECTS, sSubject.Surface(iSurf).FileName);
+            fullSurfFile = bst_fullfile(ProtocolInfo.SUBJECTS, sSurfsAlign(ix).FileName);
             if ~file_compare(fullSurfFile, filenameFull)
-                gui_component('MenuItem', jMenuAlignManual, [], sSubject.Surface(iSurf).Comment, IconLoader.ICON_SURFACE, [], @(h,ev)tess_align_manual(fullSurfFile, filenameFull));
+                gui_component('MenuItem', jMenuAlignManual, [], sSurfsAlign(ix).Comment, IconLoader.ICON_SURFACE, [], @(h,ev)tess_align_manual(fullSurfFile, filenameFull));
             end
         end
     end
@@ -3099,10 +3105,10 @@ function FileNames = GetAllFilenames(bstNodes, targetType, isExcludeBad, isFullP
                     disp('BST> Error in tree_dependencies.');
                     continue;
                 end
-                for i = 1:length(iDepStudies)
-                    sStudy = bst_get('Study', iDepStudies(i));
-                    if (~isExcludeBad || ~sStudy.Data(iDepItems(i)).BadTrial)
-                        FileNames{end+1} = sStudy.Data(iDepItems(i)).FileName;
+                sFunctFiles = db_get('FunctionalFile', iDepItems, {'FileName', 'ExtraNum'});
+                for i = 1:length(sFunctFiles)
+                    if (~isExcludeBad || ~sFunctFiles(i).ExtraNum) % BadTrial
+                        FileNames{end+1} = sFunctFiles(i).FileName;
                         if isFullPath
                             FileNames{end} = file_fullpath(FileNames{end});
                         end
@@ -3114,9 +3120,9 @@ function FileNames = GetAllFilenames(bstNodes, targetType, isExcludeBad, isFullP
                     disp('BST> Error in tree_dependencies.');
                     continue;
                 end
-                for i = 1:length(iDepStudies)
-                    sStudy = bst_get('Study', iDepStudies(i));
-                    FileNames{end+1} = sStudy.Matrix(iDepItems(i)).FileName;
+                sFunctFiles = db_get('FunctionalFile', iDepItems, {'FileName', 'ExtraNum'});
+                for i = 1:length(sFunctFiles)
+                    FileNames{end+1} = sFunctFiles(i).FileName;
                     if isFullPath
                         FileNames{end} = file_fullpath(FileNames{end});
                     end
@@ -3266,9 +3272,9 @@ function SurfaceEnvelope_Callback(TessFile)
     % Make output filename relative
     NewTessFile = file_short(NewTessFile);
     % Get subject
-    [sSubject, iSubject] = bst_get('SurfaceFile', TessFile);
+    sAnatFile = db_get('AnatomyFile', TessFile);
     % Register this file in Brainstorm database
-    db_add_surface(iSubject, NewTessFile, sSurf.Comment);
+    db_add_anatomyfile(sAnatFile.Subject, NewTessFile, sSurf.Comment);
     % Close progress bar
     bst_progress('stop');
 end
@@ -3283,13 +3289,14 @@ function SurfaceFillHoles_Callback(TessFile)
     % Load surface file (Faces field)
     sHead = in_tess_bst(TessFile, 0);
     % Get subject
-    [sSubject, iSubject] = bst_get('SurfaceFile', TessFile);
+    sSubject = db_get('SubjectFromAnatomyFile', TessFile);
     if isempty(sSubject.Anatomy)
         bst_error('No MRI available.', 'Remove surface holes');
         return;
     end
     % Load MRI
-    sMri = bst_memory('LoadMri', sSubject.Anatomy(sSubject.iAnatomy).FileName);
+    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy);
+    sMri = bst_memory('LoadMri', sAnatFile.FileName);
     
     % ===== PROCESS =====
     % Remove holes
@@ -3305,7 +3312,7 @@ function SurfaceFillHoles_Callback(TessFile)
     % Save head
     sHeadNew = bst_history('add', sHeadNew, 'clean', 'Filled holes');
     bst_save(NewTessFile, sHeadNew, 'v7');
-    db_add_surface(iSubject, NewTessFile, sHeadNew.Comment);
+    db_add_anatomyfile(sSubject.Id, NewTessFile, sHeadNew.Comment);
     bst_progress('inc', 5);
     % Stop
     bst_progress('stop');
@@ -3374,17 +3381,15 @@ end
 
 %% ===== DISPLAY MEG HELMET =====
 function [hFig, iDS, iFig] = DisplayHelmet(iStudy, ChannelFile)
-    % Get study
-    sStudy = bst_get('Study', iStudy);
-    if isempty(sStudy)
+    % Get subject
+    sSubject = db_get('SubjectFromStudy', iStudy);
+    if isempty(sSubject)
         return
     end
-    % Get subject
-    sSubject = bst_get('Subject', sStudy.BrainStormSubject);
     % View scalp surface if available
     if ~isempty(sSubject) && ~isempty(sSubject.iScalp)
-        ScalpFile = sSubject.Surface(sSubject.iScalp).FileName;
-        hFig = view_surface(ScalpFile, 0.2);
+        sScalpFile = db_get('AnatomyFile', sSubject.iScalp, 'FileName');
+        hFig = view_surface(sScalpFile.FileName, 0.2);
     else
         hFig = [];
     end    
@@ -3439,8 +3444,7 @@ function SetDefaultHeadModel(bstNode, iHeadModel, iStudy, sStudy)
     % Select this node (and unselect all the others)
     panel_protocols('MarkUniqueNode', bstNode);
     % Save in database selected file
-    sStudy.iHeadModel = iHeadModel;
-    bst_set('Study', iStudy, sStudy);
+    db_set('Study', struct('iHeadModel', iHeadModel), iStudy);
     % Repaint tree
     panel_protocols('RepaintTree');
 end
@@ -3595,13 +3599,13 @@ function SaveWhitenedData(ResultsFile)
     newDataFile = file_unique(fullfile(fPath, [fBase, '_zscore_whitened', fExt]));
     bst_save(newDataFile, DataMat, 'v6');
     % Get study
-    [sStudy, iStudy] = bst_get('DataFile', ResultsMat.DataFile);
+    sDataFile = db_get('FunctionalFile', ResultsMat.DataFile);
     % Add to database
-    [sStudy, iNewData] = db_add_data(iStudy, newDataFile, DataMat);
+    [sStudy, iNewData] = db_add_data(sDataFile.Study, newDataFile, DataMat);
     % Update display
-    panel_protocols('UpdateNode', 'Study', iStudy);
+    panel_protocols('UpdateNode', 'Study', sDataFile.Study);
     % Select node
-    panel_protocols('SelectNode', [], 'data', iStudy, iNewData);
+    panel_protocols('SelectNode', [], 'data', sDataFile.Study, iNewData);
     % Hide progress bar 
     bst_progress('stop');
 end
@@ -3619,22 +3623,22 @@ end
 %% ===== PROJECT SOURCES: ALL SUBJECTS =====
 function ProjectSourcesAll(ResultFiles)
     % Get all the subjects in the protocol
-    sProtocolSubjects = bst_get('ProtocolSubjects');
+    sSubjects = db_get('AllSubjects');
     % Find subjects non using the default anatomy and with a valid default cortex
     iSubjects = [];
-    for i = 1:length(sProtocolSubjects.Subject)
-        if ~sProtocolSubjects.Subject(i).UseDefaultAnat && ~isempty(sProtocolSubjects.Subject(i).iCortex)
+    for i = 1:length(sSubjects)
+        if ~sSubjects(i).UseDefaultAnat && ~isempty(sSubjects(i).iCortex)
             iSubjects(end+1) = i;
         end
     end
     % Ask which subject to use
-    SubjectName = java_dialog('combo', '<HTML>Select the destination subject:<BR><BR>', 'Project sources', [], {sProtocolSubjects.Subject(iSubjects).Name});
+    SubjectName = java_dialog('combo', '<HTML>Select the destination subject:<BR><BR>', 'Project sources', [], {sSubjects(iSubjects).Name});
     if isempty(SubjectName)
         return
     end
-    iSubject = find(strcmpi(SubjectName, {sProtocolSubjects.Subject.Name}));
+    iSubject = find(strcmpi(SubjectName, {sSubjects.Name}));
     % Get all cortex surfaces
-    sCortex = bst_get('SurfaceFileByType', iSubject, 'Cortex', 0);
+    sCortex = db_get('AnatomyFilesWithSubject', sSubjects(iSubject).Id, {'Comment', 'FileName'}, 'Surface', 'Cortex');
     % If there is more than one cortex surface: ask which one to use
     if (length(sCortex) > 1)
         SurfaceComment = java_dialog('combo', '<HTML>Select the destination cortex surface:<BR><BR>', 'Project sources', [], {sCortex.Comment});
@@ -3656,17 +3660,17 @@ end
 %% ===== PROJECT GRID: ALL SUBJECTS =====
 function ProjectGridAll(ResultFiles)
     % Get all the subjects in the protocol
-    sProtocolSubjects = bst_get('ProtocolSubjects');
+    sSubjects = db_get('AllSubjects');
     % Use all the subjects except the group analysis one (already the source)
-    iSubjects = find(~strcmpi({sProtocolSubjects.Subject.Name}, bst_get('NormalizedSubjectName')));
+    iSubjects = find(~strcmpi({sSubjects.Name}, bst_get('NormalizedSubjectName')));
     % Ask which subject to use
-    SubjectName = java_dialog('combo', '<HTML>Select the destination subject:<BR><BR>', 'Project sources', [], {sProtocolSubjects.Subject(iSubjects).Name});
+    SubjectName = java_dialog('combo', '<HTML>Select the destination subject:<BR><BR>', 'Project sources', [], {sSubjects(iSubjects).Name});
     if isempty(SubjectName)
         return
     end
-    iSubject = find(strcmpi(SubjectName, {sProtocolSubjects.Subject.Name}));
+    iSubject = find(strcmpi(SubjectName, {sSubjects.Name}));
     % Project source grid
-    bst_project_grid(ResultFiles, iSubject, 1);
+    bst_project_grid(ResultFiles, sSubjects(iSubject).Id, 1);
 end
 
 
