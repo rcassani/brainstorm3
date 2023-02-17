@@ -1092,7 +1092,7 @@ switch (lower(action))
             case {'scalp', 'cortex', 'outerskull', 'innerskull', 'other'}
                 % Get subject
                 iSubject = bstNodes(1).getStudyIndex();
-                sSubject = bst_get('Subject', iSubject);
+                sSubject = db_get('Subject', iSubject);
                 
                 % === DISPLAY ===
                 gui_component('MenuItem', jPopup, [], 'Display', IconLoader.ICON_DISPLAY, [], @(h,ev)view_surface(filenameRelative));
@@ -1155,7 +1155,8 @@ switch (lower(action))
                         if ~bst_get('ReadOnly')
                             AddSeparator(jMenuAlign);
                             % === ALIGN ALL SURFACES ===
-                            gui_component('MenuItem', jMenuAlign, [], 'Edit fiducials...', IconLoader.ICON_ALIGN_SURFACES, [], @(h,ev)tess_align_fiducials(filenameRelative, {sSubject.Surface.FileName}));
+                            sSurfFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'FileName', 'Surface');
+                            gui_component('MenuItem', jMenuAlign, [], 'Edit fiducials...', IconLoader.ICON_ALIGN_SURFACES, [], @(h,ev)tess_align_fiducials(filenameRelative, {sSurfFiles.FileName}));
                             % === MENU: ALIGN SURFACE MANUALLY ===
                             fcnPopupAlign();
                             % === MENU: LOAD FREESURFER SPHERE ===
@@ -1177,7 +1178,8 @@ switch (lower(action))
                         if strcmpi(nodeType, 'cortex')
                             gui_component('MenuItem', jPopup, [], 'Extract envelope', IconLoader.ICON_SURFACE_INNERSKULL, [], @(h,ev)SurfaceEnvelope_Callback(filenameFull));
                             if ~isempty(sSubject.iInnerSkull)
-                                gui_component('MenuItem', jPopup, [], 'Force inside skull', IconLoader.ICON_SURFACE_INNERSKULL, [], @(h,ev)tess_force_envelope(filenameFull, sSubject.Surface(sSubject.iInnerSkull).FileName));
+                                sInnerSkull = db_get('AnatomyFile', sSubject.iInnerSkull, 'FileName');
+                                gui_component('MenuItem', jPopup, [], 'Force inside skull', IconLoader.ICON_SURFACE_INNERSKULL, [], @(h,ev)tess_force_envelope(filenameFull, sInnerSkull.FileName));
                             end
                         end
                         gui_component('MenuItem', jPopup, [], 'Remove interpolations', IconLoader.ICON_RECYCLE, [], @(h,ev)SurfaceClean_Callback(filenameFull, 0));
@@ -1232,10 +1234,6 @@ switch (lower(action))
                         gui_component('MenuItem', jPopup, [], 'Clear FEM tensors', IconLoader.ICON_DELETE, [], @(h,ev)bst_call(@process_fem_tensors, 'ClearTensors', filenameFull));
                     end
                     % === MENU: ALIGN SURFACE MANUALLY ===
-                    % Get subject
-                    iSubject = bstNodes(1).getStudyIndex();
-                    sSubject = bst_get('Subject', iSubject);
-                    % Menu: Align manually
                     AddSeparator(jPopup);
                     fcnPopupAlign();
                 end
@@ -1272,7 +1270,7 @@ switch (lower(action))
             case 'headmodel'
                 % Get study description
                 iStudy = bstNodes(1).getStudyIndex();
-                sStudy = bst_get('Study', iStudy);
+                sStudy = db_get('Study', iStudy);
                 iHeadModel = bstNodes(1).getItemIndex();
                 % Get channel file
                 if ~isempty(sStudy.iChannel)
@@ -3289,7 +3287,9 @@ function SurfaceFillHoles_Callback(TessFile)
     sHead = in_tess_bst(TessFile, 0);
     % Get subject
     sSubject = db_get('SubjectFromAnatomyFile', TessFile);
-    if isempty(sSubject.Anatomy)
+    % Get all MRI files for subject
+    sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'Id', 'Anatomy', 'Image');
+    if isempty(sAnatFiles)
         bst_error('No MRI available.', 'Remove surface holes');
         return;
     end
