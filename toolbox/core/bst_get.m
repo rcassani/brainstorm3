@@ -934,6 +934,8 @@ switch contextName
 %% ==== ANALYSIS STUDY (INTER) ====
     % Usage: [sAnalStudyInter, iAnalStudyInter] = bst_get('AnalysisInterStudy') 
     case 'AnalysisInterStudy'
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'study');
+
         iAnalStudyInter = -2;
         [argout1, argout2] = bst_get('Study', iAnalStudyInter);
         

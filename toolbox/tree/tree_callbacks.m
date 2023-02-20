@@ -1513,10 +1513,10 @@ switch (lower(action))
                 % INVERSE SOLUTIONS
                 if ~bst_get('ReadOnly') && ~isempty(AllMod) && ismember(DataType, {'raw', 'recordings'})
                     % Get subject and inter-subject study
-                    [sInterStudy, iInterStudy] = bst_get('AnalysisInterStudy');
+                    sInterStudy =  db_get('Study', '@inter', 'Id');
                     % === COMPUTE SOURCES ===
                     % If not Default Channel
-                    if (sSubject.UseDefaultChannel == 0) && (isempty(iInterStudy) || iStudy ~= iInterStudy)
+                    if (sSubject.UseDefaultChannel == 0) && (isempty(sInterStudy.Id) || iStudy ~= sInterStudy.Id)
                         fcnPopupComputeHeadmodel();
                     else
                         AddSeparator(jPopup);    
