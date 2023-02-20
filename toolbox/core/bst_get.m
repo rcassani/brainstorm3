@@ -1248,11 +1248,10 @@ switch contextName
         for i = 1:length(iStudies)           
             % Get study 
             iStudy = iStudies(i);
-            [iChannel, iChanStudy] = db_get(sqlConn, 'ChannelFromStudy', iStudy);
-            sFuncFile = db_get(sqlConn, 'FunctionalFile', iChannel);
-            sChannel = db_convert_functionalfile(sFuncFile);
+            [sChannel, sChanStudy] = db_get(sqlConn, 'ChannelFromStudy', iStudy, '*', 'Id');
+            sChannel = db_convert_functionalfile(sChannel);
             if ~isempty(sChannel)
-                iChanStudies = [iChanStudies, iChanStudy];
+                iChanStudies = [iChanStudies, sChanStudy.Id];
                 sListChannel = [sListChannel, sChannel];
             end
         end

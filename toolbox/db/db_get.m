@@ -64,9 +64,9 @@ function varargout = db_get(varargin)
 %    - db_get('FunctionalFile', FileIDs,   Fields) : Get FunctionalFile(s) by ID(s)
 %    - db_get('FunctionalFile', FileNames, Fields) : Get FunctionalFile(s) by FileName(s)
 %    - db_get('FunctionalFile', CondQuery, Fields) : Get FunctionalFile(s) with a Query
-%    - db_get('ChannelFromStudy', StudyID)       : Find current Channel for StudyID
-%    - db_get('ChannelFromStudy', StudyFileName) : Find current Channel for StudyFileName
-%    - db_get('ChannelFromStudy', CondQuery)     : Find current Channel for Query struct
+%    - db_get('ChannelFromStudy', StudyID,       ChannelFields, StudyFields) : Find current Channel for StudyID
+%    - db_get('ChannelFromStudy', StudyFileName, ChannelFields, StudyFields) : Find current Channel for StudyFileName
+%    - db_get('ChannelFromStudy', CondQuery,     ChannelFields, StudyFields) : Find current Channel for Query struct
 %    - db_get('FilesInFileList', ListFileID, Fields)   : Get FunctionalFile belonging to a list with ID
 %    - db_get('FilesInFileList', ListFileName, Fields) : Get FunctionalFile belonging to a list with FileName
 %    - db_get('FilesInFileList', CondQuery, Fields)   : Get FunctionalFile belonging to a list with Query
@@ -591,11 +591,19 @@ switch contextName
 
 
 %% ==== CHANNEL FROM STUDY ====
-    % [iFile, iStudy] = db_get('ChannelFromStudy', StudyID)
-    %                 = db_get('ChannelFromStudy', StudyFileName)
-    %                 = db_get('ChannelFromStudy', CondQuery)
+    % [sChannel, sStudy] = db_get('ChannelFromStudy', StudyID,       ChannelFields, StudyFields)
+    %                    = db_get('ChannelFromStudy', StudyFileName, ChannelFields, StudyFields)
+    %                    = db_get('ChannelFromStudy', CondQuery,     ChannelFields, StudyFields)
     case 'ChannelFromStudy'
         iStudy = args{1};
+        channelFields = '*';
+        studyFields = '*';
+        if length(args) > 1 && ~isempty(args{2})
+            channelFields = args{2};
+            if length(args) > 2 && ~isempty(args{3})
+                studyFields = args{3};
+            end
+        end
         varargout{1} = [];
         varargout{2} = [];
         
@@ -626,15 +634,17 @@ switch contextName
             if ~isempty(sStudy)
                 % If no channel selected, find first channel in study
                 if isempty(sStudy.iChannel)
-                    sFuncFile = db_get(sqlConn, 'FunctionalFile', struct('Study', sStudy.Id, 'Type', 'channel'), 'Id');
-                    if ~isempty(sFuncFile)
-                        sStudy.iChannel = sFuncFile(1).Id;
-                    end
+                    sChannel = db_get(sqlConn, 'FunctionalFile', struct('Study', sStudy.Id, 'Type', 'channel'), channelFields);
+                else
+                    sChannel = db_get(sqlConn, 'FunctionalFile', sStudy.iChannel, channelFields);
                 end
 
-                if ~isempty(sStudy.iChannel)
-                    varargout{1} = sStudy.iChannel;
-                    varargout{2} = iChanStudy;
+                if ~isempty(sChannel)
+                    varargout{1} = sChannel;
+                    if nargout > 1
+                        sStudy = db_get(sqlConn, 'Study', iChanStudy, studyFields);
+                        varargout{2} = sStudy;
+                    end
                 end
             end
         end

@@ -137,9 +137,9 @@ end
 iStudies = unique(iStudies);
 iChanStudies = [];
 for i = 1:length(iStudies)
-    [sChannels, iChanStudy] = db_get(sqlConn, 'ChannelFromStudy', iStudies(i));
-    if ~isempty(iChanStudy)
-        iChanStudies(end + 1) = iChanStudy;
+    [sChannels, sChanStudy] = db_get(sqlConn, 'ChannelFromStudy', iStudies(i), 'Id', 'Id');
+    if ~isempty(sChanStudy)
+        iChanStudies(end + 1) = sChanStudy.Id;
     end
 end
 iStudies = unique(iChanStudies);
