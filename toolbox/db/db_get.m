@@ -16,6 +16,7 @@ function varargout = db_get(varargin)
 %    - db_get('Subject', CondQuery,          Fields, isRaw) : Get Subject(s) with a Query struct
 %    - db_get('Subject', '@default_subject', Fields)        : Get default Subject
 %    - db_get('Subject')                                    : Get current Subject in current protocol
+%    - db_get('NormalizedSubject')                          : Get Normalized subject if it exists, otherwise it's created
 %    - db_get('AllSubjects')                                : Get all Subjects in current protocol, excluding @default_subject
 %    - db_get('AllSubjects', Fields)                        : Get all Subjects in current protocol, excluding @default_subject
 %    - db_get('AllSubjects', Fields, '@default_subject')    : Get all Subjects in current protocol, including @default_subject
@@ -258,6 +259,29 @@ switch contextName
 
         varargout{1} = sSubjects;   
         
+
+%% ==== NORMALIZED SUBJECT ====
+    % sSubject = db_get('NormalizedSubject')
+    case 'NormalizedSubject'
+        % Get normalized subject name
+        normSubjName = bst_get('NormalizedSubjectName');
+        if ~sql_query(sqlConn, 'EXIST', 'Subject', struct('Name', normSubjName))
+            % Always use default anatomy
+            UseDefaultAnat = 1;
+            % If all the subjects use a global channel file: Use global default as well
+            allSubjects = db_get(sqlConn, 'AllSubjects', 'UseDefaultChannel');
+            if all([allSubjects.UseDefaultChannel] == 2)
+                UseDefaultChannel = 2;
+            else
+                UseDefaultChannel = 1;
+            end
+            % Create subject
+            sNormSubj = db_add_subject(normSubjName, [], UseDefaultAnat, UseDefaultChannel);
+        else
+            sNormSubj = db_get(sqlConn, 'Subject', normSubjName);
+        end
+        varargout{1} = sNormSubj;
+
 
 %% ==== ALL SUBJECTS ====
     % sSubjects = db_get('AllSubjects');                             % Exclude @default_subject

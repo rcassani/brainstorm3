@@ -891,26 +891,11 @@ switch contextName
         
 %% ==== NORMALIZED SUBJECT ====
     case 'NormalizedSubject'
-        % Get normalized subject name
-        normSubjName = 'Group_analysis';
-        % Try to get normalized subject
-        [sNormSubj, iNormSubj] = bst_get('Subject', normSubjName, 0);
-        % If normalized subject does not exist: create it
-        if isempty(sNormSubj)
-            % Always use default anatomy
-            UseDefaultAnat = 1;
-            % If all the subjects use a global channel file: Use global default as well
-            if ~isempty(GlobalData.DataBase.ProtocolSubjects(GlobalData.DataBase.iProtocol).Subject) && ...
-                all([GlobalData.DataBase.ProtocolSubjects(GlobalData.DataBase.iProtocol).Subject.UseDefaultChannel] == 2)
-                UseDefaultChannel = 2;
-            else
-                UseDefaultChannel = 1;
-            end    
-            % Create subject
-            [sNormSubj, iNormSubj] = db_add_subject(normSubjName, [], UseDefaultAnat, UseDefaultChannel);
-            % Get full subject structure
-            [sNormSubj, iNormSubj] = bst_get('Subject', normSubjName, 0);
-        end
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+
+        sNormSubj = db_get('NormalizedSubject');
+        % Get full subject structure
+        [sNormSubj, iNormSubj] = bst_get('Subject', sNormSubj.Name, 0);
         argout1 = sNormSubj;
         argout2 = iNormSubj;
         

@@ -3613,7 +3613,7 @@ end
 %% ===== NEW GROUP ANALYSIS =====
 function NewGroupAnalysis()
     % Create/get group analysis subject
-    [sSubject, iSubject] = bst_get('NormalizedSubject');
+    db_get('NormalizedSubject');
     % Update tree
     panel_protocols('UpdateTree');
 end
