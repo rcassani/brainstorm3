@@ -1195,6 +1195,8 @@ switch contextName
 %% ==== CHANNEL FILE FOR STUDY ====
     % Usage: [ChannelFile, sStudy, iStudy] = bst_get('ChannelFileForStudy', StudyFile/DataFile)
     case 'ChannelFileForStudy'
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'ChannelFromStudy'' or ''ChannelFromFunctionalFile');
+
         % Parse inputs
         if (nargin == 2)
             StudyFile = varargin{2};
@@ -1207,12 +1209,12 @@ switch contextName
         isStudy = sql_query(sqlConn, 'EXIST', 'Study', struct('FileName', StudyFile));
         % If data file instead on Study file
         if ~isStudy
-            sFuncFile = db_get(sqlConn, 'FunctionalFile', StudyFile, 'Study');
+            [sChannel, sFuncFile] = db_get(sqlConn, 'ChannelFromFunctionalFile', StudyFile, '*', 'Study');
             if ~isempty(sFuncFile)
                 iStudy = sFuncFile.Study;
             end
         else
-            sStudy = db_get(sqlConn, 'Study', StudyFile, 'Id');
+            [sChannel, sStudy] = db_get(sqlConn, 'ChannelFromStudy', StudyFile, '*', 'Id');
             iStudy = sStudy.Id;
         end
         sql_close(sqlConn);
@@ -1221,7 +1223,6 @@ switch contextName
             return;
         end
         
-        sChannel = bst_get('ChannelForStudy', iStudy);
         if ~isempty(sChannel)
             argout1 = sChannel.FileName;
             if nargout > 1

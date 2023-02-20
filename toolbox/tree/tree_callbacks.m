@@ -1365,10 +1365,10 @@ switch (lower(action))
                         % Import in database
                         gui_component('MenuItem', jPopup, [], 'Import in database', IconLoader.ICON_EEG_NEW, [], @(h,ev)import_raw_to_db(filenameRelative));
                         % Load file descriptor
-                        ChannelFile = bst_get('ChannelFileForStudy', filenameRelative);
-                        if ~isempty(ChannelFile) && strcmpi(DataType, 'raw')
-                            Device = bst_get('ChannelDevice', ChannelFile);
-                            ChannelMat_Comment = in_bst_channel(ChannelFile,'Comment');
+                        sChannel = db_get('ChannelFromFunctionalFile', filenameRelative, 'FileName');
+                        if ~isempty(sChannel.FileName) && strcmpi(DataType, 'raw')
+                            Device = bst_get('ChannelDevice', sChannel.FileName);
+                            ChannelMat_Comment = in_bst_channel(sChannel.FileName,'Comment');
                             % If CTF file format
                             if strcmpi(Device, 'CTF') || ~isempty(strfind(ChannelMat_Comment.Comment, 'CTF'))
                                 gui_component('MenuItem', jPopup, [], 'Switch epoched/continous', IconLoader.ICON_RAW_DATA, [], @(h,ev)bst_process('CallProcess', 'process_ctf_convert', filenameFull, [], 'rectype', 3, 'interactive', 1));
