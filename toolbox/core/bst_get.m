@@ -1318,12 +1318,12 @@ switch contextName
         % Load sensor names from file
         TimefreqMat = in_bst_timefreq(TimefreqFile, 0, 'RowNames');
         % Get channel file
-        ChannelFile = bst_get('ChannelFileForStudy', TimefreqFile);
-        if isempty(ChannelFile)
+        sChannel = db_get('ChannelFromFunctionalFile', TimefreqFile, 'FileName');
+        if isempty(sChannel)
             return;
         end
         % Load channel file
-        ChannelMat = load(file_fullpath(ChannelFile), 'Channel');
+        ChannelMat = load(file_fullpath(sChannel.FileName), 'Channel');
         % Get channels that are present in the file
         [tmp__,I,J] = intersect({ChannelMat.Channel.Name}, TimefreqMat.RowNames);
         FileMod = unique({ChannelMat.Channel(I).Type});

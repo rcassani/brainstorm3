@@ -2711,7 +2711,7 @@ end % END SWITCH( ACTION )
                 end
             end
             % === OTHER SUBJECTS ===
-            if (bst_get('SubjectCount') > 1)
+            if (db_get('SubjectCount') > 1)
                 gui_component('MenuItem', jMenu, [], 'Other subjects...', IconLoader.ICON_SUBJECT, [], @(h,ev)ProjectSourcesAll(ResultFiles));
             end
         end
@@ -2724,7 +2724,7 @@ end % END SWITCH( ACTION )
             if ~isGroupAnalysis
                 gui_component('MenuItem', jPopup, [], 'Project source grid', IconLoader.ICON_ANATOMY, [], @(h,ev)bst_project_grid(ResultFiles, [], 1));
             % Default anatomy: Project back on subjects
-            elseif (bst_get('SubjectCount') > 1)
+            elseif (db_get('SubjectCount') > 1)
                 gui_component('MenuItem', jPopup, [], 'Project source grid...', IconLoader.ICON_ANATOMY, [], @(h,ev)ProjectGridAll(ResultFiles));
             end
         end
