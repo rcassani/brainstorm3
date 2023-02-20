@@ -80,6 +80,9 @@ function varargout = db_get(varargin)
 %    - db_get('ChildrenFromFunctionalFile', FileName, ChildrenFields, ChildrenType, WholeProtocol) : Find ChildrenFiles for FunctionalFile with FileName
 %    - db_get('FilesForKernel', KernelFileId,   Type, Fields) : Find FunctionalFiles for Kernel with FileId
 %    - db_get('FilesForKernel', KernelFileName, Type, Fields) : Find FunctionalFiles for Kernel with FileName
+%    - db_get('DataForStudy', StudyId, DataFunctFileFields) : Get data FunctionalFiles for StudyID
+%    - db_get('DataForStudy', StudyId, DataFunctFileFields) : Get data FunctionalFiles for all Studies from same Subject (including @intra and @default_study) if StudyID is Subject's default study
+%    - db_get('DataForStudy', StudyId, DataFunctFileFields) : Get data FunctionalFiles for all Normal Studies of All Normal Subjects if StudyID is Global default study
 %
 % ====== ANY FILE ======================================================================
 %    - db_get('AnyFile', FileName)         : Get any file by FileName
@@ -1227,6 +1230,46 @@ switch contextName
             end
         end
         varargout{1} = sStudies;
+
+%% ==== DATA FOR STUDY (INCLUDING SHARED STUDIES) ====
+    % Usage: sDataFunctFile = db_get('DataForStudy', StudyId, DataFunctFileFields)
+    case 'DataForStudy'
+        % Get target study
+        iStudy = args{1};
+        dataFuncFileFields = '*';
+        if length(args) > 1
+            dataFuncFileFields = args{2};
+        end
+        sStudy = db_get(sqlConn, 'Study', iStudy, {'Id', 'Subject', 'Name'});
+        isDefaultStudy  = strcmpi(sStudy.Name, bst_get('DirDefaultStudy'));
+        isGlobalDefault = and(isDefaultStudy, sStudy.Subject == 0);
+
+        sStudies = [];
+        % If study is the global default study
+        if isGlobalDefault
+            % Get all the subjects of the protocol
+            sSubjects = db_get(sqlConn, 'AllSubjects', {'Id', 'UseDefaultChannel'});
+            for ix = 1 : length(sSubjects)
+                if sSubjects(ix).UseDefaultChannel
+                    tmp_sStudies = db_get(sqlConn, 'StudiesFromSubject', sSubjects(ix).Id, 'Id');
+                    sStudies = [sStudies, tmp_sStudies];
+                end
+            end
+        % Else, if study is a subject's default study (ie. channel file is shared by all studies of one subject)
+        elseif isDefaultStudy
+            % Get all the subject's studies
+            sStudies = db_get(sqlConn, 'StudiesFromSubject', sStudy.Subject, 'Id', '@intra', '@default_study');
+        % Normal: one channel per condition
+        else
+            sStudies = sStudy;
+        end
+        % Get all the DataFiles for all these studies
+        sDataFunctFiles = [];
+        for ix = 1:length(sStudies)
+            tmp_sDataFunctFiles = db_get(sqlConn, 'FunctionalFile', struct('Study', sStudies(ix).Id, 'Type', 'data'), '*', dataFuncFileFields);
+            sDataFunctFiles = [sDataFunctFiles, tmp_sDataFunctFiles];
+        end
+        varargout{1} = sDataFunctFiles;
 
 
 %% ==== ERROR ====      

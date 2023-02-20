@@ -1501,51 +1501,24 @@ switch contextName
 %% ==== DATA FOR STUDY (INCLUDING SHARED STUDIES) ====
     % Usage: [iStudies, iDatas] = bst_get('DataForStudy', iStudy)
     case 'DataForStudy'
-        % Get target study
-        iStudy = varargin{2};
-        sStudy = bst_get('Study', iStudy);
-        isDefaultStudy  = strcmpi(sStudy.Name, bst_get('DirDefaultStudy'));
-        isGlobalDefault = (iStudy == -3);
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
         
-        % If study is the global default study
-        sStudies = [];
-        iStudies = [];
-        if isGlobalDefault
-            % Get all the subjects of the protocol
-            nbSubjects = bst_get('SubjectCount');
-            for iSubject = 1:nbSubjects
-                sSubject = bst_get('Subject', iSubject, 1);
-                if sSubject.UseDefaultChannel
-                    [tmp_sStudies, tmp_iStudies] = bst_get('StudyWithSubject', sSubject.FileName);
-                    sStudies = [sStudies, tmp_sStudies];
-                    iStudies = [iStudies, tmp_iStudies];
-                end
-            end
-        % Else, if study is a subject's default study (ie. channel file is shared by all studies of one subject)
-        elseif isDefaultStudy
-            % Get all the subject's studies
-            [sStudies, iStudies] = bst_get('StudyWithSubject', sStudy.BrainStormSubject, 'intra_subject', 'default_study');
-        else
-            % Normal: one channel per condition
-            sStudies = sStudy;
-            iStudies = iStudy;
-        end
-        % Get all the DataFiles for all these studies
-        for i = 1:length(sStudies)
-            nData = length(sStudies(i).Data);
-            argout1 = [argout1, repmat(iStudies(i), [1,nData])];
-            argout2   = [argout2, 1:nData];
-        end
+        iStudy = varargin{2};
+        sDataFuncFiles = db_get('DataForStudy', iStudy);
+        argout1 = [sDataFuncFiles.Study];
+        argout2 = [sDataFuncFiles.Id];
        
         
 %% ==== DATA FOR STUDIES (INCLUDING SHARED STUDIES) ====
     % Usage: [iStudies, iDatas] = bst_get('DataForStudies', iStudies)
     case 'DataForStudies'
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'DataForStudy');
+
         iStudies = varargin{2};
         for i = 1:length(iStudies)
-            [tmp_iStudies, tmp_iDatas] = bst_get('DataForStudy', iStudies(i));
-            argout1 = [argout1, tmp_iStudies];
-            argout2 = [argout2, tmp_iDatas];
+            sDataFuncFiles = db_get('DataForStudy', iStudies(i));
+            argout1 = [argout1, [sDataFuncFiles.Study]];
+            argout2 = [argout2, [sDataFuncFiles.Id]];
         end
         
 %% ==== DATA FILE FOR CHANNEL FILE ====

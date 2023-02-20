@@ -3678,10 +3678,10 @@ function ImportChannelCheck(iAllStudies)
     % Check only if importing a single file
     if (length(iAllStudies) == 1)
         % Get study folder
-        sStudyChan = bst_get('Study', iAllStudies(1));
-        sStudyData = bst_get('DataForStudy', iAllStudies(1));
+        sChannel = db_get('FunctionalFileWithStudy', iAllStudies(1), 'FileName', 'Channel');
+        sDatas = db_get('DataForStudy', iAllStudies(1));
         % If there is already a channel file defined
-        if ~isempty(sStudyChan.Channel) && ~isempty(sStudyChan.Channel.FileName) && ~isempty(sStudyData)
+        if ~isempty(sChannel) && ~isempty(sChannel.FileName) && ~isempty(sDatas)
             res = java_dialog('confirm', [...
                 '<HTML><B>Warning</B>: There are existing channel files and data files in this folder.<BR>', ...
                 'Importing a list of channels that does not match exactly the recordings<BR>' ...
