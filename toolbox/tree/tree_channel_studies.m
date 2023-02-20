@@ -53,7 +53,7 @@ for iNode = 1:length(bstNodes)
                 return
             end
             % Get the channel studies for all the subjects of the protocol
-            iStudies = addAllSubjectsStudies(sqlConn, sqlConniStudies, [sSubjects.Id], NoIntra);
+            iStudies = addAllSubjectsStudies(sqlConn, iStudies, [sSubjects.Id], NoIntra);
             
         % ==== SUBJECT ====
         case 'studysubject'

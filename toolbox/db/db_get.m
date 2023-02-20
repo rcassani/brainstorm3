@@ -782,7 +782,7 @@ switch contextName
         end
 
 
-%% ==== CHANNEL MODALITIES =====
+%% ==== TIMEFREQ DISPLAY MODALITIES ====
     % DisplayMods = db_get('TimefreqDisplayModalities', FunctionalFileId)
     %             = db_get('TimefreqDisplayModalities', FunctionalFileFileName)
     case 'TimefreqDisplayModalities'
