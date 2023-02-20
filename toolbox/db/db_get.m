@@ -67,6 +67,9 @@ function varargout = db_get(varargin)
 %    - db_get('ChannelFromStudy', StudyID,       ChannelFields, StudyFields) : Find current Channel for StudyID
 %    - db_get('ChannelFromStudy', StudyFileName, ChannelFields, StudyFields) : Find current Channel for StudyFileName
 %    - db_get('ChannelFromStudy', CondQuery,     ChannelFields, StudyFields) : Find current Channel for Query struct
+%    - db_get('ChannelFromFunctionalFile', FunctFileID,       ChannelFields, FunctFileFields) : Find current Channel for FunctFileID
+%    - db_get('ChannelFromFunctionalFile', FunctFileFileName, ChannelFields, FunctFileFields) : Find current Channel for FunctFileFileName
+%    - db_get('ChannelFromFunctionalFile', CondQuery,         ChannelFields, FunctFileFields) : Find current Channel for Query struct
 %    - db_get('FilesInFileList', ListFileID, Fields)   : Get FunctionalFile belonging to a list with ID
 %    - db_get('FilesInFileList', ListFileName, Fields) : Get FunctionalFile belonging to a list with FileName
 %    - db_get('FilesInFileList', CondQuery, Fields)   : Get FunctionalFile belonging to a list with Query
@@ -646,6 +649,35 @@ switch contextName
                         varargout{2} = sStudy;
                     end
                 end
+            end
+        end
+
+
+%% ==== CHANNEL FROM FUNCTIONAL FILE ====
+    % [sChannel, sFunctFile] = db_get('ChannelFromFunctionalFile', FunctFileID,       ChannelFields, FunctFileFields)
+    %                        = db_get('ChannelFromFunctionalFile', FunctFileFileName, ChannelFields, FunctFileFields)
+    %                        = db_get('ChannelFromFunctionalFile', CondQuery,         ChannelFields, FunctFileFields)
+    case 'ChannelFromFunctionalFile'
+        iFuncFile = args{1};
+        channelFields = '*';
+        funcFields = '*';
+        if length(args) > 1 && ~isempty(args{2})
+            channelFields = args{2};
+            if length(args) > 2 && ~isempty(args{3})
+                funcFields = args{3};
+            end
+        end
+        varargout{1} = [];
+        varargout{2} = [];
+
+        sFuncFile = db_get(sqlConn, 'FunctionalFile', iFuncFile, 'Study');
+        sChannel =  db_get(sqlConn, 'ChannelFromStudy', sFuncFile.Study, channelFields);
+
+        if ~isempty(sChannel)
+            varargout{1} = sChannel;
+            if nargout > 1
+                sFuncFile = db_get(sqlConn, 'FunctionalFile', iFuncFile, funcFields);
+                varargout{2} = sFuncFile;
             end
         end
 
