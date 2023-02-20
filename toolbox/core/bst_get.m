@@ -1250,94 +1250,19 @@ switch contextName
     % Usage: [Modalities, DispMod, DefMod] = bst_get('ChannelModalities', ChannelFile)
     %        [Modalities, DispMod, DefMod] = bst_get('ChannelModalities', DataFile/ResultsFile/TimefreqFile...)
     case 'ChannelModalities'
-        % Get channel from input file
-        sqlConn = sql_connect();
-        sFuncFile = db_get(sqlConn, 'FunctionalFile', varargin{2}, {'Id', 'Study', 'Type'});
-        if strcmpi(sFuncFile.Type, 'channel')
-            sFuncFile = db_get(sqlConn, 'FunctionalFile', sFuncFile.Id);
-            sChannel = db_convert_functionalfile(sFuncFile);
-            sql_close(sqlConn);
-        else
-            sql_close(sqlConn);
-            sChannel = bst_get('ChannelForStudy', sFuncFile.Study);
-        end
-        % Return modalities
-        if ~isempty(sChannel)
-            % Get all modalities
-            if ~isempty(sChannel.DisplayableSensorTypes)
-                % Return the displayable sensors on top of the list
-                argout1 = cat(2, sChannel.DisplayableSensorTypes, setdiff(sChannel.Modalities, sChannel.DisplayableSensorTypes));
-            else
-                argout1 = sChannel.Modalities;
-            end
-            % Get only sensors that have spatial representation
-            argout2 = sChannel.DisplayableSensorTypes;
-            % Default candidates
-            if ~isempty(argout2)
-                defList = argout2;
-            else
-                defList = argout1;
-            end
-            if isempty(defList)
-                return;
-            end
-            % Remove EDF and BDF from the default list
-            defList = setdiff(defList, {'EDF','BDF','KDF'});
-            % Get default modality
-            if ismember('SEEG', defList)
-                argout3 = 'SEEG';
-            elseif ismember('ECOG', defList)
-                argout3 = 'ECOG';
-            elseif any(ismember({'MEG','MEG GRAD','MEG MAG'}, defList))
-                argout3 = 'MEG';
-            elseif ismember('EEG', defList)
-                argout3 = 'EEG';
-            elseif ismember('NIRS', defList)
-                argout3 = 'NIRS';
-            else
-                argout3 = defList{1};
-            end
-            % Place the default on top of the lists
-            if ismember(argout3, argout1)
-                argout1(strcmpi(argout1, argout3)) = [];
-                argout1 = cat(2, argout3, argout1);
-            end
-            if ismember(argout3, argout2)
-                argout2(strcmpi(argout2, argout3)) = [];
-                argout2 = cat(2, argout3, argout2);
-            end
-        else
-            argout1 = [];
-        end
-        
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+
+        [argout1, argout2, argout3] = db_get('ChannelModalities', varargin{2});
+
 
 %% ==== TIMEFREQ DISPLAY MODALITIES ====
     % Usage: DisplayMod = bst_get('TimefreqDisplayModalities', TimefreqFile)
     case 'TimefreqDisplayModalities'
-        TimefreqFile = varargin{2};
-        % Load sensor names from file
-        TimefreqMat = in_bst_timefreq(TimefreqFile, 0, 'RowNames');
-        % Get channel file
-        sChannel = db_get('ChannelFromFunctionalFile', TimefreqFile, 'FileName');
-        if isempty(sChannel)
-            return;
-        end
-        % Load channel file
-        ChannelMat = load(file_fullpath(sChannel.FileName), 'Channel');
-        % Get channels that are present in the file
-        [tmp__,I,J] = intersect({ChannelMat.Channel.Name}, TimefreqMat.RowNames);
-        FileMod = unique({ChannelMat.Channel(I).Type});
-        % Check if only one type of gradiometer is selected
-        if isequal(FileMod, {'MEG GRAD'}) && all(cellfun(@(c)(c(end)=='2'), {ChannelMat.Channel(I).Name}))
-            argout1 = {'MEG GRAD2'};
-        elseif isequal(FileMod, {'MEG GRAD'}) && all(cellfun(@(c)(c(end)=='3'), {ChannelMat.Channel(I).Name}))
-            argout1 = {'MEG GRAD3'};
-        % Keep only the modalities that can be displayed (as topography)
-        else
-            argout1 = intersect(FileMod, {'MEG','MEG GRAD','MEG MAG','EEG','ECOG','SEEG','NIRS'});
-        end
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
         
-        
+        argout1 = db_get('TimefreqDisplayModalities', varargin{2});
+
+
 %% ==== CHANNEL DEVICE ====
     % Usage: Device = bst_get('ChannelDevice', ChannelFile)
     case 'ChannelDevice'

@@ -83,6 +83,10 @@ function varargout = db_get(varargin)
 %    - db_get('ChannelStudiesWithSubject', SubjectIDs) : Get all studies (except @intra) where there should be a channel file all iSubjects
 %    - db_get('ChannelStudiesWithSubject', SubjectIDs, Fields) : Get Fields of all studies (except @intra) where there should be a channel file all iSubjects
 %    - db_get('ChannelStudiesWithSubject', SubjectIDs. Fields, @intrac) : Get Fields all studies (including @intra) where there should be a channel file all iSubjects
+%    - db_get('ChannelModalities', FunctionalFileId) : Get displayable modalities the Channel file related to FunctionalFileID
+%    - db_get('ChannelModalities', FunctionalFileId) : Get displayable modalities the Channel file related to FunctionalFileFileName
+%    - db_get('TimefreqDisplayModalities', FunctionalFileId)       : Get displayable modalities for a TF file FunctionalFileID
+%    - db_get('TimefreqDisplayModalities', FunctionalFileFileName) : Get displayable modalities for a TF file FunctionalFileFileName
 %
 % ====== ANY FILE ======================================================================
 %    - db_get('AnyFile', FileName)         : Get any file by FileName
@@ -706,6 +710,103 @@ switch contextName
                 sFuncFile = db_get(sqlConn, 'FunctionalFile', iFuncFile, funcFields);
                 varargout{2} = sFuncFile;
             end
+        end
+
+
+%% ==== CHANNEL MODALITIES =====
+    % [Modalities, DisplayMods, DefaultMods] = db_get('ChannelModalities', FunctionalFileId)
+    %                                        = db_get('ChannelModalities', FunctionalFileFileName)
+    case 'ChannelModalities'
+        iFuncFile = args{1};
+        varargout{1} = [];
+        varargout{2} = [];
+        varargout{3} = [];
+
+        % Get channel from input file
+        sFuncFile = db_get(sqlConn, 'ChannelFromFunctionalFile', iFuncFile);
+        if strcmpi(sFuncFile.Type, 'channel')
+            sFuncFile = db_get(sqlConn, 'FunctionalFile', sFuncFile.Id);
+        else
+            sFuncFile = db_get(sqlConn, 'ChannelForStudy', sFuncFile.Study);
+        end
+        sChannel = db_convert_functionalfile(sFuncFile);
+
+        % Return modalities
+        if ~isempty(sChannel)
+            % Get all modalities
+            if ~isempty(sChannel.DisplayableSensorTypes)
+                % Return the displayable sensors on top of the list
+                argout1 = cat(2, sChannel.DisplayableSensorTypes, setdiff(sChannel.Modalities, sChannel.DisplayableSensorTypes));
+            else
+                argout1 = sChannel.Modalities;
+            end
+            % Get only sensors that have spatial representation
+            argout2 = sChannel.DisplayableSensorTypes;
+            % Default candidates
+            if ~isempty(argout2)
+                defList = argout2;
+            else
+                defList = argout1;
+            end
+            if isempty(defList)
+                return;
+            end
+            % Remove EDF and BDF from the default list
+            defList = setdiff(defList, {'EDF','BDF','KDF'});
+            % Get default modality
+            if ismember('SEEG', defList)
+                argout3 = 'SEEG';
+            elseif ismember('ECOG', defList)
+                argout3 = 'ECOG';
+            elseif any(ismember({'MEG','MEG GRAD','MEG MAG'}, defList))
+                argout3 = 'MEG';
+            elseif ismember('EEG', defList)
+                argout3 = 'EEG';
+            elseif ismember('NIRS', defList)
+                argout3 = 'NIRS';
+            else
+                argout3 = defList{1};
+            end
+            % Place the default on top of the lists
+            if ismember(argout3, argout1)
+                argout1(strcmpi(argout1, argout3)) = [];
+                argout1 = cat(2, argout3, argout1);
+            end
+            if ismember(argout3, argout2)
+                argout2(strcmpi(argout2, argout3)) = [];
+                argout2 = cat(2, argout3, argout2);
+            end
+            varargout{1} = argout1;
+            varargout{2} = argout2;
+            varargout{3} = argout3;
+        end
+
+
+%% ==== CHANNEL MODALITIES =====
+    % DisplayMods = db_get('TimefreqDisplayModalities', FunctionalFileId)
+    %             = db_get('TimefreqDisplayModalities', FunctionalFileFileName)
+    case 'TimefreqDisplayModalities'
+        TimefreqFile = varargin{2};
+        % Load sensor names from file
+        TimefreqMat = in_bst_timefreq(TimefreqFile, 0, 'RowNames');
+        % Get channel file
+        sChannel = db_get(sqlConn, 'ChannelFromFunctionalFile', TimefreqFile, 'FileName');
+        if isempty(sChannel)
+            return;
+        end
+        % Load channel file
+        ChannelMat = load(file_fullpath(sChannel.FileName), 'Channel');
+        % Get channels that are present in the file
+        [tmp__,I,J] = intersect({ChannelMat.Channel.Name}, TimefreqMat.RowNames);
+        FileMod = unique({ChannelMat.Channel(I).Type});
+        % Check if only one type of gradiometer is selected
+        if isequal(FileMod, {'MEG GRAD'}) && all(cellfun(@(c)(c(end)=='2'), {ChannelMat.Channel(I).Name}))
+            varargout{1} = {'MEG GRAD2'};
+        elseif isequal(FileMod, {'MEG GRAD'}) && all(cellfun(@(c)(c(end)=='3'), {ChannelMat.Channel(I).Name}))
+            varargout{1} = {'MEG GRAD3'};
+        % Keep only the modalities that can be displayed (as topography)
+        else
+            varargout{1} = intersect(FileMod, {'MEG','MEG GRAD','MEG MAG','EEG','ECOG','SEEG','NIRS'});
         end
 
 

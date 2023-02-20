@@ -236,7 +236,7 @@ switch (lower(action))
             % Else : Edit channel file
             case 'channel'
                 % Get displayable modalities for this file
-                [tmp, DisplayMod] = bst_get('ChannelModalities', filenameRelative);
+                [tmp, DisplayMod] = db_get('ChannelModalities', filenameRelative);
                 DisplayMod = intersect(DisplayMod, {'EEG','MEG','MEG GRAD','MEG MAG','ECOG','SEEG','ECOG+SEEG','NIRS'});
                 % If only one modality
                 if ~isempty(DisplayMod)
@@ -835,7 +835,7 @@ switch (lower(action))
                 % Get subject structure
                 sSubject = db_get('SubjectFromStudy', iStudy);
                 % Get avaible modalities for this data file
-                [AllMod, DisplayMod] = bst_get('ChannelModalities', filenameRelative);
+                [AllMod, DisplayMod] = db_get('ChannelModalities', filenameRelative);
                 Device = bst_get('ChannelDevice', filenameRelative);
                 % Replace SEEG+ECOG with iEEG
                 if ~isempty(AllMod) && all(ismember({'SEEG','ECOG'}, AllMod))
@@ -1242,7 +1242,7 @@ switch (lower(action))
             case {'noisecov', 'ndatacov'}
                 if (length(bstNodes) == 1)
                     % Get modalities for first selected file
-                    AllMod = intersect(bst_get('ChannelModalities', filenameRelative), {'MEG', 'MEG MAG', 'MEG GRAD', 'EEG', 'SEEG', 'ECOG'});
+                    AllMod = intersect(db_get('ChannelModalities', filenameRelative), {'MEG', 'MEG MAG', 'MEG GRAD', 'EEG', 'SEEG', 'ECOG'});
                     % Display as image
                     if (length(AllMod) == 1)
                         gui_component('MenuItem', jPopup, [], 'Display as image', IconLoader.ICON_NOISECOV, [], @(h,ev)view_noisecov(filenameRelative));
@@ -1342,7 +1342,7 @@ switch (lower(action))
                 DataType = sFuncFile.SubType;
                 isStat = ~strcmpi(DataType, 'recordings') && ~strcmpi(DataType, 'raw');
                 % Get modalities for first selected file
-                [AllMod, DisplayMod] = bst_get('ChannelModalities', filenameRelative);
+                [AllMod, DisplayMod] = db_get('ChannelModalities', filenameRelative);
                 % Remove EDF Annotation channels from the list
                 % iEDF = find(strcmpi(AllMod, 'EDF') | strcmpi(AllMod, 'BDF'));
                 iEDF = find(strcmpi(AllMod, 'EDF'));
@@ -1536,7 +1536,7 @@ switch (lower(action))
                 % Get associated subject and surfaces, if it exists
                 sSubject = db_get('SubjectFromStudy', iStudy);
                 % Get avaible modalities for this data file
-                [AllMod, DisplayMod] = bst_get('ChannelModalities', filenameRelative);
+                [AllMod, DisplayMod] = db_get('ChannelModalities', filenameRelative);
                 % One data file selected only
                 if (length(bstNodes) == 1)
                     % === VIEW RESULTS ===
@@ -1636,7 +1636,7 @@ switch (lower(action))
                     iList = bstNodes(1).getItemIndex();
                     sChildren = db_get('ChildrenFromFunctionalFile', iList, 'FileName', 'data');
                     % Get avaible modalities for these data files
-                    [AllMod, DisplayMod] = bst_get('ChannelModalities', sChildren(1).FileName);
+                    [AllMod, DisplayMod] = db_get('ChannelModalities', sChildren(1).FileName);
                     if ~isempty(AllMod)
                         % === ERP IMAGE ===
                         jMenuErp = gui_component('Menu', jPopup, [], 'Display as image', IconLoader.ICON_NOISECOV, [], []);
@@ -1885,7 +1885,7 @@ switch (lower(action))
                     end
                 % Get available modalities for this data file
                 elseif strcmpi(DataType, 'data')
-                    DisplayMod = bst_get('TimefreqDisplayModalities', filenameRelative);
+                    DisplayMod = db_get('TimefreqDisplayModalities', filenameRelative);
                     % Add SEEG+ECOG 
                     if ~isempty(DisplayMod) && all(ismember({'SEEG','ECOG'}, DisplayMod))
                         DisplayMod = cat(2, {'ECOG+SEEG'}, DisplayMod);
@@ -2187,7 +2187,7 @@ switch (lower(action))
                     % ===== RECORDINGS =====
                     if strcmpi(DataType, 'data')
                         % Get avaible modalities for this data file
-                        DisplayMod = bst_get('TimefreqDisplayModalities', filenameRelative);
+                        DisplayMod = db_get('TimefreqDisplayModalities', filenameRelative);
                         % Add SEEG+ECOG 
                         if all(ismember({'SEEG','ECOG'}, DisplayMod))
                             DisplayMod = cat(2, {'ECOG+SEEG'}, DisplayMod);
