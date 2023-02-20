@@ -55,9 +55,6 @@ function varargout = db_get(varargin)
 %    - db_get('AllStudies', Fields)  : Get all Studies in current protocol, excluding @inter and global @default_study
 %    - db_get('AllStudies', Fields, '@inter', '@default_study')  : Get all Studies in current protocol including @inter and global @default_study
 %    - db_get('StudyWithCondition', ConditionPath, Fields) : Get studies for a given condition path
-%    - db_get('ChannelStudiesWithSubject', SubjectIDs) : Get all studies (except @intra) where there should be a channel file all iSubjects
-%    - db_get('ChannelStudiesWithSubject', SubjectIDs, Fields) : Get Fields of all studies (except @intra) where there should be a channel file all iSubjects
-%    - db_get('ChannelStudiesWithSubject', SubjectIDs. Fields, @intrac) : Get Fields all studies (including @intra) where there should be a channel file all iSubjects
 %
 % ====== FUNCTIONAL FILES ==============================================================
 %    - db_get('FunctionalFilesWithStudy', StudyID, FunctionalFileFields, FunctionalFileType, FunctionalFileSubtype, SubjectFields)       : Get FunctionalFiles for StudyID
@@ -83,6 +80,9 @@ function varargout = db_get(varargin)
 %    - db_get('DataForStudy', StudyId, DataFunctFileFields) : Get data FunctionalFiles for StudyID
 %    - db_get('DataForStudy', StudyId, DataFunctFileFields) : Get data FunctionalFiles for all Studies from same Subject (including @intra and @default_study) if StudyID is Subject's default study
 %    - db_get('DataForStudy', StudyId, DataFunctFileFields) : Get data FunctionalFiles for all Normal Studies of All Normal Subjects if StudyID is Global default study
+%    - db_get('ChannelStudiesWithSubject', SubjectIDs) : Get all studies (except @intra) where there should be a channel file all iSubjects
+%    - db_get('ChannelStudiesWithSubject', SubjectIDs, Fields) : Get Fields of all studies (except @intra) where there should be a channel file all iSubjects
+%    - db_get('ChannelStudiesWithSubject', SubjectIDs. Fields, @intrac) : Get Fields all studies (including @intra) where there should be a channel file all iSubjects
 %
 % ====== ANY FILE ======================================================================
 %    - db_get('AnyFile', FileName)         : Get any file by FileName
