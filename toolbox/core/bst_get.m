@@ -244,6 +244,8 @@ argout5 = [];
 switch contextName
 %% ==== SUBFUNCTIONS =====
     case 'findFileInStudies'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         [argout1, argout2, argout3] = findFileInStudies(varargin{2:end});
         
 %% ==== BRAINSTORM CONFIGURATION ====
@@ -544,7 +546,8 @@ switch contextName
         argout1 = GlobalData.DataBase.(contextName)(argout2);
 
     case 'ProtocolSubjects'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'AllSubjects');
+        deprecationWarning(contextName, 'AllSubjects');
+
         argout1 = db_template('ProtocolSubjects');
         if GlobalData.DataBase.iProtocol == 0
             % No protocol loaded
@@ -578,7 +581,8 @@ switch contextName
         argout1.Subject = sSubjects;
         
     case 'ProtocolStudies'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'AllStudies');
+        deprecationWarning(contextName, 'AllStudies');
+
         argout1 = db_template('ProtocolStudies');
         if GlobalData.DataBase.iProtocol == 0
             % No protocol loaded
@@ -621,7 +625,7 @@ switch contextName
     %        [sStudy, iStudy] = bst_get('Study')
     %        [sStudy, iStudy] = bst_get('Study', iStudies)
     case 'Study'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
 
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -832,6 +836,8 @@ switch contextName
     %    - '@default_study'             : Protocol's default condition (where the protocol's shared files are stored)
     
     case 'StudyWithCondition'
+        deprecationWarning(contextName, contextName);
+
         % Parse inputs
         if (nargin ~= 2) || ~ischar(varargin{2})
             error('Invalid call to bst_get()');
@@ -856,7 +862,8 @@ switch contextName
 %% ==== CHANNEL STUDIES WITH SUBJECT ====
     % Usage: iStudies = bst_get('ChannelStudiesWithSubject', iSubjects, 'NoIntra')
     case 'ChannelStudiesWithSubject'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
+
         % Parse inputs
         if (nargin >= 2) && isnumeric(varargin{2})
             iSubjects = varargin{2};
@@ -875,16 +882,20 @@ switch contextName
 %% ==== STUDIES COUNT ====
     % Usage: [nbStudies] = bst_get('StudyCount')
     case 'StudyCount'
+        deprecationWarning(contextName, contextName);
+
         argout1 = db_get('StudyCount');
 
 %% ==== SUBJECTS COUNT ====
     % Usage: [nbSubjects] = bst_get('SubjectCount')
     case 'SubjectCount'
+        deprecationWarning(contextName, contextName);
+
         argout1 = db_get('SubjectCount');
         
 %% ==== NORMALIZED SUBJECT ====
     case 'NormalizedSubject'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
 
         sNormSubj = db_get('NormalizedSubject');
         % Get full subject structure
@@ -896,6 +907,8 @@ switch contextName
 %% ==== ANALYSIS STUDY (INTRA) ====
     % Usage: [sAnalStudy, iAnalStudy] = bst_get('AnalysisIntraStudy', iSubject) 
     case 'AnalysisIntraStudy'
+        deprecationWarning(contextName, 'StudiesFromSubject');
+
         % Parse inputs
         if (nargin == 2) && isnumeric(varargin{2})
             iSubject = varargin{2};
@@ -912,7 +925,7 @@ switch contextName
 %% ==== ANALYSIS STUDY (INTER) ====
     % Usage: [sAnalStudyInter, iAnalStudyInter] = bst_get('AnalysisInterStudy') 
     case 'AnalysisInterStudy'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'study');
+        deprecationWarning(contextName, 'Study');
 
         iAnalStudyInter = -2;
         [argout1, argout2] = bst_get('Study', iAnalStudyInter);
@@ -978,7 +991,8 @@ switch contextName
     % If isRaw is set: force to return the real brainstormsubject description
     % (ignoring wether it uses protocol's default anatomy or not)
     case 'Subject' 
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
+
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
@@ -1048,7 +1062,8 @@ switch contextName
 %% ==== SURFACE FILE ====
     % Usage : [sSubject, iSubject, iSurface] = bst_get('SurfaceFile', SurfaceFile)
     case 'SurfaceFile'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get('''')', contextName, 'SubjectFromAnatomyFile');
+        deprecationWarning(contextName, {'AnatomyFile', 'SubjectFromAnatomyFile'});
+
         % No protocol in database
         if isempty(GlobalData) || isempty(GlobalData.DataBase) || isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1073,7 +1088,8 @@ switch contextName
     %         [sSurface, iSurface] = bst_get('SurfaceFileByType', MriFile,     SurfaceType)
     %         [sSurface, iSurface] = bst_get('SurfaceFileByType', ...,         SurfaceType, isDefaultOnly)
     case 'SurfaceFileByType'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'AnatomyFilesWithSubject');
+        deprecationWarning(contextName, {'AnatomyFilesWithSubject'});
+
         % By default: return only the default surfaces of the category
         if (nargin < 4)
             isDefaultOnly = 1;
@@ -1132,7 +1148,8 @@ switch contextName
 %% ==== MRI FILE ====
     % Usage : [sSubject, iSubject, iMri] = bst_get('MriFile', MriFile)
     case 'MriFile'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''SubjectFromAnatomyFile'')', contextName);
+        deprecationWarning(contextName, {'AnatomyFile', 'SubjectFromAnatomyFile'});
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1154,6 +1171,8 @@ switch contextName
 %% ==== CHANNEL FILE ====
     % Usage: [sStudy, iStudy, iChannel] = bst_get('ChannelFile', ChannelFile)
     case 'ChannelFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1173,7 +1192,7 @@ switch contextName
 %% ==== CHANNEL FILE FOR STUDY ====
     % Usage: [ChannelFile, sStudy, iStudy] = bst_get('ChannelFileForStudy', StudyFile/DataFile)
     case 'ChannelFileForStudy'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'ChannelFromStudy'' or ''ChannelFromFunctionalFile');
+        deprecationWarning(contextName, {'ChannelFromStudy', 'ChannelFromFunctionalFile'});
 
         % Parse inputs
         if (nargin == 2)
@@ -1215,6 +1234,8 @@ switch contextName
 %% ==== CHANNEL STRUCT FOR STUDY ====
     % Usage: [sChannel, iChanStudy] = bst_get('ChannelForStudy', iStudies)
     case 'ChannelForStudy'
+        deprecationWarning(contextName, 'ChannelFromStudy');
+
         % Parse inputs
         if (nargin == 2)
             iStudies = varargin{2};
@@ -1243,7 +1264,7 @@ switch contextName
     % Usage: [Modalities, DispMod, DefMod] = bst_get('ChannelModalities', ChannelFile)
     %        [Modalities, DispMod, DefMod] = bst_get('ChannelModalities', DataFile/ResultsFile/TimefreqFile...)
     case 'ChannelModalities'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
 
         [argout1, argout2, argout3] = db_get('ChannelModalities', varargin{2});
 
@@ -1251,7 +1272,7 @@ switch contextName
 %% ==== TIMEFREQ DISPLAY MODALITIES ====
     % Usage: DisplayMod = bst_get('TimefreqDisplayModalities', TimefreqFile)
     case 'TimefreqDisplayModalities'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
         
         argout1 = db_get('TimefreqDisplayModalities', varargin{2});
 
@@ -1331,6 +1352,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iHeadModel] = bst_get('HeadModelFile', HeadModelFile, iStudies)
     %        [sStudy, iStudy, iHeadModel] = bst_get('HeadModelFile', HeadModelFile)
     case 'HeadModelFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1354,6 +1377,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iNoiseCov] = bst_get('DataCovFile', NoiseCovFile, iStudies)
     %        [sStudy, iStudy, iNoiseCov] = bst_get('DataCovFile', NoiseCovFile)
     case {'NoiseCovFile', 'DataCovFile'}
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1376,6 +1401,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iData] = bst_get('DataFile', DataFile, iStudies)
     %        [sStudy, iStudy, iData] = bst_get('DataFile', DataFile)
     case 'DataFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1397,6 +1424,8 @@ switch contextName
 %% ==== DATA FOR DATA LIST ====
     % Usage: [iFoundData] = bst_get('DataForDataList', iStudy, DataListName)
     case 'DataForDataList'
+        deprecationWarning(contextName, 'FilesInFileList');
+
         iStudy = varargin{2};
         dataListName = varargin{3};
         % Get data files of datalist
@@ -1408,6 +1437,8 @@ switch contextName
 %% ==== MATRIX FOR MATRIX LIST ====
     % Usage: [iFoundMatrix] = bst_get('MatrixForMatrixList', iStudy, MatrixListName)
     case 'MatrixForMatrixList'
+        deprecationWarning(contextName, 'FilesInFileList');
+
         iStudy = varargin{2};
         matrixListName = varargin{3};
         % Get matrix files of matrixlist
@@ -1419,7 +1450,7 @@ switch contextName
 %% ==== DATA FOR STUDY (INCLUDING SHARED STUDIES) ====
     % Usage: [iStudies, iDatas] = bst_get('DataForStudy', iStudy)
     case 'DataForStudy'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
         
         iStudy = varargin{2};
         sDataFuncFiles = db_get('DataForStudy', iStudy, {'Id', 'Study'});
@@ -1430,7 +1461,7 @@ switch contextName
 %% ==== DATA FOR STUDIES (INCLUDING SHARED STUDIES) ====
     % Usage: [iStudies, iDatas] = bst_get('DataForStudies', iStudies)
     case 'DataForStudies'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'DataForStudy');
+        deprecationWarning(contextName, 'DataForStudy');
 
         iStudies = varargin{2};
         for i = 1:length(iStudies)
@@ -1463,6 +1494,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iResult] = bst_get('ResultsFile', ResultsFile, iStudies)
     %        [sStudy, iStudy, iResult] = bst_get('ResultsFile', ResultsFile)
     case 'ResultsFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1485,6 +1518,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iResults] = bst_get('ResultsForDataFile', DataFile)           : search the whole protocol
     % Usage: [sStudy, iStudy, iResults] = bst_get('ResultsForDataFile', DataFile, iStudies) : search only the specified studies
     case 'ResultsForDataFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1512,6 +1547,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iData] = bst_get('StatFile', StatFile, iStudies)
     %        [sStudy, iStudy, iData] = bst_get('StatFile', StatFile)
     case 'StatFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1534,6 +1571,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iResults] = bst_get('StatForDataFile', DataFile)           : search the whole protocol
     % Usage: [sStudy, iStudy, iResults] = bst_get('StatForDataFile', DataFile, iStudies) : search only the specified studies
     case 'StatForDataFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1564,6 +1603,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iTimefreq] = bst_get('TimefreqFile', TimefreqFile, iStudies)
     %        [sStudy, iStudy, iTimefreq] = bst_get('TimefreqFile', TimefreqFile)
     case 'TimefreqFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1788,6 +1829,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iDipole] = bst_get('DipolesFile', DipolesFile, iStudies)
     %        [sStudy, iStudy, iDipole] = bst_get('DipolesFile', DipolesFile)
     case 'DipolesFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1810,6 +1853,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iDipole] = bst_get('MatrixFile', MatrixFile, iStudies)
     %        [sStudy, iStudy, iDipole] = bst_get('MatrixFile', MatrixFile)
     case 'MatrixFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1831,6 +1876,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iDipole] = bst_get('ImageFile', ImageFile, iStudies)
     %        [sStudy, iStudy, iDipole] = bst_get('ImageFile', ImageFile)
     case 'ImageFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1853,6 +1900,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iFile, DataType, sItem] = bst_get('AnyFile', FileName, iStudies)
     %        [sStudy, iStudy, iFile, DataType, sItem] = bst_get('AnyFile', FileName)
     case 'AnyFile'
+        deprecationWarning(contextName, contextName);
+
         % Input #2: FileName
         FileName = varargin{2};
         if isempty(FileName)
@@ -3953,7 +4002,22 @@ function bstPref = FillMissingFields(PrefName, defPref)
     end
 end
 
+%% ===== DEPRECATION WARNING =====
+function deprecationWarning(context_bst_get, contexts_db_get)
+    if ischar(contexts_db_get)
+        dbgetStr = ['db_get(''', contexts_db_get, ''')'];
+    else
+        dbgetStr = ['db_get(''', contexts_db_get{1}, ''')'];
+        for iContext = 2 : length(contexts_db_get)
+            dbgetStr = [dbgetStr, ' or ', 'db_get(''', contexts_db_get{iContext}, ''')'];
+       end
+    end
 
+    warning(['Call to bst_get(''', context_bst_get, ''') ', ...
+             'will be deprecated in new Brainstorm database system.', char(10), ...
+             '         Use instead:', char(10) ...
+             '         ', dbgetStr, char(10)]);
+end
 
 
 
