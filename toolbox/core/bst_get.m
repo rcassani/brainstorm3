@@ -875,14 +875,7 @@ switch contextName
 %% ==== STUDIES COUNT ====
     % Usage: [nbStudies] = bst_get('StudyCount')
     case 'StudyCount'
-        % Nothing
-        if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
-            argout1 = 0;
-            return;
-        end
-        % Get list of current protocol studies
-        ProtocolStudies = GlobalData.DataBase.ProtocolStudies(GlobalData.DataBase.iProtocol);
-        argout1 = length(ProtocolStudies.Study);
+        argout1 = db_get('StudyCount');
 
 %% ==== SUBJECTS COUNT ====
     % Usage: [nbSubjects] = bst_get('SubjectCount')

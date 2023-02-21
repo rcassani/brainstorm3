@@ -54,6 +54,7 @@ function varargout = db_get(varargin)
 %    - db_get('AllStudies')          : Get all Studies in current protocol, excluding @inter and global @default_study
 %    - db_get('AllStudies', Fields)  : Get all Studies in current protocol, excluding @inter and global @default_study
 %    - db_get('AllStudies', Fields, '@inter', '@default_study')  : Get all Studies in current protocol including @inter and global @default_study
+%    - db_get('StudyCount')                                : Get number of studies in current protocol, excluding @inter and global @default_study
 %    - db_get('StudyWithCondition', ConditionPath, Fields) : Get studies for a given condition path
 %
 % ====== FUNCTIONAL FILES ==============================================================
@@ -979,6 +980,12 @@ switch contextName
         end
         
         varargout{1} = sql_query(sqlConn, 'SELECT', 'Study', [], fields, addQuery);
+
+
+%% ==== STUDIES COUNT ====
+    % nStudies = db_get('StudyCount')
+    case 'StudyCount'
+        varargout{1} = sql_query(sqlConn, 'COUNT', 'Study', [], [], [' AND Name <> "', bst_get('DirAnalysisInter'), '" AND (Subject <> 0 OR Name <> "@default_study")']);
 
 
 %% ==== SUBJECT FROM FUNCTIONAL FILE ====              
