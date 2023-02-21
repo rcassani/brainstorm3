@@ -169,6 +169,7 @@ function [argout1, argout2, argout3, argout4, argout5] = bst_get( varargin )
 %    - bst_get('TimefreqOptions_fft')
 %    - bst_get('TimefreqOptions_psd')
 %    - bst_get('TimefreqOptions_hilbert')
+%    - bst_get('TimefreqOptions_plv')
 %    - bst_get('OpenMEEGOptions')
 %    - bst_get('DuneuroOptions')
 %    - bst_get('GridOptions_headmodel')
@@ -202,6 +203,15 @@ function [argout1, argout2, argout3, argout4, argout5] = bst_get( varargin )
 %    - bst_get('LastPsdDisplayFunction')  : Display option of measure for spectrum (log, power, magnitude, etc.)
 %    - bst_get('PlotlyCredentials')       : Get the credentials and URL to connect to plot.ly server
 %    - bst_get('ExportBidsOptions')       : Additional metadata for BIDS export
+%    - bst_get('KlustersExecutable')      : Get path tp klusters.exe (ephys)
+%    - bst_get('MontageOptions')          : Get montage options
+%    - bst_get('ComputerName')            : Get this computer name (hostname)
+%    - bst_get('UserName')                : Get username in this computer
+%    - bst_get('InstanceID')              : Get current InstanceID
+%    - bst_get('ProgramStartTime')        : Get Brainstorm start time (Unix time)
+%    - bst_get('CurrentUnixTime')         : Get current time (Unix time)
+
+
 %
 % SEE ALSO bst_set
 
