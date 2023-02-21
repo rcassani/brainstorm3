@@ -3885,7 +3885,6 @@ end
 % USAGE:  [sFoundStudy, iFoundStudy, iItem] = findFileInStudies(fieldGroup, fieldName, fieldFile, iStudiesList)
 %         [sFoundStudy, iFoundStudy, iItem] = findFileInStudies(fieldGroup, fieldName, fieldFile)
 function [sFoundStudy, iFoundStudy, iItem] = findFileInStudies(fieldGroup, fieldName, fieldFile, iStudiesList)
-    global GlobalData;
     sFoundStudy = [];
     iFoundStudy = [];
     iItem       = [];
@@ -3909,51 +3908,43 @@ function [sFoundStudy, iFoundStudy, iItem] = findFileInStudies(fieldGroup, field
     else
         fieldFolders = {fileparts(fieldFile)};
     end
-    % Get protocol information
-    ProtocolStudies = bst_get('ProtocolStudies');
+    % Get all studies information
+    sStudies = db_get('AllStudies', {'Id', 'FileName'}, '@inter', '@default_study');
     % List studies to process
     if (nargin < 4) || isempty(iStudiesList)
-        iStudiesList = [-2, -3, 1:length(ProtocolStudies.Study)];
+        iStudiesList = [sStudies.Id];
     end
-    
-    % NORMAL STUDIES: Look for surface file in all the surfaces of all subjects
-    for iStudy = iStudiesList
+
+    % Process each study
+    for ix = 1 : length(iStudiesList)
+        iStudy = iStudiesList(ix);
         % Get study
-        switch (iStudy)
-            case -2,    sStudy = ProtocolStudies.AnalysisStudy;
-            case -3,    sStudy = ProtocolStudies.DefaultStudy;
-            otherwise,  sStudy = ProtocolStudies.Study(iStudy);
-        end
-        % Check if field is available for the study
+        sStudy = sStudies([sStudies.Id] == iStudy);
         if isempty(sStudy)
-            continue;
-        end
-        if isempty(sStudy.(fieldGroup))
             continue;
         end
          % Check we are in the correct folder
         if ~any(file_compare(fieldFolders, fileparts(sStudy.FileName)))
             continue;
         end
-        % Get list of files from study
-        filesList = {sStudy.(fieldGroup).(fieldName)};
-        if isempty(filesList)
+        % For groups with DataFile field (Dipoles, Result, Stat and TimeFreq), it is called ExtraStr1 in new DB
+        if strcmpi('DataFile', fieldName)
+            fieldName = 'ExtraStr1';
+        end
+        % Check if study has functional files with: type (fieldGroup), fieldName and fieldFile
+        sFuncFiles = db_get('FunctionalFile', struct('Study', iStudy, 'Type', lower(fieldGroup), fieldName, fieldFile));
+        % For NoiseCov group, search for functional files of types noisecov and ndatacov
+        if strcmpi(fieldGroup, 'noisecov')
+            sFuncFilesb = db_get('FunctionalFile', struct('Study', iStudy, 'Type', 'ndatacov', fieldName, fieldFile));
+            sFuncFiles = [sFuncFiles, sFuncFilesb];
+        end
+        if isempty(sFuncFiles)
             continue;
         end
-        % Replace empty cells with empty strings
-        iValidFiles = find(cellfun(@ischar, filesList));
-        if isempty(iValidFiles)
-            continue;
-        end
-        % Find target in this list
-        iItem = find(file_compare(filesList(iValidFiles), fieldFile));
-        if ~isempty(iItem)
-            sFoundStudy  = sStudy;
-            iFoundStudy  = sStudy.Id;
-            sFuncFile = db_get('FunctionalFile', {sStudy.(fieldGroup)(iValidFiles(iItem)).FileName}, 'Id');
-            iItem = [sFuncFile.Id];
-            return
-        end
+        iItem = [sFuncFiles.Id];
+        iFoundStudy  = sFuncFiles(1).Study;
+        sFoundStudy  = bst_get('Study', iFoundStudy);
+        return
     end
 end
 
