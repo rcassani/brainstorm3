@@ -1367,7 +1367,7 @@ switch contextName
         % Get all the DataFiles for all these studies
         sDataFunctFiles = [];
         for ix = 1:length(sStudies)
-            tmp_sDataFunctFiles = db_get(sqlConn, 'FunctionalFile', struct('Study', sStudies(ix).Id, 'Type', 'data'), '*', dataFuncFileFields);
+            tmp_sDataFunctFiles = db_get(sqlConn, 'FunctionalFile', struct('Study', sStudies(ix).Id, 'Type', 'data'), dataFuncFileFields);
             sDataFunctFiles = [sDataFunctFiles, tmp_sDataFunctFiles];
         end
         varargout{1} = sDataFunctFiles;

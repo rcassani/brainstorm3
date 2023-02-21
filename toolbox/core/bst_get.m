@@ -1429,7 +1429,7 @@ switch contextName
         warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
         
         iStudy = varargin{2};
-        sDataFuncFiles = db_get('DataForStudy', iStudy);
+        sDataFuncFiles = db_get('DataForStudy', iStudy, {'Id', 'Study'});
         argout1 = [sDataFuncFiles.Study];
         argout2 = [sDataFuncFiles.Id];
        
@@ -1441,7 +1441,7 @@ switch contextName
 
         iStudies = varargin{2};
         for i = 1:length(iStudies)
-            sDataFuncFiles = db_get('DataForStudy', iStudies(i));
+            sDataFuncFiles = db_get('DataForStudy', iStudies(i), {'Id', 'Study'});
             argout1 = [argout1, [sDataFuncFiles.Study]];
             argout2 = [argout2, [sDataFuncFiles.Id]];
         end
