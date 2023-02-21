@@ -16,6 +16,7 @@ function varargout = db_get(varargin)
 %    - db_get('Subject', CondQuery,          Fields, isRaw) : Get Subject(s) with a Query struct
 %    - db_get('Subject', '@default_subject', Fields)        : Get default Subject
 %    - db_get('Subject')                                    : Get current Subject in current protocol
+%    - db_get('NormalizedSubject')                          : Get Normalized subject if it exists, otherwise it's created
 %    - db_get('AllSubjects')                                : Get all Subjects in current protocol, excluding @default_subject
 %    - db_get('AllSubjects', Fields)                        : Get all Subjects in current protocol, excluding @default_subject
 %    - db_get('AllSubjects', Fields, '@default_subject')    : Get all Subjects in current protocol, including @default_subject
@@ -61,9 +62,12 @@ function varargout = db_get(varargin)
 %    - db_get('FunctionalFile', FileIDs,   Fields) : Get FunctionalFile(s) by ID(s)
 %    - db_get('FunctionalFile', FileNames, Fields) : Get FunctionalFile(s) by FileName(s)
 %    - db_get('FunctionalFile', CondQuery, Fields) : Get FunctionalFile(s) with a Query
-%    - db_get('ChannelFromStudy', StudyID)       : Find current Channel for StudyID
-%    - db_get('ChannelFromStudy', StudyFileName) : Find current Channel for StudyFileName
-%    - db_get('ChannelFromStudy', CondQuery)     : Find current Channel for Query struct
+%    - db_get('ChannelFromStudy', StudyID,       ChannelFields, StudyFields) : Find current Channel for StudyID
+%    - db_get('ChannelFromStudy', StudyFileName, ChannelFields, StudyFields) : Find current Channel for StudyFileName
+%    - db_get('ChannelFromStudy', CondQuery,     ChannelFields, StudyFields) : Find current Channel for Query struct
+%    - db_get('ChannelFromFunctionalFile', FunctFileID,       ChannelFields, FunctFileFields) : Find current Channel for FunctFileID
+%    - db_get('ChannelFromFunctionalFile', FunctFileFileName, ChannelFields, FunctFileFields) : Find current Channel for FunctFileFileName
+%    - db_get('ChannelFromFunctionalFile', CondQuery,         ChannelFields, FunctFileFields) : Find current Channel for Query struct
 %    - db_get('FilesInFileList', ListFileID, Fields)   : Get FunctionalFile belonging to a list with ID
 %    - db_get('FilesInFileList', ListFileName, Fields) : Get FunctionalFile belonging to a list with FileName
 %    - db_get('FilesInFileList', CondQuery, Fields)   : Get FunctionalFile belonging to a list with Query
@@ -73,6 +77,16 @@ function varargout = db_get(varargin)
 %    - db_get('ChildrenFromFunctionalFile', FileName, ChildrenFields, ChildrenType, WholeProtocol) : Find ChildrenFiles for FunctionalFile with FileName
 %    - db_get('FilesForKernel', KernelFileId,   Type, Fields) : Find FunctionalFiles for Kernel with FileId
 %    - db_get('FilesForKernel', KernelFileName, Type, Fields) : Find FunctionalFiles for Kernel with FileName
+%    - db_get('DataForStudy', StudyId, DataFunctFileFields) : Get data FunctionalFiles for StudyID
+%    - db_get('DataForStudy', StudyId, DataFunctFileFields) : Get data FunctionalFiles for all Studies from same Subject (including @intra and @default_study) if StudyID is Subject's default study
+%    - db_get('DataForStudy', StudyId, DataFunctFileFields) : Get data FunctionalFiles for all Normal Studies of All Normal Subjects if StudyID is Global default study
+%    - db_get('ChannelStudiesWithSubject', SubjectIDs) : Get all studies (except @intra) where there should be a channel file all iSubjects
+%    - db_get('ChannelStudiesWithSubject', SubjectIDs, Fields) : Get Fields of all studies (except @intra) where there should be a channel file all iSubjects
+%    - db_get('ChannelStudiesWithSubject', SubjectIDs. Fields, @intrac) : Get Fields all studies (including @intra) where there should be a channel file all iSubjects
+%    - db_get('ChannelModalities', FunctionalFileId) : Get displayable modalities the Channel file related to FunctionalFileID
+%    - db_get('ChannelModalities', FunctionalFileId) : Get displayable modalities the Channel file related to FunctionalFileFileName
+%    - db_get('TimefreqDisplayModalities', FunctionalFileId)       : Get displayable modalities for a TF file FunctionalFileID
+%    - db_get('TimefreqDisplayModalities', FunctionalFileFileName) : Get displayable modalities for a TF file FunctionalFileFileName
 %
 % ====== ANY FILE ======================================================================
 %    - db_get('AnyFile', FileName)         : Get any file by FileName
@@ -252,6 +266,29 @@ switch contextName
 
         varargout{1} = sSubjects;   
         
+
+%% ==== NORMALIZED SUBJECT ====
+    % sSubject = db_get('NormalizedSubject')
+    case 'NormalizedSubject'
+        % Get normalized subject name
+        normSubjName = bst_get('NormalizedSubjectName');
+        if ~sql_query(sqlConn, 'EXIST', 'Subject', struct('Name', normSubjName))
+            % Always use default anatomy
+            UseDefaultAnat = 1;
+            % If all the subjects use a global channel file: Use global default as well
+            allSubjects = db_get(sqlConn, 'AllSubjects', 'UseDefaultChannel');
+            if all([allSubjects.UseDefaultChannel] == 2)
+                UseDefaultChannel = 2;
+            else
+                UseDefaultChannel = 1;
+            end
+            % Create subject
+            sNormSubj = db_add_subject(normSubjName, [], UseDefaultAnat, UseDefaultChannel);
+        else
+            sNormSubj = db_get(sqlConn, 'Subject', normSubjName);
+        end
+        varargout{1} = sNormSubj;
+
 
 %% ==== ALL SUBJECTS ====
     % sSubjects = db_get('AllSubjects');                             % Exclude @default_subject
@@ -588,11 +625,19 @@ switch contextName
 
 
 %% ==== CHANNEL FROM STUDY ====
-    % [iFile, iStudy] = db_get('ChannelFromStudy', StudyID)
-    %                 = db_get('ChannelFromStudy', StudyFileName)
-    %                 = db_get('ChannelFromStudy', CondQuery)
+    % [sChannel, sStudy] = db_get('ChannelFromStudy', StudyID,       ChannelFields, StudyFields)
+    %                    = db_get('ChannelFromStudy', StudyFileName, ChannelFields, StudyFields)
+    %                    = db_get('ChannelFromStudy', CondQuery,     ChannelFields, StudyFields)
     case 'ChannelFromStudy'
         iStudy = args{1};
+        channelFields = '*';
+        studyFields = '*';
+        if length(args) > 1 && ~isempty(args{2})
+            channelFields = args{2};
+            if length(args) > 2 && ~isempty(args{3})
+                studyFields = args{3};
+            end
+        end
         varargout{1} = [];
         varargout{2} = [];
         
@@ -623,17 +668,145 @@ switch contextName
             if ~isempty(sStudy)
                 % If no channel selected, find first channel in study
                 if isempty(sStudy.iChannel)
-                    sFuncFile = db_get(sqlConn, 'FunctionalFile', struct('Study', sStudy.Id, 'Type', 'channel'), 'Id');
-                    if ~isempty(sFuncFile)
-                        sStudy.iChannel = sFuncFile(1).Id;
-                    end
+                    sChannel = db_get(sqlConn, 'FunctionalFile', struct('Study', sStudy.Id, 'Type', 'channel'), channelFields);
+                else
+                    sChannel = db_get(sqlConn, 'FunctionalFile', sStudy.iChannel, channelFields);
                 end
 
-                if ~isempty(sStudy.iChannel)
-                    varargout{1} = sStudy.iChannel;
-                    varargout{2} = iChanStudy;
+                if ~isempty(sChannel)
+                    varargout{1} = sChannel;
+                    if nargout > 1
+                        sStudy = db_get(sqlConn, 'Study', iChanStudy, studyFields);
+                        varargout{2} = sStudy;
+                    end
                 end
             end
+        end
+
+
+%% ==== CHANNEL FROM FUNCTIONAL FILE ====
+    % [sChannel, sFunctFile] = db_get('ChannelFromFunctionalFile', FunctFileID,       ChannelFields, FunctFileFields)
+    %                        = db_get('ChannelFromFunctionalFile', FunctFileFileName, ChannelFields, FunctFileFields)
+    %                        = db_get('ChannelFromFunctionalFile', CondQuery,         ChannelFields, FunctFileFields)
+    case 'ChannelFromFunctionalFile'
+        iFuncFile = args{1};
+        channelFields = '*';
+        funcFields = '*';
+        if length(args) > 1 && ~isempty(args{2})
+            channelFields = args{2};
+            if length(args) > 2 && ~isempty(args{3})
+                funcFields = args{3};
+            end
+        end
+        varargout{1} = [];
+        varargout{2} = [];
+
+        sFuncFile = db_get(sqlConn, 'FunctionalFile', iFuncFile, 'Study');
+        sChannel =  db_get(sqlConn, 'ChannelFromStudy', sFuncFile.Study, channelFields);
+
+        if ~isempty(sChannel)
+            varargout{1} = sChannel;
+            if nargout > 1
+                sFuncFile = db_get(sqlConn, 'FunctionalFile', iFuncFile, funcFields);
+                varargout{2} = sFuncFile;
+            end
+        end
+
+
+%% ==== CHANNEL MODALITIES =====
+    % [Modalities, DisplayMods, DefaultMods] = db_get('ChannelModalities', FunctionalFileId)
+    %                                        = db_get('ChannelModalities', FunctionalFileFileName)
+    case 'ChannelModalities'
+        iFuncFile = args{1};
+        varargout{1} = [];
+        varargout{2} = [];
+        varargout{3} = [];
+
+        % Get channel from input file
+        sFuncFile = db_get(sqlConn, 'ChannelFromFunctionalFile', iFuncFile);
+        if strcmpi(sFuncFile.Type, 'channel')
+            sFuncFile = db_get(sqlConn, 'FunctionalFile', sFuncFile.Id);
+        else
+            sFuncFile = db_get(sqlConn, 'ChannelForStudy', sFuncFile.Study);
+        end
+        sChannel = db_convert_functionalfile(sFuncFile);
+
+        % Return modalities
+        if ~isempty(sChannel)
+            % Get all modalities
+            if ~isempty(sChannel.DisplayableSensorTypes)
+                % Return the displayable sensors on top of the list
+                argout1 = cat(2, sChannel.DisplayableSensorTypes, setdiff(sChannel.Modalities, sChannel.DisplayableSensorTypes));
+            else
+                argout1 = sChannel.Modalities;
+            end
+            % Get only sensors that have spatial representation
+            argout2 = sChannel.DisplayableSensorTypes;
+            % Default candidates
+            if ~isempty(argout2)
+                defList = argout2;
+            else
+                defList = argout1;
+            end
+            if isempty(defList)
+                return;
+            end
+            % Remove EDF and BDF from the default list
+            defList = setdiff(defList, {'EDF','BDF','KDF'});
+            % Get default modality
+            if ismember('SEEG', defList)
+                argout3 = 'SEEG';
+            elseif ismember('ECOG', defList)
+                argout3 = 'ECOG';
+            elseif any(ismember({'MEG','MEG GRAD','MEG MAG'}, defList))
+                argout3 = 'MEG';
+            elseif ismember('EEG', defList)
+                argout3 = 'EEG';
+            elseif ismember('NIRS', defList)
+                argout3 = 'NIRS';
+            else
+                argout3 = defList{1};
+            end
+            % Place the default on top of the lists
+            if ismember(argout3, argout1)
+                argout1(strcmpi(argout1, argout3)) = [];
+                argout1 = cat(2, argout3, argout1);
+            end
+            if ismember(argout3, argout2)
+                argout2(strcmpi(argout2, argout3)) = [];
+                argout2 = cat(2, argout3, argout2);
+            end
+            varargout{1} = argout1;
+            varargout{2} = argout2;
+            varargout{3} = argout3;
+        end
+
+
+%% ==== TIMEFREQ DISPLAY MODALITIES ====
+    % DisplayMods = db_get('TimefreqDisplayModalities', FunctionalFileId)
+    %             = db_get('TimefreqDisplayModalities', FunctionalFileFileName)
+    case 'TimefreqDisplayModalities'
+        TimefreqFile = varargin{2};
+        % Load sensor names from file
+        TimefreqMat = in_bst_timefreq(TimefreqFile, 0, 'RowNames');
+        % Get channel file
+        sChannel = db_get(sqlConn, 'ChannelFromFunctionalFile', TimefreqFile, 'FileName');
+        if isempty(sChannel)
+            return;
+        end
+        % Load channel file
+        ChannelMat = load(file_fullpath(sChannel.FileName), 'Channel');
+        % Get channels that are present in the file
+        [tmp__,I,J] = intersect({ChannelMat.Channel.Name}, TimefreqMat.RowNames);
+        FileMod = unique({ChannelMat.Channel(I).Type});
+        % Check if only one type of gradiometer is selected
+        if isequal(FileMod, {'MEG GRAD'}) && all(cellfun(@(c)(c(end)=='2'), {ChannelMat.Channel(I).Name}))
+            varargout{1} = {'MEG GRAD2'};
+        elseif isequal(FileMod, {'MEG GRAD'}) && all(cellfun(@(c)(c(end)=='3'), {ChannelMat.Channel(I).Name}))
+            varargout{1} = {'MEG GRAD3'};
+        % Keep only the modalities that can be displayed (as topography)
+        else
+            varargout{1} = intersect(FileMod, {'MEG','MEG GRAD','MEG MAG','EEG','ECOG','SEEG','NIRS'});
         end
 
 
@@ -1121,6 +1294,83 @@ switch contextName
         end
         varargout{1} = db_get(sqlConn, table, fileName, fields);
         varargout{2} = table;
+
+
+%% ==== CHANNEL STUDIES WITH SUBJECT ====
+    % sStudies = db_get('ChannelStudiesWithSubject', iSubjects)                   % Get all studies (except @intra) where there should be a channel file all iSubjects
+    % sStudies = db_get('ChannelStudiesWithSubject', iSubjects, fields)           % Get specific sStudy fields
+    % sStudies = db_get('ChannelStudiesWithSubject', iSubjects, fields, '@intra') % Include @intra study
+    case 'ChannelStudiesWithSubject'
+        fields = '*';
+        iSubjects = args{1};
+        if length(args) > 1
+            fields = args{2};
+            if length(args) > 2 && strcmpi(varargin{3}, '@intra')
+                getIntra = 1;
+            else
+                getIntra = 0;
+            end
+        end
+        % Process all subjects
+        sSubjects = db_get(sqlConn, 'Subject', iSubjects, {'Id', 'UseDefaultChannel'});
+        sStudies = [];
+        for ix = 1 : length(sSubjects)
+            % If subject uses default channel file
+            if (sSubjects(ix).UseDefaultChannel ~= 0)
+                % Get default study for this subject
+                sStudy = db_get(sqlConn, 'DefaultStudy', sSubjects(ix).Id, fields);
+                sStudies = [sStudies, sStudy];
+            % Else: get all the studies belonging to this subject
+            else
+                if getIntra
+                    sStudiesSub = db_get(sqlConn, 'StudiesFromSubject', sSubjects(ix).Id, fields, '@intra');
+                else
+                    sStudiesSub = db_get(sqlConn, 'StudiesFromSubject', sSubjects(ix).Id, fields);
+                end
+                sStudies = [sStudies, sStudiesSub];
+            end
+        end
+        varargout{1} = sStudies;
+
+%% ==== DATA FOR STUDY (INCLUDING SHARED STUDIES) ====
+    % Usage: sDataFunctFile = db_get('DataForStudy', StudyId, DataFunctFileFields)
+    case 'DataForStudy'
+        % Get target study
+        iStudy = args{1};
+        dataFuncFileFields = '*';
+        if length(args) > 1
+            dataFuncFileFields = args{2};
+        end
+        sStudy = db_get(sqlConn, 'Study', iStudy, {'Id', 'Subject', 'Name'});
+        isDefaultStudy  = strcmpi(sStudy.Name, bst_get('DirDefaultStudy'));
+        isGlobalDefault = and(isDefaultStudy, sStudy.Subject == 0);
+
+        sStudies = [];
+        % If study is the global default study
+        if isGlobalDefault
+            % Get all the subjects of the protocol
+            sSubjects = db_get(sqlConn, 'AllSubjects', {'Id', 'UseDefaultChannel'});
+            for ix = 1 : length(sSubjects)
+                if sSubjects(ix).UseDefaultChannel
+                    tmp_sStudies = db_get(sqlConn, 'StudiesFromSubject', sSubjects(ix).Id, 'Id');
+                    sStudies = [sStudies, tmp_sStudies];
+                end
+            end
+        % Else, if study is a subject's default study (ie. channel file is shared by all studies of one subject)
+        elseif isDefaultStudy
+            % Get all the subject's studies
+            sStudies = db_get(sqlConn, 'StudiesFromSubject', sStudy.Subject, 'Id', '@intra', '@default_study');
+        % Normal: one channel per condition
+        else
+            sStudies = sStudy;
+        end
+        % Get all the DataFiles for all these studies
+        sDataFunctFiles = [];
+        for ix = 1:length(sStudies)
+            tmp_sDataFunctFiles = db_get(sqlConn, 'FunctionalFile', struct('Study', sStudies(ix).Id, 'Type', 'data'), dataFuncFileFields);
+            sDataFunctFiles = [sDataFunctFiles, tmp_sDataFunctFiles];
+        end
+        varargout{1} = sDataFunctFiles;
 
 
 %% ==== ERROR ====      

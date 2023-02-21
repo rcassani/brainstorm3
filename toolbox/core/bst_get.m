@@ -544,7 +544,7 @@ switch contextName
         argout1 = GlobalData.DataBase.(contextName)(argout2);
 
     case 'ProtocolSubjects'
-        warning('bst_get(\''%s'') is deprecated with the new Brainstorm database system.', contextName);
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'AllSubjects');
         argout1 = db_template('ProtocolSubjects');
         if GlobalData.DataBase.iProtocol == 0
             % No protocol loaded
@@ -578,7 +578,7 @@ switch contextName
         argout1.Subject = sSubjects;
         
     case 'ProtocolStudies'
-        warning('bst_get(\''%s'') is deprecated with the new Brainstorm database system.', contextName);
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'AllStudies');
         argout1 = db_template('ProtocolStudies');
         if GlobalData.DataBase.iProtocol == 0
             % No protocol loaded
@@ -621,6 +621,8 @@ switch contextName
     %        [sStudy, iStudy] = bst_get('Study')
     %        [sStudy, iStudy] = bst_get('Study', iStudies)
     case 'Study'
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
@@ -854,6 +856,7 @@ switch contextName
 %% ==== CHANNEL STUDIES WITH SUBJECT ====
     % Usage: iStudies = bst_get('ChannelStudiesWithSubject', iSubjects, 'NoIntra')
     case 'ChannelStudiesWithSubject'
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
         % Parse inputs
         if (nargin >= 2) && isnumeric(varargin{2})
             iSubjects = varargin{2};
@@ -861,36 +864,12 @@ switch contextName
             error('Invalid call to bst_get()');
         end
         if (nargin == 3) && strcmpi(varargin{3}, 'NoIntra')
-            NoIntra = 1;
+            intra_str = '';
         else
-            NoIntra = 0;
+            intra_str = '@intra';
         end
-        % Process all subjects
-        iStudies = [];
-        sqlConn = sql_connect();
-        for i=1:length(iSubjects)
-            iSubject = iSubjects(i);
-            sSubject = db_get(sqlConn, 'Subject', iSubject, 'UseDefaultChannel');
-            % No subject: error
-            if isempty(sSubject) 
-                continue
-            % If subject uses default channel file    
-            elseif (sSubject.UseDefaultChannel ~= 0)
-                % Get default study for this subject
-                sStudy = db_get(sqlConn, 'DefaultStudy', iSubject, 'Id');
-                iStudies = [iStudies, sStudy.Id];
-            % Else: get all the studies belonging to this subject
-            else
-                if NoIntra
-                    sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, 'Id');
-                else
-                    sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, 'Id', '@intra');
-                end
-                iStudies = [iStudies, sStudies.Id];
-            end
-        end
-        sql_close(sqlConn);
-        argout1 = iStudies;
+        sStudies = db_get('ChannelStudiesWithSubject', iSubjects, 'Id', intra_str);
+        argout1 = [sStudies.Id];
     
         
 %% ==== STUDIES COUNT ====
@@ -912,26 +891,11 @@ switch contextName
         
 %% ==== NORMALIZED SUBJECT ====
     case 'NormalizedSubject'
-        % Get normalized subject name
-        normSubjName = 'Group_analysis';
-        % Try to get normalized subject
-        [sNormSubj, iNormSubj] = bst_get('Subject', normSubjName, 0);
-        % If normalized subject does not exist: create it
-        if isempty(sNormSubj)
-            % Always use default anatomy
-            UseDefaultAnat = 1;
-            % If all the subjects use a global channel file: Use global default as well
-            if ~isempty(GlobalData.DataBase.ProtocolSubjects(GlobalData.DataBase.iProtocol).Subject) && ...
-                all([GlobalData.DataBase.ProtocolSubjects(GlobalData.DataBase.iProtocol).Subject.UseDefaultChannel] == 2)
-                UseDefaultChannel = 2;
-            else
-                UseDefaultChannel = 1;
-            end    
-            % Create subject
-            [sNormSubj, iNormSubj] = db_add_subject(normSubjName, [], UseDefaultAnat, UseDefaultChannel);
-            % Get full subject structure
-            [sNormSubj, iNormSubj] = bst_get('Subject', normSubjName, 0);
-        end
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+
+        sNormSubj = db_get('NormalizedSubject');
+        % Get full subject structure
+        [sNormSubj, iNormSubj] = bst_get('Subject', sNormSubj.Name, 0);
         argout1 = sNormSubj;
         argout2 = iNormSubj;
         
@@ -955,6 +919,8 @@ switch contextName
 %% ==== ANALYSIS STUDY (INTER) ====
     % Usage: [sAnalStudyInter, iAnalStudyInter] = bst_get('AnalysisInterStudy') 
     case 'AnalysisInterStudy'
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'study');
+
         iAnalStudyInter = -2;
         [argout1, argout2] = bst_get('Study', iAnalStudyInter);
         
@@ -1089,7 +1055,7 @@ switch contextName
 %% ==== SURFACE FILE ====
     % Usage : [sSubject, iSubject, iSurface] = bst_get('SurfaceFile', SurfaceFile)
     case 'SurfaceFile'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''SubjectFromAnatomyFile'')', contextName);
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get('''')', contextName, 'SubjectFromAnatomyFile');
         % No protocol in database
         if isempty(GlobalData) || isempty(GlobalData.DataBase) || isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1114,6 +1080,7 @@ switch contextName
     %         [sSurface, iSurface] = bst_get('SurfaceFileByType', MriFile,     SurfaceType)
     %         [sSurface, iSurface] = bst_get('SurfaceFileByType', ...,         SurfaceType, isDefaultOnly)
     case 'SurfaceFileByType'
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'AnatomyFilesWithSubject');
         % By default: return only the default surfaces of the category
         if (nargin < 4)
             isDefaultOnly = 1;
@@ -1213,6 +1180,8 @@ switch contextName
 %% ==== CHANNEL FILE FOR STUDY ====
     % Usage: [ChannelFile, sStudy, iStudy] = bst_get('ChannelFileForStudy', StudyFile/DataFile)
     case 'ChannelFileForStudy'
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'ChannelFromStudy'' or ''ChannelFromFunctionalFile');
+
         % Parse inputs
         if (nargin == 2)
             StudyFile = varargin{2};
@@ -1222,14 +1191,15 @@ switch contextName
         % Get study in database
         sqlConn = sql_connect();
         iStudy = [];
-        sStudy = db_get(sqlConn, 'Study', StudyFile, 'Id');
+        isStudy = sql_query(sqlConn, 'EXIST', 'Study', struct('FileName', StudyFile));
         % If data file instead on Study file
-        if isempty(sStudy)
-            sFuncFile = db_get(sqlConn, 'FunctionalFile', StudyFile, 'Study');
+        if ~isStudy
+            [sChannel, sFuncFile] = db_get(sqlConn, 'ChannelFromFunctionalFile', StudyFile, '*', 'Study');
             if ~isempty(sFuncFile)
                 iStudy = sFuncFile.Study;
             end
         else
+            [sChannel, sStudy] = db_get(sqlConn, 'ChannelFromStudy', StudyFile, '*', 'Id');
             iStudy = sStudy.Id;
         end
         sql_close(sqlConn);
@@ -1238,7 +1208,6 @@ switch contextName
             return;
         end
         
-        sChannel = bst_get('ChannelForStudy', iStudy);
         if ~isempty(sChannel)
             argout1 = sChannel.FileName;
             if nargout > 1
@@ -1265,11 +1234,10 @@ switch contextName
         for i = 1:length(iStudies)           
             % Get study 
             iStudy = iStudies(i);
-            [iChannel, iChanStudy] = db_get(sqlConn, 'ChannelFromStudy', iStudy);
-            sFuncFile = db_get(sqlConn, 'FunctionalFile', iChannel);
-            sChannel = db_convert_functionalfile(sFuncFile);
+            [sChannel, sChanStudy] = db_get(sqlConn, 'ChannelFromStudy', iStudy, '*', 'Id');
+            sChannel = db_convert_functionalfile(sChannel);
             if ~isempty(sChannel)
-                iChanStudies = [iChanStudies, iChanStudy];
+                iChanStudies = [iChanStudies, sChanStudy.Id];
                 sListChannel = [sListChannel, sChannel];
             end
         end
@@ -1282,94 +1250,19 @@ switch contextName
     % Usage: [Modalities, DispMod, DefMod] = bst_get('ChannelModalities', ChannelFile)
     %        [Modalities, DispMod, DefMod] = bst_get('ChannelModalities', DataFile/ResultsFile/TimefreqFile...)
     case 'ChannelModalities'
-        % Get channel from input file
-        sqlConn = sql_connect();
-        sFuncFile = db_get(sqlConn, 'FunctionalFile', varargin{2}, {'Id', 'Study', 'Type'});
-        if strcmpi(sFuncFile.Type, 'channel')
-            sFuncFile = db_get(sqlConn, 'FunctionalFile', sFuncFile.Id);
-            sChannel = db_convert_functionalfile(sFuncFile);
-            sql_close(sqlConn);
-        else
-            sql_close(sqlConn);
-            sChannel = bst_get('ChannelForStudy', sFuncFile.Study);
-        end
-        % Return modalities
-        if ~isempty(sChannel)
-            % Get all modalities
-            if ~isempty(sChannel.DisplayableSensorTypes)
-                % Return the displayable sensors on top of the list
-                argout1 = cat(2, sChannel.DisplayableSensorTypes, setdiff(sChannel.Modalities, sChannel.DisplayableSensorTypes));
-            else
-                argout1 = sChannel.Modalities;
-            end
-            % Get only sensors that have spatial representation
-            argout2 = sChannel.DisplayableSensorTypes;
-            % Default candidates
-            if ~isempty(argout2)
-                defList = argout2;
-            else
-                defList = argout1;
-            end
-            if isempty(defList)
-                return;
-            end
-            % Remove EDF and BDF from the default list
-            defList = setdiff(defList, {'EDF','BDF','KDF'});
-            % Get default modality
-            if ismember('SEEG', defList)
-                argout3 = 'SEEG';
-            elseif ismember('ECOG', defList)
-                argout3 = 'ECOG';
-            elseif any(ismember({'MEG','MEG GRAD','MEG MAG'}, defList))
-                argout3 = 'MEG';
-            elseif ismember('EEG', defList)
-                argout3 = 'EEG';
-            elseif ismember('NIRS', defList)
-                argout3 = 'NIRS';
-            else
-                argout3 = defList{1};
-            end
-            % Place the default on top of the lists
-            if ismember(argout3, argout1)
-                argout1(strcmpi(argout1, argout3)) = [];
-                argout1 = cat(2, argout3, argout1);
-            end
-            if ismember(argout3, argout2)
-                argout2(strcmpi(argout2, argout3)) = [];
-                argout2 = cat(2, argout3, argout2);
-            end
-        else
-            argout1 = [];
-        end
-        
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+
+        [argout1, argout2, argout3] = db_get('ChannelModalities', varargin{2});
+
 
 %% ==== TIMEFREQ DISPLAY MODALITIES ====
     % Usage: DisplayMod = bst_get('TimefreqDisplayModalities', TimefreqFile)
     case 'TimefreqDisplayModalities'
-        TimefreqFile = varargin{2};
-        % Load sensor names from file
-        TimefreqMat = in_bst_timefreq(TimefreqFile, 0, 'RowNames');
-        % Get channel file
-        ChannelFile = bst_get('ChannelFileForStudy', TimefreqFile);
-        if isempty(ChannelFile)
-            return;
-        end
-        % Load channel file
-        ChannelMat = load(file_fullpath(ChannelFile), 'Channel');
-        % Get channels that are present in the file
-        [tmp__,I,J] = intersect({ChannelMat.Channel.Name}, TimefreqMat.RowNames);
-        FileMod = unique({ChannelMat.Channel(I).Type});
-        % Check if only one type of gradiometer is selected
-        if isequal(FileMod, {'MEG GRAD'}) && all(cellfun(@(c)(c(end)=='2'), {ChannelMat.Channel(I).Name}))
-            argout1 = {'MEG GRAD2'};
-        elseif isequal(FileMod, {'MEG GRAD'}) && all(cellfun(@(c)(c(end)=='3'), {ChannelMat.Channel(I).Name}))
-            argout1 = {'MEG GRAD3'};
-        % Keep only the modalities that can be displayed (as topography)
-        else
-            argout1 = intersect(FileMod, {'MEG','MEG GRAD','MEG MAG','EEG','ECOG','SEEG','NIRS'});
-        end
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
         
-        
+        argout1 = db_get('TimefreqDisplayModalities', varargin{2});
+
+
 %% ==== CHANNEL DEVICE ====
     % Usage: Device = bst_get('ChannelDevice', ChannelFile)
     case 'ChannelDevice'
@@ -1533,51 +1426,24 @@ switch contextName
 %% ==== DATA FOR STUDY (INCLUDING SHARED STUDIES) ====
     % Usage: [iStudies, iDatas] = bst_get('DataForStudy', iStudy)
     case 'DataForStudy'
-        % Get target study
-        iStudy = varargin{2};
-        sStudy = bst_get('Study', iStudy);
-        isDefaultStudy  = strcmpi(sStudy.Name, bst_get('DirDefaultStudy'));
-        isGlobalDefault = (iStudy == -3);
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
         
-        % If study is the global default study
-        sStudies = [];
-        iStudies = [];
-        if isGlobalDefault
-            % Get all the subjects of the protocol
-            nbSubjects = bst_get('SubjectCount');
-            for iSubject = 1:nbSubjects
-                sSubject = bst_get('Subject', iSubject, 1);
-                if sSubject.UseDefaultChannel
-                    [tmp_sStudies, tmp_iStudies] = bst_get('StudyWithSubject', sSubject.FileName);
-                    sStudies = [sStudies, tmp_sStudies];
-                    iStudies = [iStudies, tmp_iStudies];
-                end
-            end
-        % Else, if study is a subject's default study (ie. channel file is shared by all studies of one subject)
-        elseif isDefaultStudy
-            % Get all the subject's studies
-            [sStudies, iStudies] = bst_get('StudyWithSubject', sStudy.BrainStormSubject, 'intra_subject', 'default_study');
-        else
-            % Normal: one channel per condition
-            sStudies = sStudy;
-            iStudies = iStudy;
-        end
-        % Get all the DataFiles for all these studies
-        for i = 1:length(sStudies)
-            nData = length(sStudies(i).Data);
-            argout1 = [argout1, repmat(iStudies(i), [1,nData])];
-            argout2   = [argout2, 1:nData];
-        end
+        iStudy = varargin{2};
+        sDataFuncFiles = db_get('DataForStudy', iStudy, {'Id', 'Study'});
+        argout1 = [sDataFuncFiles.Study];
+        argout2 = [sDataFuncFiles.Id];
        
         
 %% ==== DATA FOR STUDIES (INCLUDING SHARED STUDIES) ====
     % Usage: [iStudies, iDatas] = bst_get('DataForStudies', iStudies)
     case 'DataForStudies'
+        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'DataForStudy');
+
         iStudies = varargin{2};
         for i = 1:length(iStudies)
-            [tmp_iStudies, tmp_iDatas] = bst_get('DataForStudy', iStudies(i));
-            argout1 = [argout1, tmp_iStudies];
-            argout2 = [argout2, tmp_iDatas];
+            sDataFuncFiles = db_get('DataForStudy', iStudies(i), {'Id', 'Study'});
+            argout1 = [argout1, [sDataFuncFiles.Study]];
+            argout2 = [argout2, [sDataFuncFiles.Id]];
         end
         
 %% ==== DATA FILE FOR CHANNEL FILE ====

@@ -204,7 +204,7 @@ switch (lower(action))
             % Mark/unmark (items selected : 1/category)
             case {'scalp', 'outerskull', 'innerskull', 'cortex', 'fibers', 'fem'}
                 iSubject = bstNodes(1).getStudyIndex();
-                sSubject = bst_get('Subject', iSubject);
+                sSubject = db_get('Subject', iSubject);
                 iSurface = bstNodes(1).getItemIndex();
                 % If surface is not selected yet
                 switch lower(nodeType)
@@ -236,7 +236,7 @@ switch (lower(action))
             % Else : Edit channel file
             case 'channel'
                 % Get displayable modalities for this file
-                [tmp, DisplayMod] = bst_get('ChannelModalities', filenameRelative);
+                [tmp, DisplayMod] = db_get('ChannelModalities', filenameRelative);
                 DisplayMod = intersect(DisplayMod, {'EEG','MEG','MEG GRAD','MEG MAG','ECOG','SEEG','ECOG+SEEG','NIRS'});
                 % If only one modality
                 if ~isempty(DisplayMod)
@@ -260,15 +260,14 @@ switch (lower(action))
             % Mark/unmark (items selected : 1)
             case 'headmodel'
                 iStudy     = bstNodes(1).getStudyIndex();
-                sStudy     = bst_get('Study', iStudy);
+                sStudy     = db_get('Study', iStudy);
                 iHeadModel = bstNodes(1).getItemIndex();
                 % If item is not marked yet : mark it (and unmark all the other nodes)
                 if (~ismember(iHeadModel, sStudy.iHeadModel) || ~bstNodes(1).isMarked())
                     % Select this node (and unselect all the others)
                     panel_protocols('MarkUniqueNode', bstNodes(1));
                     % Save in database selected file
-                    sStudy.iHeadModel = iHeadModel;
-                    bst_set('Study', iStudy, sStudy);
+                    db_set('Study', struct('iHeadModel', iHeadModel), iStudy);
                 % Else, this item is already marked : keep it marked
                 end
                 
@@ -305,9 +304,9 @@ switch (lower(action))
             % ===== STAT/RESULTS =====
             case 'presults'
                 % Read the head model from the file
-                sFunctFile = db_get('FunctionalFile', filenameRelative, 'ExtraStr2'); % HeadModelType
+                ResultsMat = in_bst_results(filenameRelative, 0, 'HeadModelType');
                 % Volume: MRI Viewer
-                if strcmpi(sFunctFile.ExtraStr2, 'volume')
+                if strcmpi(ResultsMat.HeadModelType, 'volume')
                     sSubject  = db_get('SubjectFromFunctionalFile', filenameRelative, 'iAnatomy');
                     sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
                     view_mri(sAnatFile.FileName, filenameRelative);
@@ -330,7 +329,7 @@ switch (lower(action))
                 % Get study
                 iStudy = bstNodes(1).getStudyIndex();
                 iTimefreq = bstNodes(1).getItemIndex();
-                sStudy = bst_get('Study', iStudy);
+                sTimeFreq = db_get('FunctionalFile', iTimefreq, {'SubType', 'ExtraStr1'});
                 % Get data type
                 if strcmpi(char(bstNodes(1).getType()), 'ptimefreq')
                     TimefreqMat = in_bst_timefreq(filenameRelative, 0, 'DataType');
@@ -341,8 +340,8 @@ switch (lower(action))
                     end
                     DataFile = [];
                 else
-                    DataType = sStudy.Timefreq(iTimefreq).DataType;
-                    DataFile = sStudy.Timefreq(iTimefreq).DataFile;
+                    DataType = sTimeFreq.SubType;
+                    DataFile = sTimeFreq.ExtraStr1;
                 end
                 % PAC and DPAC
                 if ~isempty(strfind(filenameRelative, '_pac_fullmaps'))
@@ -353,7 +352,7 @@ switch (lower(action))
                     return;
                 end
                 % Get subject 
-                sSubject = bst_get('Subject', sStudy.BrainStormSubject);
+                sSubject = db_get('SubjectFromStudy', iStudy);
                 switch DataType
                     % Results: display on cortex or MRI
                     case 'results'
@@ -365,9 +364,9 @@ switch (lower(action))
                         else
                             % Get head model type for the sources file
                             if ~isempty(DataFile)
-                                [sStudyData, iStudyData, iResult] = bst_get('AnyFile', DataFile);
-                                if ~isempty(sStudyData)
-                                    isVolume = strcmpi(sStudyData.Result(iResult).HeadModelType, 'volume');
+                                sResult = db_get('FunctionalFile', DataFile);
+                                if ~isempty(sResult)
+                                    isVolume = strcmpi(sResult.ExtraStr2, 'volume');
                                 else
                                     disp('BST> Error: This file was linked to a source file that was deleted.');
                                     isVolume = 0;
@@ -383,9 +382,9 @@ switch (lower(action))
                                 view_surface_data([], filenameRelative);
                             % MRI
                             elseif isVolume && ~isempty(sSubject) && ~isempty(sSubject.iAnatomy)
-                                MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
-                                % view_surface_data(MriFile, filenameRelative);
-                                view_mri(MriFile, filenameRelative);
+                                sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                                % view_surface_data(sAnatFile.FileName, filenameRelative);
+                                view_mri(sAnatFile.FileName, filenameRelative);
                             % Else: single sensor
                             else
                                 view_timefreq(filenameRelative, 'SingleSensor');
@@ -425,7 +424,7 @@ switch (lower(action))
                 % Get study
                 iStudy = bstNodes(1).getStudyIndex();
                 iTimefreq = bstNodes(1).getItemIndex();
-                sStudy = bst_get('Study', iStudy);
+                sTimeFreq = db_get('FunctionalFile', iTimefreq, {'SubType', 'ExtraStr1'});
                 % Get data type
                 if strcmpi(nodeType, 'pspectrum')
                     TimefreqMat = in_bst_timefreq(filenameRelative, 0, 'DataType');
@@ -436,18 +435,18 @@ switch (lower(action))
                     end
                     DataFile = [];
                 else
-                    DataType = sStudy.Timefreq(iTimefreq).DataType;
-                    DataFile = sStudy.Timefreq(iTimefreq).DataFile;
+                    DataType = sTimeFreq.DataType;
+                    DataFile = sTimeFreq.DataFile;
                 end
                 % Get subject 
-                sSubject = bst_get('Subject', sStudy.BrainStormSubject);
+                sSubject = db_get('SubjectFromStudy', iStudy);
                 switch (DataType)
                     % Results: display on cortex or MRI
                     case 'results'
                         % Get head model type for the sources file
                         if ~isempty(DataFile)
-                            [sStudyData, iStudyData, iResult] = bst_get('AnyFile', DataFile);
-                            isVolume = strcmpi(sStudyData.Result(iResult).HeadModelType, 'volume');
+                            sResult = db_get('FunctionalFile', DataFile);
+                            isVolume = strcmpi(sResult.ExtraStr2, 'volume');
                         % Get the default head model
                         else
                             wloc    = whos('-file', filenameFull, 'GridLoc');
@@ -458,9 +457,9 @@ switch (lower(action))
                         if ~isempty(sSubject) && ~isempty(sSubject.iCortex) && ~isVolume
                             view_surface_data([], filenameRelative);
                         elseif ~isempty(sSubject) && ~isempty(sSubject.iAnatomy)
-                            MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
-                            %view_surface_data(MriFile, filenameRelative);
-                            view_mri(MriFile, filenameRelative);
+                            sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                            %view_surface_data(sAnatFile.FileName, filenameRelative);
+                            view_mri(sAnatFile.FileName, filenameRelative);
                         else
                             view_timefreq(filenameRelative, 'SingleSensor');
                         end
@@ -661,7 +660,7 @@ switch (lower(action))
                 % Get subject
                 iStudy = bstNodes(1).getStudyIndex();
                 iSubject = bstNodes(1).getItemIndex();
-                sSubject = bst_get('Subject', iSubject);
+                sSubject = db_get('Subject', iSubject);
                 % If node is a directory node
                 isDirNode = (bstNodes(1).getStudyIndex() == 0);
                 % === EDIT SUBJECT ===
@@ -713,7 +712,7 @@ switch (lower(action))
                     if (bstNodes(1).getStudyIndex() ~= 0) 
                         iStudy   = bstNodes(1).getStudyIndex();
                         iSubject = bstNodes(1).getItemIndex();
-                        sSubject = bst_get('Subject', iSubject);
+                        sSubject = db_get('Subject', iSubject);
                         % === IMPORT DATA/DIPOLES ===
                         if (length(bstNodes) == 1) && ~isRaw
                             gui_component('MenuItem', jPopup, [], 'Import MEG/EEG', IconLoader.ICON_EEG_NEW, [], @(h,ev)bst_call(@import_data, [], [], [], iStudy, iSubject));
@@ -769,9 +768,10 @@ switch (lower(action))
                         % Get all raw files contained in these folders
                         RawFiles = {};
                         for i = 1:length(bstNodes)
-                            sStudy = bst_get('Study', bstNodes(i).getStudyIndex());
-                            if ~isempty(sStudy) && (length(sStudy.Data) == 1) && strcmpi(sStudy.Data(1).DataType, 'raw')
-                                RawFiles{end+1} = sStudy.Data(1).FileName;
+                            sStudy = db_get('Study', bstNodes(i).getStudyIndex());
+                            sDataFiles = db_get('FunctionalFilesWithStudy', sStudy.Id, 'FileName', 'data', 'raw');
+                            if length(sDataFiles) == 1
+                                RawFiles{end+1} = sDataFiles(1).FileName;
                             end
                         end
                         jMenuExport = gui_component('MenuItem', [], [], 'Export to file', IconLoader.ICON_SAVE, [], @(h,ev)export_data(RawFiles));
@@ -783,15 +783,15 @@ switch (lower(action))
                 if ~bst_get('ReadOnly')
                     iStudy   = bstNodes(1).getStudyIndex();
                     iSubject = bstNodes(1).getItemIndex();
-                    sSubject = bst_get('Subject', iSubject);
+                    sSubject = db_get('Subject', iSubject);
                     % Get inter-subject study
-                    [sInterStudy, iInterStudy] = bst_get('AnalysisInterStudy');
+                    sInterStudy = db_get('Study', '@inter');
                     % === IMPORT DATA ===
                     if ~isSpecialNode
                         gui_component('MenuItem', jPopup, [], 'Import MEG/EEG', IconLoader.ICON_EEG_NEW, [], @(h,ev)bst_call(@import_data, [], [], [], iStudy, iSubject));
                     end
                     % If not Default Channel
-                    if (sSubject.UseDefaultChannel == 0) && (iStudy ~= iInterStudy)
+                    if (sSubject.UseDefaultChannel == 0) && (iStudy ~= sInterStudy.Id)
                         % === IMPORT CHANNEL / COMPUTE HEADMODEL ===
                         fcnPopupImportChannel(bstNodes, jPopup, 0);
                         fcnPopupMenuGoodBad();
@@ -833,10 +833,9 @@ switch (lower(action))
                 % Get study index
                 iStudy = bstNodes(1).getStudyIndex();
                 % Get subject structure
-                sStudy = bst_get('Study', iStudy);
-                sSubject = bst_get('Subject', sStudy.BrainStormSubject);
+                sSubject = db_get('SubjectFromStudy', iStudy);
                 % Get avaible modalities for this data file
-                [AllMod, DisplayMod] = bst_get('ChannelModalities', filenameRelative);
+                [AllMod, DisplayMod] = db_get('ChannelModalities', filenameRelative);
                 Device = bst_get('ChannelDevice', filenameRelative);
                 % Replace SEEG+ECOG with iEEG
                 if ~isempty(AllMod) && all(ismember({'SEEG','ECOG'}, AllMod))
@@ -846,11 +845,7 @@ switch (lower(action))
                     end
                 end
                 % Find anatomy volumes (exclude atlases)
-                if ~isempty(sSubject.Anatomy)
-                    iVolAnat = find(cellfun(@(c)isempty(strfind(c, '_volatlas')), {sSubject.Anatomy.FileName}));
-                else
-                    iVolAnat = [];
-                end
+                sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, '*', 'Volume', 'Image');
                 % If only one modality
                 if (length(DisplayMod) == 1) && ((length(bstNodes) ~= 1) || isempty(Device)) && ~ismember(Device, {'Vectorview306', 'CTF', '4D', 'KIT', 'KRISS', 'BabyMEG', 'RICOH'}) && ~ismember(DisplayMod, {'EEG','ECOG','SEEG','ECOG+SEEG','NIRS'})
                     gui_component('MenuItem', jPopup, [], 'Display sensors', IconLoader.ICON_CHANNEL, [], @(h,ev)DisplayChannels(bstNodes, DisplayMod{1}, 'scalp'));
@@ -886,19 +881,19 @@ switch (lower(action))
                                 gui_component('MenuItem', jMenuDisplay, [], [channelTypeDisplay '   (Cortex)'],   IconLoader.ICON_SURFACE_CORTEX, [], @(h,ev)DisplayChannels(bstNodes, DisplayMod{iType}, 'cortex', 1));
                             end
                             % MRI 3D
-                            if (length(iVolAnat) == 1)
-                                gui_component('MenuItem', jMenuDisplay, [], [channelTypeDisplay '   (MRI 3D)'], IconLoader.ICON_ANATOMY, [], @(h,ev)DisplayChannels(bstNodes, DisplayMod{iType}, 'anatomy', iVolAnat(1)));
-                            elseif (length(iVolAnat) > 1)
-                                for iAnat = 1:length(iVolAnat)
-                                    gui_component('MenuItem', jMenuDisplay, [], [channelTypeDisplay '   (MRI 3D: ' sSubject.Anatomy(iVolAnat(iAnat)).Comment ')'], IconLoader.ICON_ANATOMY, [], @(h,ev)DisplayChannels(bstNodes, DisplayMod{iType}, sSubject.Anatomy(iVolAnat(iAnat)).FileName, 1));
+                            if (length(sAnatFiles) == 1)
+                                gui_component('MenuItem', jMenuDisplay, [], [channelTypeDisplay '   (MRI 3D)'], IconLoader.ICON_ANATOMY, [], @(h,ev)DisplayChannels(bstNodes, DisplayMod{iType}, 'anatomy', sAnatFiles.FileName));
+                            elseif (length(sAnatFiles) > 1)
+                                for iAnat = 1:length(sAnatFiles)
+                                    gui_component('MenuItem', jMenuDisplay, [], [channelTypeDisplay '   (MRI 3D: ' sAnatFiles(iAnat).Comment ')'], IconLoader.ICON_ANATOMY, [], @(h,ev)DisplayChannels(bstNodes, DisplayMod{iType}, sAnatFiles(iAnat).FileName, 1));
                                 end
                             end
                             % MRI Viewer
-                            if (length(iVolAnat) == 1)
-                                gui_component('MenuItem', jMenuDisplay, [], [channelTypeDisplay '   (MRI Viewer)'], IconLoader.ICON_ANATOMY, [], @(h,ev)panel_ieeg('DisplayChannelsMri', filenameRelative, DisplayMod{iType}, iVolAnat(1)));
-                            elseif (length(iVolAnat) > 1)
-                                for iAnat = 1:length(iVolAnat)
-                                    gui_component('MenuItem', jMenuDisplay, [], [channelTypeDisplay '   (MRI Viewer: ' sSubject.Anatomy(iVolAnat(iAnat)).Comment ')'], IconLoader.ICON_ANATOMY, [], @(h,ev)panel_ieeg('DisplayChannelsMri', filenameRelative, DisplayMod{iType}, iVolAnat(iAnat)));
+                            if (length(sAnatFiles) == 1)
+                                gui_component('MenuItem', jMenuDisplay, [], [channelTypeDisplay '   (MRI Viewer)'], IconLoader.ICON_ANATOMY, [], @(h,ev)panel_ieeg('DisplayChannelsMri', filenameRelative, DisplayMod{iType}, sAnatFiles.Id));
+                            elseif (length(sAnatFiles) > 1)
+                                for iAnat = 1:length(sAnatFiles)
+                                    gui_component('MenuItem', jMenuDisplay, [], [channelTypeDisplay '   (MRI Viewer: ' sAnatFiles(iAnat).Comment ')'], IconLoader.ICON_ANATOMY, [], @(h,ev)panel_ieeg('DisplayChannelsMri', filenameRelative, DisplayMod{iType}, sAnatFiles(iAnat).Id));
                                 end
                             end
                         elseif ismember('NIRS', DisplayMod{iType})
@@ -961,20 +956,20 @@ switch (lower(action))
                                 if ~isempty(sSubject.iCortex)
                                     gui_component('MenuItem', jMenuAlign, [], [strType 'Edit...    (Cortex)'],     IconLoader.ICON_ALIGN_CHANNELS, [], @(h,ev)channel_align_manual(filenameRelative, DisplayModReg{iMod}, 1, 'cortex'));
                                 end
-                                if (length(iVolAnat) == 1)
-                                    gui_component('MenuItem', jMenuAlign, [], [strType 'Edit...    (MRI 3D)'], IconLoader.ICON_ANATOMY, [], @(h,ev)channel_align_manual(filenameRelative, DisplayModReg{iMod}, 1, sSubject.Anatomy(iVolAnat(1)).FileName));
-                                elseif (length(iVolAnat) > 1)
-                                    for iAnat = 1:length(iVolAnat)
-                                        gui_component('MenuItem', jMenuAlign, [], [strType 'Edit...    (MRI 3D: ' sSubject.Anatomy(iVolAnat(iAnat)).Comment ')'], IconLoader.ICON_ANATOMY, [], @(h,ev)channel_align_manual(filenameRelative, DisplayModReg{iMod}, 1, sSubject.Anatomy(iVolAnat(iAnat)).FileName));
+                                if (length(sAnatFiles) == 1)
+                                    gui_component('MenuItem', jMenuAlign, [], [strType 'Edit...    (MRI 3D)'], IconLoader.ICON_ANATOMY, [], @(h,ev)channel_align_manual(filenameRelative, DisplayModReg{iMod}, 1, sAnatFiles.FileName));
+                                elseif (length(sAnatFiles) > 1)
+                                    for iAnat = 1:length(sAnatFiles)
+                                        gui_component('MenuItem', jMenuAlign, [], [strType 'Edit...    (MRI 3D: ' sAnatFiles(iAnat).Comment ')'], IconLoader.ICON_ANATOMY, [], @(h,ev)channel_align_manual(filenameRelative, DisplayModReg{iMod}, 1, sAnatFiles(iAnat).FileName));
                                     end
                                 end
                             end
                             % Allow edition in MRI even if there is not location available for any electrode
-                            if (length(iVolAnat) == 1)
-                                gui_component('MenuItem', jMenuAlign, [], [strType 'Edit...    (MRI Viewer)'], IconLoader.ICON_ALIGN_CHANNELS, [], @(h,ev)panel_ieeg('DisplayChannelsMri', filenameRelative, DisplayModReg{iMod}, iVolAnat(1)));
-                            elseif (length(iVolAnat) > 1)
-                                for iAnat = 1:length(iVolAnat)
-                                    gui_component('MenuItem', jMenuAlign, [], [strType 'Edit...    (MRI Viewer: ' sSubject.Anatomy(iVolAnat(iAnat)).Comment ')'], IconLoader.ICON_ALIGN_CHANNELS, [], @(h,ev)panel_ieeg('DisplayChannelsMri', filenameRelative, DisplayModReg{iMod}, iVolAnat(iAnat)));
+                            if (length(sAnatFiles) == 1)
+                                gui_component('MenuItem', jMenuAlign, [], [strType 'Edit...    (MRI Viewer)'], IconLoader.ICON_ALIGN_CHANNELS, [], @(h,ev)panel_ieeg('DisplayChannelsMri', filenameRelative, DisplayModReg{iMod}, sAnatFiles.Id));
+                            elseif (length(sAnatFiles) > 1)
+                                for iAnat = 1:length(sAnatFiles)
+                                    gui_component('MenuItem', jMenuAlign, [], [strType 'Edit...    (MRI Viewer: ' sAnatFiles(iAnat).Comment ')'], IconLoader.ICON_ALIGN_CHANNELS, [], @(h,ev)panel_ieeg('DisplayChannelsMri', filenameRelative, DisplayModReg{iMod}, sAnatFiles(iAnat).Id));
                                 end
                             end
                             AddSeparator(jMenuAlign);
@@ -1097,7 +1092,7 @@ switch (lower(action))
             case {'scalp', 'cortex', 'outerskull', 'innerskull', 'other'}
                 % Get subject
                 iSubject = bstNodes(1).getStudyIndex();
-                sSubject = bst_get('Subject', iSubject);
+                sSubject = db_get('Subject', iSubject);
                 
                 % === DISPLAY ===
                 gui_component('MenuItem', jPopup, [], 'Display', IconLoader.ICON_DISPLAY, [], @(h,ev)view_surface(filenameRelative));
@@ -1160,7 +1155,8 @@ switch (lower(action))
                         if ~bst_get('ReadOnly')
                             AddSeparator(jMenuAlign);
                             % === ALIGN ALL SURFACES ===
-                            gui_component('MenuItem', jMenuAlign, [], 'Edit fiducials...', IconLoader.ICON_ALIGN_SURFACES, [], @(h,ev)tess_align_fiducials(filenameRelative, {sSubject.Surface.FileName}));
+                            sSurfFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'FileName', 'Surface');
+                            gui_component('MenuItem', jMenuAlign, [], 'Edit fiducials...', IconLoader.ICON_ALIGN_SURFACES, [], @(h,ev)tess_align_fiducials(filenameRelative, {sSurfFiles.FileName}));
                             % === MENU: ALIGN SURFACE MANUALLY ===
                             fcnPopupAlign();
                             % === MENU: LOAD FREESURFER SPHERE ===
@@ -1182,7 +1178,8 @@ switch (lower(action))
                         if strcmpi(nodeType, 'cortex')
                             gui_component('MenuItem', jPopup, [], 'Extract envelope', IconLoader.ICON_SURFACE_INNERSKULL, [], @(h,ev)SurfaceEnvelope_Callback(filenameFull));
                             if ~isempty(sSubject.iInnerSkull)
-                                gui_component('MenuItem', jPopup, [], 'Force inside skull', IconLoader.ICON_SURFACE_INNERSKULL, [], @(h,ev)tess_force_envelope(filenameFull, sSubject.Surface(sSubject.iInnerSkull).FileName));
+                                sInnerSkull = db_get('AnatomyFile', sSubject.iInnerSkull, 'FileName');
+                                gui_component('MenuItem', jPopup, [], 'Force inside skull', IconLoader.ICON_SURFACE_INNERSKULL, [], @(h,ev)tess_force_envelope(filenameFull, sInnerSkull.FileName));
                             end
                         end
                         gui_component('MenuItem', jPopup, [], 'Remove interpolations', IconLoader.ICON_RECYCLE, [], @(h,ev)SurfaceClean_Callback(filenameFull, 0));
@@ -1237,10 +1234,6 @@ switch (lower(action))
                         gui_component('MenuItem', jPopup, [], 'Clear FEM tensors', IconLoader.ICON_DELETE, [], @(h,ev)bst_call(@process_fem_tensors, 'ClearTensors', filenameFull));
                     end
                     % === MENU: ALIGN SURFACE MANUALLY ===
-                    % Get subject
-                    iSubject = bstNodes(1).getStudyIndex();
-                    sSubject = bst_get('Subject', iSubject);
-                    % Menu: Align manually
                     AddSeparator(jPopup);
                     fcnPopupAlign();
                 end
@@ -1249,7 +1242,7 @@ switch (lower(action))
             case {'noisecov', 'ndatacov'}
                 if (length(bstNodes) == 1)
                     % Get modalities for first selected file
-                    AllMod = intersect(bst_get('ChannelModalities', filenameRelative), {'MEG', 'MEG MAG', 'MEG GRAD', 'EEG', 'SEEG', 'ECOG'});
+                    AllMod = intersect(db_get('ChannelModalities', filenameRelative), {'MEG', 'MEG MAG', 'MEG GRAD', 'EEG', 'SEEG', 'ECOG'});
                     % Display as image
                     if (length(AllMod) == 1)
                         gui_component('MenuItem', jPopup, [], 'Display as image', IconLoader.ICON_NOISECOV, [], @(h,ev)view_noisecov(filenameRelative));
@@ -1277,11 +1270,12 @@ switch (lower(action))
             case 'headmodel'
                 % Get study description
                 iStudy = bstNodes(1).getStudyIndex();
-                sStudy = bst_get('Study', iStudy);
+                sStudy = db_get('Study', iStudy);
                 iHeadModel = bstNodes(1).getItemIndex();
                 % Get channel file
-                if ~isempty(sStudy.Channel)
-                    ChannelFile = bst_fullfile(ProtocolInfo.STUDIES, sStudy.Channel.FileName);
+                if ~isempty(sStudy.iChannel)
+                    sChannel = db_get('FunctionalFile', sStudy.iChannel, 'FileName');
+                    ChannelFile = bst_fullfile(ProtocolInfo.STUDIES, sChannel.FileName);
                 else
                     ChannelFile = [];
                 end
@@ -1298,8 +1292,9 @@ switch (lower(action))
                     gui_component('MenuItem', jPopup, [], ['Set as default ' lower(nodeType)], IconLoader.ICON_GOOD, [], @(h,ev)SetDefaultHeadModel(bstNodes(1), iHeadModel, iStudy, sStudy));
                 end
                 % === CHECK SPHERES ===
-                MEGMethod = sStudy.HeadModel(iHeadModel).MEGMethod;
-                EEGMethod = sStudy.HeadModel(iHeadModel).EEGMethod;
+                sHeadModel = db_convert_functionalfile(db_get('FunctionalFile', iHeadModel));
+                MEGMethod = sHeadModel.MEGMethod;
+                EEGMethod = sHeadModel.EEGMethod;
                 isSepGain = 0;
                 if ~isempty(ChannelFile) && ((~isempty(MEGMethod) && ismember(MEGMethod, {'os_meg', 'meg_sphere', 'singlesphere', 'localspheres'})) || (~isempty(EEGMethod) && ismember(EEGMethod, {'eeg_3sphereberg', 'singlesphere', 'concentricspheres'})))
                     if ~bst_get('ReadOnly')
@@ -1307,18 +1302,18 @@ switch (lower(action))
                         AddSeparator(jPopup);
                     end
                     % Get subject
-                    [sSubject, iSubject] = bst_get('Subject', sStudy.BrainStormSubject);
+                    sSubject = db_get('Subject', sStudy.Subject);
                     gui_component('MenuItem', jPopup, [], 'Check spheres', IconLoader.ICON_HEADMODEL, [], @(h,ev)view_spheres(filenameFull, ChannelFile, sSubject));
                 end
                 
                 % === CHECK SOURCE GRID ===
-                if strcmpi(sStudy.HeadModel(iHeadModel).HeadModelType, 'volume') 
+                if strcmpi(sHeadModel.HeadModelType, 'volume')
                     if ~bst_get('ReadOnly') && ~isSepGain
                         AddSeparator(jPopup);
                     end
                     gui_component('MenuItem', jPopup, [], 'Check source grid (Cortex)', IconLoader.ICON_HEADMODEL, [], @(h,ev)view_gridloc(filenameFull));
                     gui_component('MenuItem', jPopup, [], 'Check source grid (MRI)', IconLoader.ICON_HEADMODEL, [], @(h,ev)view_gridloc(filenameFull, 'V', 'MRI'));
-                elseif strcmpi(sStudy.HeadModel(iHeadModel).HeadModelType, 'mixed')
+                elseif strcmpi(sHeadModel.HeadModelType, 'mixed')
                     if ~bst_get('ReadOnly') && ~isSepGain
                         AddSeparator(jPopup);
                     end
@@ -1342,13 +1337,12 @@ switch (lower(action))
                 iStudy = bstNodes(1).getStudyIndex();
                 iData = bstNodes(1).getItemIndex();
                 sFuncFile = db_get('FunctionalFile', iData);
-                sData = db_convert_functionalfile(sFuncFile);
                 sSubject = db_get('SubjectFromStudy', iStudy);
                 % Data type
-                DataType = sData.DataType;
+                DataType = sFuncFile.SubType;
                 isStat = ~strcmpi(DataType, 'recordings') && ~strcmpi(DataType, 'raw');
                 % Get modalities for first selected file
-                [AllMod, DisplayMod] = bst_get('ChannelModalities', filenameRelative);
+                [AllMod, DisplayMod] = db_get('ChannelModalities', filenameRelative);
                 % Remove EDF Annotation channels from the list
                 % iEDF = find(strcmpi(AllMod, 'EDF') | strcmpi(AllMod, 'BDF'));
                 iEDF = find(strcmpi(AllMod, 'EDF'));
@@ -1363,11 +1357,7 @@ switch (lower(action))
                     DisplayMod = cat(2, {'ECOG+SEEG'}, DisplayMod);
                 end
                 % Find anatomy volumes (exclude atlases)
-                if ~isempty(sSubject.Anatomy)
-                    iVolAnat = find(cellfun(@(c)isempty(strfind(c, '_volatlas')), {sSubject.Anatomy.FileName}));
-                else
-                    iVolAnat = [];
-                end
+                sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, '*', 'Volume', 'Image');
                 % One data file selected only
                 if (length(bstNodes) == 1)
                     % RAW continuous files
@@ -1375,10 +1365,10 @@ switch (lower(action))
                         % Import in database
                         gui_component('MenuItem', jPopup, [], 'Import in database', IconLoader.ICON_EEG_NEW, [], @(h,ev)import_raw_to_db(filenameRelative));
                         % Load file descriptor
-                        ChannelFile = bst_get('ChannelFileForStudy', filenameRelative);
-                        if ~isempty(ChannelFile) && strcmpi(DataType, 'raw')
-                            Device = bst_get('ChannelDevice', ChannelFile);
-                            ChannelMat_Comment = in_bst_channel(ChannelFile,'Comment');
+                        sChannel = db_get('ChannelFromFunctionalFile', filenameRelative, 'FileName');
+                        if ~isempty(sChannel.FileName) && strcmpi(DataType, 'raw')
+                            Device = bst_get('ChannelDevice', sChannel.FileName);
+                            ChannelMat_Comment = in_bst_channel(sChannel.FileName,'Comment');
                             % If CTF file format
                             if strcmpi(Device, 'CTF') || ~isempty(strfind(ChannelMat_Comment.Comment, 'CTF'))
                                 gui_component('MenuItem', jPopup, [], 'Switch epoched/continous', IconLoader.ICON_RAW_DATA, [], @(h,ev)bst_process('CallProcess', 'process_ctf_convert', filenameFull, [], 'rectype', 3, 'interactive', 1));
@@ -1416,24 +1406,26 @@ switch (lower(action))
                             % => ONLY for EEG, and if a scalp is defined
                             if strcmpi(AllMod{iMod}, 'EEG') && ~isempty(sSubject) && ~isempty(sSubject.iScalp) && ~isempty(DisplayMod) && ismember(AllMod{iMod}, DisplayMod)
                                 AddSeparator(jMenuModality);
-                                gui_component('MenuItem', jMenuModality, [], 'Display on scalp', IconLoader.ICON_SURFACE_SCALP, [], @(h,ev)view_surface_data(sSubject.Surface(sSubject.iScalp).FileName, filenameRelative, AllMod{iMod}));
+                                sScalpDisp = db_get('AnatomyFile', sSubject.iScalp);
+                                gui_component('MenuItem', jMenuModality, [], 'Display on scalp', IconLoader.ICON_SURFACE_SCALP, [], @(h,ev)view_surface_data(sScalpDisp.FileName, filenameRelative, AllMod{iMod}));
                             end
                             % === DISPLAY ON CORTEX/MRI ===
                             % => ONLY for SEEG/ECOG, and if a cortex/MRI is defined
                             if ismember(AllMod{iMod}, {'SEEG','ECOG','ECOG+SEEG'}) && ~isempty(sSubject) && ~isempty(DisplayMod) && ismember(AllMod{iMod}, DisplayMod)
                                 AddSeparator(jMenuModality);
                                 if ~isempty(sSubject.iCortex)
-                                    gui_component('MenuItem', jMenuModality, [], 'Display on cortex', IconLoader.ICON_SURFACE_CORTEX, [], @(h,ev)view_surface_data(sSubject.Surface(sSubject.iCortex).FileName, filenameRelative, AllMod{iMod}));
+                                    sCortexDisp = db_get('AnatomyFile', sSubject.iCortex);
+                                    gui_component('MenuItem', jMenuModality, [], 'Display on cortex', IconLoader.ICON_SURFACE_CORTEX, [], @(h,ev)view_surface_data(sCortexDisp.FileName, filenameRelative, AllMod{iMod}));
                                 end
-                                if (length(iVolAnat) == 1)
-                                    gui_component('MenuItem', jMenuModality, [], 'Display on MRI (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sSubject.Anatomy(iVolAnat(1)).FileName, filenameRelative, AllMod{iMod}));
-                                    gui_component('MenuItem', jMenuModality, [], 'Display on MRI (3D)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sSubject.Anatomy(iVolAnat(1)).FileName, filenameRelative, AllMod{iMod}));
-                                elseif (length(iVolAnat) > 1)
-                                    for iAnat = 1:length(iVolAnat)
-                                        gui_component('MenuItem', jMenuModality, [], ['Display on MRI (MRI Viewer): ' sSubject.Anatomy(iVolAnat(iAnat)).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sSubject.Anatomy(iVolAnat(iAnat)).FileName, filenameRelative, AllMod{iMod}));
+                                if (length(sAnatFiles) == 1)
+                                    gui_component('MenuItem', jMenuModality, [], 'Display on MRI (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFiles.FileName, filenameRelative, AllMod{iMod}));
+                                    gui_component('MenuItem', jMenuModality, [], 'Display on MRI (3D)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFiles.FileName, filenameRelative, AllMod{iMod}));
+                                elseif (length(sAnatFiles) > 1)
+                                    for iAnat = 1:length(sAnatFiles)
+                                        gui_component('MenuItem', jMenuModality, [], ['Display on MRI (MRI Viewer): ' sAnatFiles(iAnat).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFiles(iAnat).FileName, filenameRelative, AllMod{iMod}));
                                     end
-                                    for iAnat = 1:length(iVolAnat)
-                                        gui_component('MenuItem', jMenuModality, [], ['Display on MRI (3D): ' sSubject.Anatomy(iVolAnat(iAnat)).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sSubject.Anatomy(iVolAnat(iAnat)).FileName, filenameRelative, AllMod{iMod}));
+                                    for iAnat = 1:length(sAnatFiles)
+                                        gui_component('MenuItem', jMenuModality, [], ['Display on MRI (3D): ' sAnatFiles(iAnat).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFiles(iAnat).FileName, filenameRelative, AllMod{iMod}));
                                     end
                                 end
                             end
@@ -1521,10 +1513,10 @@ switch (lower(action))
                 % INVERSE SOLUTIONS
                 if ~bst_get('ReadOnly') && ~isempty(AllMod) && ismember(DataType, {'raw', 'recordings'})
                     % Get subject and inter-subject study
-                    [sInterStudy, iInterStudy] = bst_get('AnalysisInterStudy');
+                    sInterStudy =  db_get('Study', '@inter', 'Id');
                     % === COMPUTE SOURCES ===
                     % If not Default Channel
-                    if (sSubject.UseDefaultChannel == 0) && (isempty(iInterStudy) || iStudy ~= iInterStudy)
+                    if (sSubject.UseDefaultChannel == 0) && (isempty(sInterStudy.Id) || iStudy ~= sInterStudy.Id)
                         fcnPopupComputeHeadmodel();
                     else
                         AddSeparator(jPopup);    
@@ -1541,14 +1533,13 @@ switch (lower(action))
             case 'pdata'
                 % Get protocol description
                 iStudy = bstNodes(1).getStudyIndex();
-                sStudy = bst_get('Study', iStudy);
+                % Get associated subject and surfaces, if it exists
+                sSubject = db_get('SubjectFromStudy', iStudy);
                 % Get avaible modalities for this data file
-                [AllMod, DisplayMod] = bst_get('ChannelModalities', filenameRelative);
+                [AllMod, DisplayMod] = db_get('ChannelModalities', filenameRelative);
                 % One data file selected only
                 if (length(bstNodes) == 1)
                     % === VIEW RESULTS ===
-                    % Get associated subject and surfaces, if it exists
-                    sSubject = bst_get('Subject', sStudy.BrainStormSubject);
                     % If channel file is defined and at least one modality
                     if ~isempty(AllMod)
                         % For each modality, display a menu
@@ -1574,13 +1565,15 @@ switch (lower(action))
                             % === DISPLAY ON SCALP ===
                             if strcmpi(AllMod{iMod}, 'EEG') && ~isempty(sSubject) && ~isempty(sSubject.iScalp) && ~isempty(DisplayMod) && ismember(AllMod{iMod}, DisplayMod)
                                 AddSeparator(jMenuModality);
-                                gui_component('MenuItem', jMenuModality, [], 'Display on scalp', IconLoader.ICON_SURFACE_SCALP, [], @(h,ev)view_surface_data(sSubject.Surface(sSubject.iScalp).FileName, filenameRelative, AllMod{iMod}));
+                                sScalpDisp = db_get('AnatomyFile', sSubject.iScalp);
+                                gui_component('MenuItem', jMenuModality, [], 'Display on scalp', IconLoader.ICON_SURFACE_SCALP, [], @(h,ev)view_surface_data(sScalpDisp.FileName, filenameRelative, AllMod{iMod}));
                             end
                             % === DISPLAY ON CORTEX ===
                             % => ONLY for SEEG/ECOG, and if a cortex is defined
                             if ismember(AllMod{iMod}, {'SEEG','ECOG','ECOG+SEEG'}) && ~isempty(sSubject) && ~isempty(sSubject.iCortex) && ~isempty(DisplayMod) && ismember(AllMod{iMod}, DisplayMod)
                                 AddSeparator(jMenuModality);
-                                gui_component('MenuItem', jMenuModality, [], 'Display on cortex', IconLoader.ICON_SURFACE_CORTEX, [], @(h,ev)view_surface_data(sSubject.Surface(sSubject.iCortex).FileName, filenameRelative, AllMod{iMod}));
+                                sCortexDisp = db_get('AnatomyFile', sSubject.iCortex);
+                                gui_component('MenuItem', jMenuModality, [], 'Display on cortex', IconLoader.ICON_SURFACE_CORTEX, [], @(h,ev)view_surface_data(sCortexDisp.FileName, filenameRelative, AllMod{iMod}));
                             end
                         end
                         
@@ -1640,11 +1633,10 @@ switch (lower(action))
 %% ===== POPUP: DATA LIST =====
             case 'datalist'                
                 if ~bst_get('ReadOnly')
-                    % Get protocol description
-                    iStudy = bstNodes(1).getStudyIndex();
-                    sStudy = bst_get('Study', iStudy);
+                    iList = bstNodes(1).getItemIndex();
+                    sChildren = db_get('ChildrenFromFunctionalFile', iList, 'FileName', 'data');
                     % Get avaible modalities for these data files
-                    [AllMod, DisplayMod] = bst_get('ChannelModalities', sStudy.Data(1).FileName);
+                    [AllMod, DisplayMod] = db_get('ChannelModalities', sChildren(1).FileName);
                     if ~isempty(AllMod)
                         % === ERP IMAGE ===
                         jMenuErp = gui_component('Menu', jPopup, [], 'Display as image', IconLoader.ICON_NOISECOV, [], []);
@@ -1688,19 +1680,19 @@ switch (lower(action))
                 isLink = strcmpi(nodeType, 'link');
                 % Get study
                 iStudy = bstNodes(1).getStudyIndex();
-                sStudy = bst_get('Study', iStudy);
                 iResult = bstNodes(1).getItemIndex();
                 % Get associated subject
-                [sSubject, iSubject] = bst_get('Subject', sStudy.BrainStormSubject);
+                sSubject = db_get('SubjectFromStudy', iStudy);
                 % FOR FIRST NODE: Get associated recordings (DataFile)
-                DataFile = sStudy.Result(iResult).DataFile;
+                sResult = db_get('FunctionalFile', iResult);
+                DataFile = sResult.ExtraStr1; % DataFile;
                 isStat = ~isempty(strfind(filenameRelative, '_pthresh'));
                 % Get type of data node
                 isRaw = 0;
                 if ~isempty(DataFile)
-                    [tmp__, tmp__, iData] = bst_get('DataFile', DataFile, iStudy);
-                    if ~isempty(iData)
-                        isRaw = strcmpi(sStudy.Data(iData).DataType, 'raw');
+                    sData = db_get('FunctionalFile', DataFile, 'SubType');
+                    if ~isempty(sData)
+                        isRaw = strcmpi(sData.SubType, 'raw');
                     end
                 end
                 
@@ -1711,7 +1703,7 @@ switch (lower(action))
                 % ONE RESULTS FILE SELECTED
                 if (length(bstNodes) == 1)
                     % === DISPLAY ON CORTEX ===
-                    if ismember(sStudy.Result(iResult).HeadModelType, {'surface', 'mixed'})
+                    if ismember(sResult.ExtraStr2, {'surface', 'mixed'})
                         if ~isempty(sSubject) && ~isempty(sSubject.iCortex)
                             gui_component('MenuItem', jMenuActivations, [], 'Display on cortex', IconLoader.ICON_CORTEX, [], @(h,ev)view_surface_data([], filenameRelative));
                         else
@@ -1720,24 +1712,20 @@ switch (lower(action))
                     end
                     % === DISPLAY ON MRI ===
                     % Find anatomy volumes (exclude atlases)
-                    if ~isempty(sSubject.Anatomy)
-                        iVolAnat = find(cellfun(@(c)isempty(strfind(c, '_volatlas')), {sSubject.Anatomy.FileName}));
-                    else
-                        iVolAnat = [];
-                    end
-                    if (length(iVolAnat) == 1)
-                        gui_component('MenuItem', jMenuActivations, [], 'Display on MRI (3D)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sSubject.Anatomy(iVolAnat(1)).FileName, filenameRelative));
-                        gui_component('MenuItem', jMenuActivations, [], 'Display on MRI (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sSubject.Anatomy(iVolAnat(1)).FileName, filenameRelative));
-                    elseif (length(iVolAnat) > 1)
-                        for iAnat = 1:length(iVolAnat)
-                            gui_component('MenuItem', jMenuActivations, [], ['Display on MRI (3D): ' sSubject.Anatomy(iVolAnat(iAnat)).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sSubject.Anatomy(iVolAnat(iAnat)).FileName, filenameRelative));
+                    sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, '*', 'Volume', 'Image');
+                    if (length(sAnatFiles) == 1)
+                        gui_component('MenuItem', jMenuActivations, [], 'Display on MRI (3D)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFiles.FileName, filenameRelative));
+                        gui_component('MenuItem', jMenuActivations, [], 'Display on MRI (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFiles.FileName, filenameRelative));
+                    elseif (length(sAnatFiles) > 1)
+                        for iAnat = 1:length(sAnatFiles)
+                            gui_component('MenuItem', jMenuActivations, [], ['Display on MRI (3D): ' sAnatFiles(iAnat).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFiles(iAnat).FileName, filenameRelative));
                         end
-                        for iAnat = 1:length(iVolAnat)
-                            gui_component('MenuItem', jMenuActivations, [], ['Display on MRI (MRI Viewer): ' sSubject.Anatomy(iVolAnat(iAnat)).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sSubject.Anatomy(iVolAnat(iAnat)).FileName, filenameRelative));
+                        for iAnat = 1:length(sAnatFiles)
+                            gui_component('MenuItem', jMenuActivations, [], ['Display on MRI (MRI Viewer): ' sAnatFiles(iAnat).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFiles(iAnat).FileName, filenameRelative));
                         end
                     end
                     % === DISPLAY ON SPHERE ===
-                    if strcmpi(sStudy.Result(iResult).HeadModelType, 'surface') && ~isempty(sSubject) && ~isempty(sSubject.iCortex)
+                    if strcmpi(sResult.ExtraStr2, 'surface') && ~isempty(sSubject) && ~isempty(sSubject.iCortex)
                         AddSeparator(jMenuActivations);
                         gui_component('MenuItem', jMenuActivations, [], 'Display on spheres/squares', IconLoader.ICON_SURFACE, [], @(h,ev)view_surface_sphere(filenameRelative, 'orig'));
                         gui_component('MenuItem', jMenuActivations, [], '2D projection (Mollweide)', IconLoader.ICON_SURFACE, [], @(h,ev)view_surface_sphere(filenameRelative, 'mollweide'));
@@ -1748,8 +1736,8 @@ switch (lower(action))
                 fcnPopupScoutTimeSeries(jMenuActivations, 1);
 
                 % === MENU: SIMULATE DATA ===
-                [tmp__, iDefStudy]   = bst_get('DefaultStudy', iSubject);
-                if ~bst_get('ReadOnly') && ~isRaw && ~ismember(iStudy, iDefStudy) && ~isStat    % && ~isempty(strfind(filenameRelative, '_wMNE')) && ~strcmpi(sStudy.Result(iResult).HeadModelType, 'mixed')
+                sDefStudy = db_get('DefaultStudy', sSubject.Id, 'Id');
+                if ~bst_get('ReadOnly') && ~isRaw && ~ismember(iStudy, sDefStudy.Id) && ~isStat    % && ~isempty(strfind(filenameRelative, '_wMNE')) && ~strcmpi(sStudy.Result(iResult).HeadModelType, 'mixed')
                     jMenuModality = gui_component('Menu', jPopup, [], 'Model evaluation', IconLoader.ICON_RESULTS, [], []);
                     gui_component('MenuItem', jMenuModality, [], 'Simulate recordings', IconLoader.ICON_TS_DISPLAY, [], @(h,ev)bst_simulation(filenameRelative));
                     if ~isempty(DataFile)
@@ -1800,9 +1788,8 @@ switch (lower(action))
                 if (length(bstNodes) == 1)
                     % Get study
                     iStudy = bstNodes(1).getStudyIndex();
-                    sStudy = bst_get('Study', iStudy);
-                    % Get associated subject and surfaces, if it exists
-                    sSubject = bst_get('Subject', sStudy.BrainStormSubject);
+                    % Get associated subject
+                    sSubject = db_get('SubjectFromStudy', iStudy);
                     isVolumeGrid = ~isempty(strfind(filenameRelative, '_volume_'));
 
                     % === MENU: CORTICAL ACTIVATIONS ===
@@ -1813,20 +1800,16 @@ switch (lower(action))
                         end
                         % === DISPLAY ON MRI ===
                         % Find anatomy volumes (exclude atlases)
-                        if ~isempty(sSubject.Anatomy)
-                            iVolAnat = find(cellfun(@(c)isempty(strfind(c, '_volatlas')), {sSubject.Anatomy.FileName}));
-                        else
-                            iVolAnat = [];
-                        end
-                        if (length(iVolAnat) == 1)
-                            gui_component('MenuItem', jMenuActivations, [], 'Display on MRI (3D)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sSubject.Anatomy(iVolAnat(1)).FileName, filenameRelative));
-                            gui_component('MenuItem', jMenuActivations, [], 'Display on MRI (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sSubject.Anatomy(iVolAnat(1)).FileName, filenameRelative));
-                        elseif (length(iVolAnat) > 1)
-                            for iAnat = 1:length(iVolAnat)
-                                gui_component('MenuItem', jMenuActivations, [], ['Display on MRI (3D): ' sSubject.Anatomy(iVolAnat(iAnat)).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sSubject.Anatomy(iVolAnat(iAnat)).FileName, filenameRelative));
+                        sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, '*', 'Volume', 'Image');
+                        if (length(sAnatFiles) == 1)
+                            gui_component('MenuItem', jMenuActivations, [], 'Display on MRI (3D)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFiles.FileName, filenameRelative));
+                            gui_component('MenuItem', jMenuActivations, [], 'Display on MRI (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFiles.FileName, filenameRelative));
+                        elseif (length(sAnatFiles) > 1)
+                            for iAnat = 1:length(sAnatFiles)
+                                gui_component('MenuItem', jMenuActivations, [], ['Display on MRI (3D): ' sAnatFiles(iAnat).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFiles(iAnat).FileName, filenameRelative));
                             end
-                            for iAnat = 1:length(iVolAnat)
-                                gui_component('MenuItem', jMenuActivations, [], ['Display on MRI (MRI Viewer): ' sSubject.Anatomy(iVolAnat(iAnat)).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sSubject.Anatomy(iVolAnat(iAnat)).FileName, filenameRelative));
+                            for iAnat = 1:length(sAnatFiles)
+                                gui_component('MenuItem', jMenuActivations, [], ['Display on MRI (MRI Viewer): ' sAnatFiles(iAnat).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFiles(iAnat).FileName, filenameRelative));
                             end
                         end
                     % === STAT CLUSTERS ===
@@ -1866,8 +1849,8 @@ switch (lower(action))
                 % Get study description
                 iStudy    = bstNodes(1).getStudyIndex();
                 iTimefreq = bstNodes(1).getItemIndex();
-                sStudy    = bst_get('Study', iStudy);
-                sSubject  = bst_get('Subject', sStudy.BrainStormSubject);
+                sSubject = db_get('SubjectFromStudy', iStudy);
+                sTimefreq = db_get('FunctionalFile', iTimefreq);
                 DisplayMod= {};
                 % Get data type
                 isStat = strcmpi(char(bstNodes(1).getType()), 'ptimefreq');
@@ -1880,16 +1863,16 @@ switch (lower(action))
                     end
                     DataFile = [];
                 else
-                    DataType = sStudy.Timefreq(iTimefreq).DataType;
-                    DataFile = sStudy.Timefreq(iTimefreq).DataFile;
+                    DataType = sTimefreq.SubType;   % DataType;
+                    DataFile = sTimefreq.ExtraStr1; % DataFile;
                 end
                 % Get source model
                 if strcmpi(DataType, 'results')
                     % Get head model type for the sources file
                     if ~isempty(DataFile)
-                        [sStudyData, iStudyData, iResult] = bst_get('AnyFile', DataFile);
-                        if ~isempty(sStudyData)
-                            isVolume = strcmpi(sStudyData.Result(iResult).HeadModelType, 'volume');
+                        sResult = db_get('FunctionalFile', DataFile);
+                        if ~isempty(sResult)
+                            isVolume = strcmpi(sResult.ExtraStr2, 'volume');
                         else
                             disp('BST> Error: This file was linked to a source file that was deleted.');
                             isVolume = 0;
@@ -1902,7 +1885,7 @@ switch (lower(action))
                     end
                 % Get available modalities for this data file
                 elseif strcmpi(DataType, 'data')
-                    DisplayMod = bst_get('TimefreqDisplayModalities', filenameRelative);
+                    DisplayMod = db_get('TimefreqDisplayModalities', filenameRelative);
                     % Add SEEG+ECOG 
                     if ~isempty(DisplayMod) && all(ismember({'SEEG','ECOG'}, DisplayMod))
                         DisplayMod = cat(2, {'ECOG+SEEG'}, DisplayMod);
@@ -1961,9 +1944,9 @@ switch (lower(action))
                                 end
                                 % MRI
                                 if isempty(strfind(filenameRelative, '_connectn')) && ~isempty(sSubject) && ~isempty(sSubject.iAnatomy)
-                                    MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
-                                    gui_component('MenuItem', jMenuConn1, [], 'Display on MRI   (3D)',         IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(MriFile, filenameRelative));
-                                    gui_component('MenuItem', jMenuConn1, [], 'Display on MRI   (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(MriFile, filenameRelative));
+                                    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                                    gui_component('MenuItem', jMenuConn1, [], 'Display on MRI   (3D)',         IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFile.FileName, filenameRelative));
+                                    gui_component('MenuItem', jMenuConn1, [], 'Display on MRI   (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFile.FileName, filenameRelative));
                                 end
                             otherwise
                                 if ~isempty(strfind(filenameRelative, '_cohere')) || ~isempty(strfind(filenameRelative, '_spgranger')) || ~isempty(strfind(filenameRelative, '_henv')) || ~isempty(strfind(filenameRelative, '_pte')) ...
@@ -2010,9 +1993,9 @@ switch (lower(action))
                                     end
                                     % MRI
                                     if ~isempty(sSubject) && ~isempty(sSubject.iAnatomy)
-                                        MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
-                                        gui_component('MenuItem', jPopup, [], 'Display on MRI   (3D)',         IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(MriFile, filenameRelative));
-                                        gui_component('MenuItem', jPopup, [], 'Display on MRI   (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(MriFile, filenameRelative));
+                                        sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                                        gui_component('MenuItem', jPopup, [], 'Display on MRI   (3D)',         IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFile.FileName, filenameRelative));
+                                        gui_component('MenuItem', jPopup, [], 'Display on MRI   (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFile.FileName, filenameRelative));
                                     end
                                 otherwise
                             end
@@ -2062,9 +2045,9 @@ switch (lower(action))
                                     end
                                     % MRI
                                     if ~isempty(sSubject) && ~isempty(sSubject.iAnatomy)
-                                        MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
-                                        gui_component('MenuItem', jPopup, [], 'Display on MRI   (3D)',         IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(MriFile, filenameRelative));
-                                        gui_component('MenuItem', jPopup, [], 'Display on MRI   (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(MriFile, filenameRelative));
+                                        sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                                        gui_component('MenuItem', jPopup, [], 'Display on MRI   (3D)',         IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFile.FileName, filenameRelative));
+                                        gui_component('MenuItem', jPopup, [], 'Display on MRI   (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFile.FileName, filenameRelative));
                                     end
                                 otherwise
                             end
@@ -2104,27 +2087,25 @@ switch (lower(action))
                                         AddSeparator(jPopup);
                                         % EEG: Display on scalp
                                         if strcmpi(DisplayMod{iMod}, 'EEG') && ~isempty(sSubject) && ~isempty(sSubject.iScalp)
-                                            gui_component('MenuItem', jPopup, [], 'Display on scalp', IconLoader.ICON_SURFACE_SCALP, [], @(h,ev)view_surface_data(sSubject.Surface(sSubject.iScalp).FileName, filenameRelative, 'EEG'));
+                                            sAnatFile = db_get('AnatomyFile', sSubject.iScalp, 'FileName');
+                                            gui_component('MenuItem', jPopup, [], 'Display on scalp', IconLoader.ICON_SURFACE_SCALP, [], @(h,ev)view_surface_data(sAnatFile.FileName, filenameRelative, 'EEG'));
                                         % SEEG/ECOG: Display on cortex or MRI
                                         elseif ismember(DisplayMod{iMod}, {'SEEG', 'ECOG', 'ECOG+SEEG'}) && ~isempty(sSubject)
                                             if ~isempty(sSubject.iCortex)
-                                                gui_component('MenuItem', jMenuModality, [], 'Display on cortex', IconLoader.ICON_SURFACE_CORTEX, [], @(h,ev)view_surface_data(sSubject.Surface(sSubject.iCortex).FileName, filenameRelative, DisplayMod{iMod}));
+                                                sAnatFile = db_get('AnatomyFile', sSubject.iCortex, 'FileName');
+                                                gui_component('MenuItem', jMenuModality, [], 'Display on cortex', IconLoader.ICON_SURFACE_CORTEX, [], @(h,ev)view_surface_data(sAnatFile.FileName, filenameRelative, DisplayMod{iMod}));
                                             end
                                             % Find anatomy volumes (exclude atlases)
-                                            if ~isempty(sSubject.Anatomy)
-                                                iVolAnat = find(cellfun(@(c)isempty(strfind(c, '_volatlas')), {sSubject.Anatomy.FileName}));
-                                            else
-                                                iVolAnat = [];
-                                            end
-                                            if (length(iVolAnat) == 1)
-                                                gui_component('MenuItem', jMenuModality, [], 'Display on MRI (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sSubject.Anatomy(iVolAnat(1)).FileName, filenameRelative, DisplayMod{iMod}));
-                                                gui_component('MenuItem', jMenuModality, [], 'Display on MRI (3D)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sSubject.Anatomy(iVolAnat(1)).FileName, filenameRelative, DisplayMod{iMod}));
-                                            elseif (length(iVolAnat) > 1)
-                                                for iAnat = 1:length(iVolAnat)
-                                                    gui_component('MenuItem', jMenuModality, [], ['Display on MRI (MRI Viewer): ' sSubject.Anatomy(iVolAnat(iAnat)).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sSubject.Anatomy(iVolAnat(iAnat)).FileName, filenameRelative, DisplayMod{iMod}));
+                                            sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, '*', 'Volume', 'Image');
+                                            if (length(sAnatFiles) == 1)
+                                                gui_component('MenuItem', jMenuModality, [], 'Display on MRI (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFiles.FileName, filenameRelative, DisplayMod{iMod}));
+                                                gui_component('MenuItem', jMenuModality, [], 'Display on MRI (3D)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFiles.FileName, filenameRelative, DisplayMod{iMod}));
+                                            elseif (length(sAnatFiles) > 1)
+                                                for iAnat = 1:length(sAnatFiles)
+                                                    gui_component('MenuItem', jMenuModality, [], ['Display on MRI (MRI Viewer): ' sAnatFiles(iAnat).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFiles(iAnat).FileName, filenameRelative, DisplayMod{iMod}));
                                                 end
-                                                for iAnat = 1:length(iVolAnat)
-                                                    gui_component('MenuItem', jMenuModality, [], ['Display on MRI (3D): ' sSubject.Anatomy(iVolAnat(iAnat)).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sSubject.Anatomy(iVolAnat(iAnat)).FileName, filenameRelative, DisplayMod{iMod}));
+                                                for iAnat = 1:length(sAnatFiles)
+                                                    gui_component('MenuItem', jMenuModality, [], ['Display on MRI (3D): ' sAnatFiles(iAnat).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFiles(iAnat).FileName, filenameRelative, DisplayMod{iMod}));
                                                 end
                                             end
                                         end
@@ -2140,9 +2121,9 @@ switch (lower(action))
                                 end
                                 % MRI
                                 if ~isempty(sSubject) && ~isempty(sSubject.iAnatomy)
-                                    MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
-                                    gui_component('MenuItem', jPopup, [], 'Display on MRI   (3D)',         IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(MriFile, filenameRelative));
-                                    gui_component('MenuItem', jPopup, [], 'Display on MRI   (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(MriFile, filenameRelative));
+                                    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                                    gui_component('MenuItem', jPopup, [], 'Display on MRI   (3D)',         IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFile.FileName, filenameRelative));
+                                    gui_component('MenuItem', jPopup, [], 'Display on MRI   (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFile.FileName, filenameRelative));
                                 end
                                 % MENU: EXPORT (Added later)
                                 jMenuExport{2} = gui_component('MenuItem', [], [], 'Export as 4D matrix', IconLoader.ICON_SAVE, [], @(h,ev)panel_process_select('ShowPanelForFile', {filenameFull}, 'process_export_spmvol'));
@@ -2186,9 +2167,8 @@ switch (lower(action))
                 % Get study description
                 iStudy = bstNodes(1).getStudyIndex();
                 iTimefreq = bstNodes(1).getItemIndex();
-                sStudy = bst_get('Study', iStudy);
-                % Get subject structure
-                sSubject = bst_get('Subject', sStudy.BrainStormSubject);
+                sSubject = db_get('SubjectFromStudy', iStudy);
+                sTimefreq = db_get('FunctionalFile', iTimefreq);
                 % Get data type
                 if strcmpi(nodeType, 'pspectrum')
                     TimefreqMat = in_bst_timefreq(filenameRelative, 0, 'DataType');
@@ -2199,15 +2179,15 @@ switch (lower(action))
                     end
                     DataFile = [];
                 else
-                    DataType = sStudy.Timefreq(iTimefreq).DataType;
-                    DataFile = sStudy.Timefreq(iTimefreq).DataFile;
+                    DataType = sTimefreq.SubType;   % DataType;
+                    DataFile = sTimefreq.ExtraStr1; % DataFile;
                 end
                 % One file selected
                 if (length(bstNodes) == 1)
                     % ===== RECORDINGS =====
                     if strcmpi(DataType, 'data')
                         % Get avaible modalities for this data file
-                        DisplayMod = bst_get('TimefreqDisplayModalities', filenameRelative);
+                        DisplayMod = db_get('TimefreqDisplayModalities', filenameRelative);
                         % Add SEEG+ECOG 
                         if all(ismember({'SEEG','ECOG'}, DisplayMod))
                             DisplayMod = cat(2, {'ECOG+SEEG'}, DisplayMod);
@@ -2235,27 +2215,25 @@ switch (lower(action))
                             AddSeparator(jPopup);
                             % EEG: Display on scalp
                             if strcmpi(DisplayMod{iMod}, 'EEG') && ~isempty(sSubject) && ~isempty(sSubject.iScalp)
-                                gui_component('MenuItem', jPopup, [], 'Display on scalp', IconLoader.ICON_SURFACE_SCALP, [], @(h,ev)view_surface_data(sSubject.Surface(sSubject.iScalp).FileName, filenameRelative, 'EEG'));
+                                sAnatFile = db_get('AnatomyFile', sSubject.iScalp, 'FileName');
+                                gui_component('MenuItem', jPopup, [], 'Display on scalp', IconLoader.ICON_SURFACE_SCALP, [], @(h,ev)view_surface_data(sAnatFile.FileName, filenameRelative, 'EEG'));
                             % SEEG/ECOG: Display on cortex or MRI
                             elseif ismember(DisplayMod{iMod}, {'SEEG', 'ECOG', 'ECOG+SEEG'}) && ~isempty(sSubject)
                                 if ~isempty(sSubject.iCortex)
-                                    gui_component('MenuItem', jMenuModality, [], 'Display on cortex', IconLoader.ICON_SURFACE_CORTEX, [], @(h,ev)view_surface_data(sSubject.Surface(sSubject.iCortex).FileName, filenameRelative, DisplayMod{iMod}));
+                                    sAnatFile = db_get('AnatomyFile', sSubject.iCortex, 'FileName');
+                                    gui_component('MenuItem', jMenuModality, [], 'Display on cortex', IconLoader.ICON_SURFACE_CORTEX, [], @(h,ev)view_surface_data(sAnatFile.FileName, filenameRelative, DisplayMod{iMod}));
                                 end
                                 % Find anatomy volumes (exclude atlases)
-                                if ~isempty(sSubject.Anatomy)
-                                    iVolAnat = find(cellfun(@(c)isempty(strfind(c, '_volatlas')), {sSubject.Anatomy.FileName}));
-                                else
-                                    iVolAnat = [];
-                                end
-                                if (length(iVolAnat) == 1)
-                                    gui_component('MenuItem', jMenuModality, [], 'Display on MRI (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sSubject.Anatomy(iVolAnat(1)).FileName, filenameRelative, DisplayMod{iMod}));
-                                    gui_component('MenuItem', jMenuModality, [], 'Display on MRI (3D)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sSubject.Anatomy(iVolAnat(1)).FileName, filenameRelative, DisplayMod{iMod}));
-                                elseif (length(iVolAnat) > 1)
-                                    for iAnat = 1:length(iVolAnat)
-                                        gui_component('MenuItem', jMenuModality, [], ['Display on MRI (MRI Viewer): ' sSubject.Anatomy(iVolAnat(iAnat)).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sSubject.Anatomy(iVolAnat(iAnat)).FileName, filenameRelative, DisplayMod{iMod}));
+                                sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, '*', 'Volume', 'Image');
+                                if (length(sAnatFiles) == 1)
+                                    gui_component('MenuItem', jMenuModality, [], 'Display on MRI (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFiles.FileName, filenameRelative, DisplayMod{iMod}));
+                                    gui_component('MenuItem', jMenuModality, [], 'Display on MRI (3D)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFiles.FileName, filenameRelative, DisplayMod{iMod}));
+                                elseif (length(sAnatFiles) > 1)
+                                    for iAnat = 1:length(sAnatFiles)
+                                        gui_component('MenuItem', jMenuModality, [], ['Display on MRI (MRI Viewer): ' sAnatFiles(iAnat).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFiles(iAnat).FileName, filenameRelative, DisplayMod{iMod}));
                                     end
-                                    for iAnat = 1:length(iVolAnat)
-                                        gui_component('MenuItem', jMenuModality, [], ['Display on MRI (3D): ' sSubject.Anatomy(iVolAnat(iAnat)).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sSubject.Anatomy(iVolAnat(iAnat)).FileName, filenameRelative, DisplayMod{iMod}));
+                                    for iAnat = 1:length(sAnatFiles)
+                                        gui_component('MenuItem', jMenuModality, [], ['Display on MRI (3D): ' sAnatFiles(iAnat).Comment], IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFiles(iAnat).FileName, filenameRelative, DisplayMod{iMod}));
                                     end
                                 end
                             end
@@ -2266,8 +2244,8 @@ switch (lower(action))
                         AddSeparator(jPopup);
                         % Get head model type for the sources file
                         if ~isempty(DataFile)
-                            [sStudyData, iStudyData, iResult] = bst_get('AnyFile', DataFile);
-                            isVolume = strcmpi(sStudyData.Result(iResult).HeadModelType, 'volume');
+                            sResults = db_get('FunctionalFile', DataFile);
+                            isVolume = strcmpi(sResults.ExtraStr2, 'volume');
                         % Get the default head model
                         else
                             wloc    = whos('-file', filenameFull, 'GridLoc');
@@ -2279,9 +2257,9 @@ switch (lower(action))
                             gui_component('MenuItem', jPopup, [], 'Display on cortex', IconLoader.ICON_CORTEX, [], @(h,ev)view_surface_data([], filenameRelative));
                         end
                         if ~isempty(sSubject) && ~isempty(sSubject.iAnatomy)
-                            MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
-                            gui_component('MenuItem', jPopup, [], 'Display on MRI   (3D)',         IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(MriFile, filenameRelative));
-                            gui_component('MenuItem', jPopup, [], 'Display on MRI   (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(MriFile, filenameRelative));
+                            sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                            gui_component('MenuItem', jPopup, [], 'Display on MRI   (3D)',         IconLoader.ICON_ANATOMY, [], @(h,ev)view_surface_data(sAnatFile.FileName, filenameRelative));
+                            gui_component('MenuItem', jPopup, [], 'Display on MRI   (MRI Viewer)', IconLoader.ICON_ANATOMY, [], @(h,ev)view_mri(sAnatFile.FileName, filenameRelative));
                         end
                         % MENU: EXPORT (Added later)
                         if strcmpi(nodeType, 'spectrum')
@@ -2420,14 +2398,12 @@ switch (lower(action))
             if strcmpi(nodeType, 'rawdata') && isone
                 RawFile = filenameRelative;
             elseif (isstudy && strcmpi(nodeType, 'rawcondition')) && isone
-                % Get study
-                sStudy = bst_get('Study', iStudy);
                 % Find raw data file in the condition
-                iDataRaw = find(strcmpi({sStudy.Data.DataType}, 'raw'));
-                if isempty(iDataRaw)
+                sDataRaw = db_get('FunctionalFilesWithStudy', iStudy, 'FileName', 'Data', 'raw');
+                if isempty(sDataRaw)
                     RawFile = [];
                 else
-                    RawFile = sStudy.Data(iDataRaw(1)).FileName;
+                    RawFile = sDataRaw(1).FileName;
                 end
             else
                 RawFile = [];
@@ -2629,15 +2605,17 @@ end % END SWITCH( ACTION )
                 iStudies(iNode) = bstNodes(iNode).getStudyIndex();
             end
             % Get all the studies
-            sStudies = bst_get('Study', iStudies);
+            sStudies = db_get('Study', iStudies);
             % Get first file in the datbase
-            [sStudy,iStudy,iTf] = bst_get('TimefreqFile', ResultFiles{1});
+            sTimefreqFile = db_get('FunctionalFile', ResultFiles{1});
             % Try to get source model type from the parent file
-            if ~isempty(sStudy) && ~isempty(sStudy.Timefreq(iTf).DataFile) && strcmpi(sStudy.Timefreq(iTf).DataType, 'results')
+            if ~isempty(sTimefreqFile.SubType) && strcmpi(sTimefreqFile.SubType, 'results')
                 % Get parent source file
-                [sStudy,iStudy,iRes] = bst_get('ResultsFile', sStudy.Timefreq(iTf).DataFile);
-                if ~isempty(sStudy) && ~isempty(sStudy.Result(iRes).HeadModelType)
-                    HeadModelType = sStudy.Result(iRes).HeadModelType;
+                if ~isempty(sTimefreqFile.Parent)
+                    sResultFile = db_get('FunctionalFile', sTimefreqFile.Parent, 'ExtraStr2');
+                    if ~isempty(sResultFile.ExtraStr2) % HeadModelType
+                        HeadModelType = sResultFile.ExtraStr2;
+                    end
                 end
             end
         else
@@ -2650,53 +2628,56 @@ end % END SWITCH( ACTION )
                 return;
             end
             % Get all the studies
-            sStudies = bst_get('Study', iStudies);
+            sStudies = db_get('Study', iStudies);
+            sResultFiles = db_get('FunctionalFile', iResults);
             % Build results files list
             for iRes = 1:length(iResults)
-                ResultFiles{iRes} = sStudies(iRes).Result(iResults(iRes)).FileName;
+                ResultFiles{iRes} = sResultFiles(iRes).FileName;
                 if isempty(HeadModelType) || strcmpi(HeadModelType, 'unknown')
-                    HeadModelType = sStudies(iRes).Result(iResults(iRes)).HeadModelType;
-                elseif ~isequal(HeadModelType, sStudies(iRes).Result(iResults(iRes)).HeadModelType)
+                    HeadModelType = sResultFiles(iRes).ExtraStr2; % HeadModelType
+                elseif ~isequal(HeadModelType, sResultFiles(iRes).ExtraStr2)
                     % disp('PROJECT> Selected node contains different type of source files. Cannot be handled together.');
                     return;
                 end
             end
         end
         % Get all the subjects
-        SubjectFiles = unique({sStudies.BrainStormSubject});
+        SubjectIds = unique([sStudies.Subject]);
         nCortex = 0;
         
         % ===== SINGLE SUBJECT =====
         sCortex = [];
         isGroupAnalysis = 0;
         % If only one subject: offer to reproject the sources on it
-        if (length(SubjectFiles) == 1)
+        if (length(SubjectIds) == 1)
             % Get subject
-            [sSubject, iSubject] = bst_get('Subject', SubjectFiles{1});
+            sSingleSubject = db_get('Subject', SubjectIds(1));
             % If not using default anat and there is more than one cortex
-            if ~sSubject.UseDefaultAnat && ~isempty(sSubject.iCortex)
+            if ~sSingleSubject.UseDefaultAnat && ~isempty(sSingleSubject.iCortex)
                 % Get all cortex surfaces
-                sCortex = bst_get('SurfaceFileByType', iSubject, 'Cortex', 0);
+                sCortex = db_get('AnatomyFilesWithSubject', sSingleSubject.Id, '*', 'Surface', 'Cortex');
                 nCortex = length(sCortex);
             end
-            UseDefaultAnat = sSubject.UseDefaultAnat;
+            UseDefaultAnat = sSingleSubject.UseDefaultAnat;
             % Is this the group analysis subject
-            if strcmpi(sSubject.Name, bst_get('NormalizedSubjectName'))
+            if strcmpi(sSingleSubject.Name, bst_get('NormalizedSubjectName'))
                 isGroupAnalysis = 1;
             end
         % If more than one subject: just check if the subjects are using default anatomy
         else
-            for iSubj = 1:length(SubjectFiles)
-                sSubjects(iSubj) = bst_get('Subject', SubjectFiles{iSubj});
+            for iSubj = 1:length(SubjectIds)
+                sSubjects = db_get('Subject', SubjectIds);
             end
             UseDefaultAnat = any([sSubjects.UseDefaultAnat]);
         end
 
         % ===== DEFAULT ANATOMY =====
         % Get default subject
-        sDefSubject = bst_get('Subject',0);
+        sDefSubject = db_get('Subject',0);
+        % Get all anatomies for default subject
+        sDefAnats = db_get('AnatomyFilesWithSubject', sDefSubject.Id, '*', 'Anatomy');
         % Get all cortex surfaces for default subject
-        sDefCortex = bst_get('SurfaceFileByType', 0, 'Cortex', 0);
+        sDefCortex = db_get('AnatomyFilesWithSubject', sDefSubject.Id, '*', 'Surface', 'Cortex');
         nCortex = nCortex + length(sDefCortex);
         
         % ===== CREATE MENUS =====
@@ -2723,19 +2704,19 @@ end % END SWITCH( ACTION )
             end
             % === INDIVIDUAL SUBJECT ===
             if ~isempty(sCortex)
-                jMenuSubj = gui_component('Menu', jMenu, [], sSubject.Name, IconLoader.ICON_SUBJECT, [], []);
+                jMenuSubj = gui_component('Menu', jMenu, [], sSingleSubject.Name, IconLoader.ICON_SUBJECT, [], []);
                 % Loop on all the cortex surfaces
                 for iCort = 1:length(sCortex)
                     gui_component('MenuItem', jMenuSubj, [], sCortex(iCort).Comment, IconLoader.ICON_CORTEX, [], @(h,ev)bst_project_sources(ResultFiles, sCortex(iCort).FileName));
                 end
             end
             % === OTHER SUBJECTS ===
-            if (bst_get('SubjectCount') > 1)
+            if (db_get('SubjectCount') > 1)
                 gui_component('MenuItem', jMenu, [], 'Other subjects...', IconLoader.ICON_SUBJECT, [], @(h,ev)ProjectSourcesAll(ResultFiles));
             end
         end
         % VOLUME: Menu "project on template grid"
-        if ismember(HeadModelType, {'unknown','volume'}) && ~isempty(sDefSubject) && ~isempty(sDefSubject.Anatomy)
+        if ismember(HeadModelType, {'unknown','volume'}) && ~isempty(sDefSubject) && ~isempty(sDefAnats)
             if isSeparator
                 AddSeparator(jPopup);
             end
@@ -2743,7 +2724,7 @@ end % END SWITCH( ACTION )
             if ~isGroupAnalysis
                 gui_component('MenuItem', jPopup, [], 'Project source grid', IconLoader.ICON_ANATOMY, [], @(h,ev)bst_project_grid(ResultFiles, [], 1));
             % Default anatomy: Project back on subjects
-            elseif (bst_get('SubjectCount') > 1)
+            elseif (db_get('SubjectCount') > 1)
                 gui_component('MenuItem', jPopup, [], 'Project source grid...', IconLoader.ICON_ANATOMY, [], @(h,ev)ProjectGridAll(ResultFiles));
             end
         end
@@ -2776,20 +2757,21 @@ end % END SWITCH( ACTION )
     function fcnPopupAlign()
         import org.brainstorm.icon.*;
 
+        iSubjectAlign = bstNodes(1).getStudyIndex();
+        sAnatsAlign = db_get('AnatomyFilesWithSubject', iSubjectAlign, {'Comment', 'FileName'}, 'Volume', 'Image');
+        sSurfsAlign = db_get('AnatomyFilesWithSubject', iSubjectAlign, {'Comment', 'FileName'}, 'Surface');
         jMenuAlignManual = gui_component('Menu', jPopup, [], 'Align manually on...', IconLoader.ICON_ALIGN_SURFACES, [], []);
         % ADD ANATOMIES
-        for iAnat = 1:length(sSubject.Anatomy)
-            if isempty(strfind(sSubject.Anatomy(iAnat).FileName, '_volatlas'))
-                fullAnatFile = bst_fullfile(ProtocolInfo.SUBJECTS, sSubject.Anatomy(iAnat).FileName);
-                gui_component('MenuItem', jMenuAlignManual, [], sSubject.Anatomy(iAnat).Comment, IconLoader.ICON_ANATOMY, [], @(h,ev)tess_align_manual(fullAnatFile, filenameFull));
-            end
+        for ix = 1:length(sAnatsAlign)
+            fullAnatFile = bst_fullfile(ProtocolInfo.SUBJECTS, sAnatsAlign(ix).FileName);
+            gui_component('MenuItem', jMenuAlignManual, [], sAnatsAlign(ix).Comment, IconLoader.ICON_ANATOMY, [], @(h,ev)tess_align_manual(fullAnatFile, filenameFull));
         end
         % ADD SURFACES
-        for iSurf = 1:length(sSubject.Surface)
+        for ix = 1:length(sSurfsAlign)
             % Ignore itself
-            fullSurfFile = bst_fullfile(ProtocolInfo.SUBJECTS, sSubject.Surface(iSurf).FileName);
+            fullSurfFile = bst_fullfile(ProtocolInfo.SUBJECTS, sSurfsAlign(ix).FileName);
             if ~file_compare(fullSurfFile, filenameFull)
-                gui_component('MenuItem', jMenuAlignManual, [], sSubject.Surface(iSurf).Comment, IconLoader.ICON_SURFACE, [], @(h,ev)tess_align_manual(fullSurfFile, filenameFull));
+                gui_component('MenuItem', jMenuAlignManual, [], sSurfsAlign(ix).Comment, IconLoader.ICON_SURFACE, [], @(h,ev)tess_align_manual(fullSurfFile, filenameFull));
             end
         end
     end
@@ -3120,10 +3102,10 @@ function FileNames = GetAllFilenames(bstNodes, targetType, isExcludeBad, isFullP
                     disp('BST> Error in tree_dependencies.');
                     continue;
                 end
-                for i = 1:length(iDepStudies)
-                    sStudy = bst_get('Study', iDepStudies(i));
-                    if (~isExcludeBad || ~sStudy.Data(iDepItems(i)).BadTrial)
-                        FileNames{end+1} = sStudy.Data(iDepItems(i)).FileName;
+                sFunctFiles = db_get('FunctionalFile', iDepItems, {'FileName', 'ExtraNum'});
+                for i = 1:length(sFunctFiles)
+                    if (~isExcludeBad || ~sFunctFiles(i).ExtraNum) % BadTrial
+                        FileNames{end+1} = sFunctFiles(i).FileName;
                         if isFullPath
                             FileNames{end} = file_fullpath(FileNames{end});
                         end
@@ -3135,9 +3117,9 @@ function FileNames = GetAllFilenames(bstNodes, targetType, isExcludeBad, isFullP
                     disp('BST> Error in tree_dependencies.');
                     continue;
                 end
-                for i = 1:length(iDepStudies)
-                    sStudy = bst_get('Study', iDepStudies(i));
-                    FileNames{end+1} = sStudy.Matrix(iDepItems(i)).FileName;
+                sFunctFiles = db_get('FunctionalFile', iDepItems, {'FileName', 'ExtraNum'});
+                for i = 1:length(sFunctFiles)
+                    FileNames{end+1} = sFunctFiles(i).FileName;
                     if isFullPath
                         FileNames{end} = file_fullpath(FileNames{end});
                     end
@@ -3287,9 +3269,9 @@ function SurfaceEnvelope_Callback(TessFile)
     % Make output filename relative
     NewTessFile = file_short(NewTessFile);
     % Get subject
-    [sSubject, iSubject] = bst_get('SurfaceFile', TessFile);
+    sAnatFile = db_get('AnatomyFile', TessFile);
     % Register this file in Brainstorm database
-    db_add_surface(iSubject, NewTessFile, sSurf.Comment);
+    db_add_anatomyfile(sAnatFile.Subject, NewTessFile, sSurf.Comment);
     % Close progress bar
     bst_progress('stop');
 end
@@ -3304,13 +3286,16 @@ function SurfaceFillHoles_Callback(TessFile)
     % Load surface file (Faces field)
     sHead = in_tess_bst(TessFile, 0);
     % Get subject
-    [sSubject, iSubject] = bst_get('SurfaceFile', TessFile);
-    if isempty(sSubject.Anatomy)
+    sSubject = db_get('SubjectFromAnatomyFile', TessFile);
+    % Get all MRI files for subject
+    sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'Id', 'Anatomy', 'Image');
+    if isempty(sAnatFiles)
         bst_error('No MRI available.', 'Remove surface holes');
         return;
     end
     % Load MRI
-    sMri = bst_memory('LoadMri', sSubject.Anatomy(sSubject.iAnatomy).FileName);
+    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy);
+    sMri = bst_memory('LoadMri', sAnatFile.FileName);
     
     % ===== PROCESS =====
     % Remove holes
@@ -3326,7 +3311,7 @@ function SurfaceFillHoles_Callback(TessFile)
     % Save head
     sHeadNew = bst_history('add', sHeadNew, 'clean', 'Filled holes');
     bst_save(NewTessFile, sHeadNew, 'v7');
-    db_add_surface(iSubject, NewTessFile, sHeadNew.Comment);
+    db_add_anatomyfile(sSubject.Id, NewTessFile, sHeadNew.Comment);
     bst_progress('inc', 5);
     % Stop
     bst_progress('stop');
@@ -3395,17 +3380,15 @@ end
 
 %% ===== DISPLAY MEG HELMET =====
 function [hFig, iDS, iFig] = DisplayHelmet(iStudy, ChannelFile)
-    % Get study
-    sStudy = bst_get('Study', iStudy);
-    if isempty(sStudy)
+    % Get subject
+    sSubject = db_get('SubjectFromStudy', iStudy);
+    if isempty(sSubject)
         return
     end
-    % Get subject
-    sSubject = bst_get('Subject', sStudy.BrainStormSubject);
     % View scalp surface if available
     if ~isempty(sSubject) && ~isempty(sSubject.iScalp)
-        ScalpFile = sSubject.Surface(sSubject.iScalp).FileName;
-        hFig = view_surface(ScalpFile, 0.2);
+        sScalpFile = db_get('AnatomyFile', sSubject.iScalp, 'FileName');
+        hFig = view_surface(sScalpFile.FileName, 0.2);
     else
         hFig = [];
     end    
@@ -3460,8 +3443,7 @@ function SetDefaultHeadModel(bstNode, iHeadModel, iStudy, sStudy)
     % Select this node (and unselect all the others)
     panel_protocols('MarkUniqueNode', bstNode);
     % Save in database selected file
-    sStudy.iHeadModel = iHeadModel;
-    bst_set('Study', iStudy, sStudy);
+    db_set('Study', struct('iHeadModel', iHeadModel), iStudy);
     % Repaint tree
     panel_protocols('RepaintTree');
 end
@@ -3616,13 +3598,13 @@ function SaveWhitenedData(ResultsFile)
     newDataFile = file_unique(fullfile(fPath, [fBase, '_zscore_whitened', fExt]));
     bst_save(newDataFile, DataMat, 'v6');
     % Get study
-    [sStudy, iStudy] = bst_get('DataFile', ResultsMat.DataFile);
+    sDataFile = db_get('FunctionalFile', ResultsMat.DataFile);
     % Add to database
-    [sStudy, iNewData] = db_add_data(iStudy, newDataFile, DataMat);
+    [sStudy, iNewData] = db_add_data(sDataFile.Study, newDataFile, DataMat);
     % Update display
-    panel_protocols('UpdateNode', 'Study', iStudy);
+    panel_protocols('UpdateNode', 'Study', sDataFile.Study);
     % Select node
-    panel_protocols('SelectNode', [], 'data', iStudy, iNewData);
+    panel_protocols('SelectNode', [], 'data', sDataFile.Study, iNewData);
     % Hide progress bar 
     bst_progress('stop');
 end
@@ -3631,7 +3613,7 @@ end
 %% ===== NEW GROUP ANALYSIS =====
 function NewGroupAnalysis()
     % Create/get group analysis subject
-    [sSubject, iSubject] = bst_get('NormalizedSubject');
+    db_get('NormalizedSubject');
     % Update tree
     panel_protocols('UpdateTree');
 end
@@ -3640,22 +3622,22 @@ end
 %% ===== PROJECT SOURCES: ALL SUBJECTS =====
 function ProjectSourcesAll(ResultFiles)
     % Get all the subjects in the protocol
-    sProtocolSubjects = bst_get('ProtocolSubjects');
+    sSubjects = db_get('AllSubjects');
     % Find subjects non using the default anatomy and with a valid default cortex
     iSubjects = [];
-    for i = 1:length(sProtocolSubjects.Subject)
-        if ~sProtocolSubjects.Subject(i).UseDefaultAnat && ~isempty(sProtocolSubjects.Subject(i).iCortex)
+    for i = 1:length(sSubjects)
+        if ~sSubjects(i).UseDefaultAnat && ~isempty(sSubjects(i).iCortex)
             iSubjects(end+1) = i;
         end
     end
     % Ask which subject to use
-    SubjectName = java_dialog('combo', '<HTML>Select the destination subject:<BR><BR>', 'Project sources', [], {sProtocolSubjects.Subject(iSubjects).Name});
+    SubjectName = java_dialog('combo', '<HTML>Select the destination subject:<BR><BR>', 'Project sources', [], {sSubjects(iSubjects).Name});
     if isempty(SubjectName)
         return
     end
-    iSubject = find(strcmpi(SubjectName, {sProtocolSubjects.Subject.Name}));
+    iSubject = find(strcmpi(SubjectName, {sSubjects.Name}));
     % Get all cortex surfaces
-    sCortex = bst_get('SurfaceFileByType', iSubject, 'Cortex', 0);
+    sCortex = db_get('AnatomyFilesWithSubject', sSubjects(iSubject).Id, {'Comment', 'FileName'}, 'Surface', 'Cortex');
     % If there is more than one cortex surface: ask which one to use
     if (length(sCortex) > 1)
         SurfaceComment = java_dialog('combo', '<HTML>Select the destination cortex surface:<BR><BR>', 'Project sources', [], {sCortex.Comment});
@@ -3677,17 +3659,17 @@ end
 %% ===== PROJECT GRID: ALL SUBJECTS =====
 function ProjectGridAll(ResultFiles)
     % Get all the subjects in the protocol
-    sProtocolSubjects = bst_get('ProtocolSubjects');
+    sSubjects = db_get('AllSubjects');
     % Use all the subjects except the group analysis one (already the source)
-    iSubjects = find(~strcmpi({sProtocolSubjects.Subject.Name}, bst_get('NormalizedSubjectName')));
+    iSubjects = find(~strcmpi({sSubjects.Name}, bst_get('NormalizedSubjectName')));
     % Ask which subject to use
-    SubjectName = java_dialog('combo', '<HTML>Select the destination subject:<BR><BR>', 'Project sources', [], {sProtocolSubjects.Subject(iSubjects).Name});
+    SubjectName = java_dialog('combo', '<HTML>Select the destination subject:<BR><BR>', 'Project sources', [], {sSubjects(iSubjects).Name});
     if isempty(SubjectName)
         return
     end
-    iSubject = find(strcmpi(SubjectName, {sProtocolSubjects.Subject.Name}));
+    iSubject = find(strcmpi(SubjectName, {sSubjects.Name}));
     % Project source grid
-    bst_project_grid(ResultFiles, iSubject, 1);
+    bst_project_grid(ResultFiles, sSubjects(iSubject).Id, 1);
 end
 
 
@@ -3696,10 +3678,10 @@ function ImportChannelCheck(iAllStudies)
     % Check only if importing a single file
     if (length(iAllStudies) == 1)
         % Get study folder
-        sStudyChan = bst_get('Study', iAllStudies(1));
-        sStudyData = bst_get('DataForStudy', iAllStudies(1));
+        sChannel = db_get('FunctionalFileWithStudy', iAllStudies(1), 'FileName', 'Channel');
+        sDatas = db_get('DataForStudy', iAllStudies(1));
         % If there is already a channel file defined
-        if ~isempty(sStudyChan.Channel) && ~isempty(sStudyChan.Channel.FileName) && ~isempty(sStudyData)
+        if ~isempty(sChannel) && ~isempty(sChannel.FileName) && ~isempty(sDatas)
             res = java_dialog('confirm', [...
                 '<HTML><B>Warning</B>: There are existing channel files and data files in this folder.<BR>', ...
                 'Importing a list of channels that does not match exactly the recordings<BR>' ...
