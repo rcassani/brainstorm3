@@ -1395,8 +1395,7 @@ switch contextName
         % Get study for the given channel file
         sChannel = db_get(sqlConn, 'FunctionalFile', iChannel, 'Study');
         % Get dependent data files
-        sDataFuncFiles = db_get(sqlConn, 'DataForStudy', sChannel.Study, {'FileName'}, dataFuncFileFields);
-        % Get all the Data filenames
+        sDataFuncFiles = db_get(sqlConn, 'DataForStudy', sChannel.Study, dataFuncFileFields);
         varargout{1} = sDataFuncFiles;
 
 
