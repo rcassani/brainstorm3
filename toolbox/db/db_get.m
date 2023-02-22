@@ -1380,6 +1380,24 @@ switch contextName
         varargout{1} = sDataFunctFiles;
 
 
+%% ==== DATA FILE FOR CHANNEL FILE ====
+    % sDataFuncFiles = db_get('DataForChannelFile', ChannelFileName, DataFunctFileFields)
+    % sDataFuncFiles = db_get('DataForChannelFile', ChannelID,       DataFunctFileFields)
+    case 'DataForChannelFile'
+        % Get target study
+        iChannel = args{1};
+        dataFuncFileFields = '*';
+        if length(args) > 1
+            dataFuncFileFields = args{2};
+        end
+        % Get study for the given channel file
+        sChannel = db_get(sqlConn, 'FunctionalFile', iChannel, 'Study');
+        % Get dependent data files
+        sDataFuncFiles = db_get(sqlConn, 'DataForStudy', sChannel.Study, {'FileName'}, dataFuncFileFields);
+        % Get all the Data filenames
+        varargout{1} = sDataFuncFiles;
+
+
 %% ==== ERROR ====      
     otherwise
         error('Invalid context : "%s"', contextName);

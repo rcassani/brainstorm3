@@ -1483,21 +1483,12 @@ switch contextName
 %% ==== DATA FILE FOR CHANNEL FILE ====
     % Usage: DataFiles = bst_get('DataForChannelFile', ChannelFile)
     case 'DataForChannelFile'
+        deprecationWarning(contextName, contextName);
+
         ChannelFile = varargin{2};
-        DataFiles = {};
-        % Get study for the given channel file
-        [sStudy, iStudy] = bst_get('ChannelFile', ChannelFile);
-        if isempty(sStudy)
-            return;
-        end
-        % Get dependent data files
-        [iStudies, iDatas] = bst_get('DataForStudy', iStudy);
+        sDataFuncFiles = db_get('DataForChannelFile', ChannelFile, {'FileName'});
         % Get all the Data filenames
-        for i = 1:length(iStudies)
-            sStudy = bst_get('Study', iStudies(i));
-            DataFiles = cat(2, DataFiles, {sStudy.Data(iDatas(i)).FileName});
-        end
-        argout1 = DataFiles;
+        argout1 = {sDataFuncFiles.FileName};
                 
         
 %% ==== RESULTS FILE ====
