@@ -1340,7 +1340,7 @@ switch contextName
         varargout{1} = sStudies;
 
 %% ==== DATA FOR STUDY (INCLUDING SHARED STUDIES) ====
-    % Usage: sDataFunctFile = db_get('DataForStudy', StudyId, DataFunctFileFields)
+    % sDataFunctFile = db_get('DataForStudy', StudyId, DataFunctFileFields)
     case 'DataForStudy'
         % Get target study
         iStudy = args{1};
