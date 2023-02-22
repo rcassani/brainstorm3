@@ -1569,6 +1569,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iTimefreq] = bst_get('TimefreqForFile', FileName, iStudies) : search only the specified studies
     %        [sStudy, iStudy, iTimefreq] = bst_get('TimefreqForFile', FileName)           : search the whole protocol
     case 'TimefreqForFile'
+        deprecationWarning(contextName, 'ChildrenFromFunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1580,38 +1582,13 @@ switch contextName
         else
             error('Invalid call to bst_get().');
         end
-        % Get study in which file is located
-        if (nargin >= 3)
-            iStudies = varargin{3};
-            [sStudy, iStudy, iFile, DataType] = bst_get('AnyFile', FileName, iStudies);
-        else
-            [sStudy, iStudy, iFile, DataType] = bst_get('AnyFile', FileName);
-        end
-        % If file was not found
-        if isempty(iStudy)
-            return;
-        end
-        % Search direct dependent files
-        [tmp, tmp, iTf] = findFileInStudies('Timefreq', 'DataFile', FileName, iStudy);
-        % Data files: get all the depending results, and then all the timefreq for those results
-        if strcmpi(DataType, 'data')
-            [tmp, tmp, iResults] = bst_get('ResultsForDataFile', FileName, iStudy);
-            for i = 1:length(iResults)
-                % Get FileName for depending results file
-                sFuncFile = db_get('FunctionalFile', iResults(i), 'FileName');
-                FileNameRes = sFuncFile.FileName;
-                % Search selected studies
-                [tmp, tmp, iTfRes] = findFileInStudies('Timefreq', 'DataFile', FileNameRes, iStudy);
-                if ~isempty(iTfRes)
-                    iTf = [iTf iTfRes];
-                end
-            end
-        end
+        sTimefreqFuncFiles = db_get('ChildrenFromFunctionalFile', FileName, {'Id', 'Study'}, 'timefreq');
+
         % Return results
-        if ~isempty(iTf)
-            argout1 = sStudy;
-            argout2 = iStudy;
-            argout3 = iTf;
+        if ~isempty(sTimefreqFuncFiles)
+            argout1 = bst_get('Study', [sTimefreqFuncFiles.Study]);
+            argout2 = [sTimefreqFuncFiles.Study];
+            argout3 = [sTimefreqFuncFiles.Id];
         end
         
         
@@ -1619,6 +1596,8 @@ switch contextName
     % Usage: [sStudy, iStudy, iDipoles] = bst_get('DipolesForFile', FileName, iStudies) : search only the specified studies
     %        [sStudy, iStudy, iDipoles] = bst_get('DipolesForFile', FileName)           : search the whole protocol
     case 'DipolesForFile'
+        deprecationWarning(contextName, 'ChildrenFromFunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1630,38 +1609,13 @@ switch contextName
         else
             error('Invalid call to bst_get().');
         end
-        % Get study in which file is located
-        if (nargin >= 3)
-            iStudies = varargin{3};
-            [sStudy, iStudy, iFile, DataType] = bst_get('AnyFile', FileName, iStudies);
-        else
-            [sStudy, iStudy, iFile, DataType] = bst_get('AnyFile', FileName);
-        end
-        % If file was not found
-        if isempty(iStudy)
-            return;
-        end
-        % Search direct dependent files
-        [tmp, tmp, iDip] = findFileInStudies('Dipoles', 'DataFile', FileName, iStudy);
-        % Data files: get all the depending results, and then all the timefreq for those results
-        if strcmpi(DataType, 'data')
-            [tmp, tmp, iResults] = bst_get('ResultsForDataFile', FileName, iStudy);
-            for i = 1:length(iResults)
-                % Get FileName for depending results file
-                sFuncFile = db_get('FunctionalFile', iResults(i), 'FileName');
-                FileNameRes = sFuncFile.FileName;
-                % Search selected studies
-                [tmp, tmp, iDipRes] = findFileInStudies('Dipoles', 'DataFile', FileNameRes, iStudy);
-                if ~isempty(iDipRes)
-                    iDip = [iDip, iDipRes];
-                end
-            end
-        end
+        sDipoleFuncFiles = db_get('ChildrenFromFunctionalFile', FileName, {'Id', 'Study'}, 'dipoles');
+
         % Return results
-        if ~isempty(iDip)
-            argout1 = sStudy;
-            argout2 = iStudy;
-            argout3 = iDip;
+        if ~isempty(sDipoleFuncFiles)
+            argout1 = bst_get('Study', [sDipoleFuncFiles.Study]);
+            argout2 = [sDipoleFuncFiles.Study];
+            argout3 = [sDipoleFuncFiles.Id];
         end
         
         
@@ -1669,9 +1623,8 @@ switch contextName
     % Find all the timefreq files dependent from links due to a given kernel
     % Usage: [sStudy, iStudy, iTimefreq] = bst_get('TimefreqForKernel', KernelFile) 
     case 'TimefreqForKernel'
-        sFoundStudy = [];
-        iFoundStudy = [];
-        iFoundTimefreq = [];
+        deprecationWarning(contextName, 'FilesForKernel');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1679,48 +1632,22 @@ switch contextName
         % Get study in which file is located
         KernelFile = varargin{2};
         KernelFile = file_short(KernelFile);
-        [sStudy, iStudy, iFile, DataType] = bst_get('ResultsFile', KernelFile);
-        if isempty(iStudy)
-            return;
+        sTimefreqFuncFiles = db_get('FilesForKernel', KernelFile, 'timefreq', {'Id', 'Study'});
+
+        % Return results
+        if ~isempty(sTimefreqFuncFiles)
+            argout1 = bst_get('Study', [sTimefreqFuncFiles.Study]);
+            argout2 = [sTimefreqFuncFiles.Study];
+            argout3 = [sTimefreqFuncFiles.Id];
         end
-        % Get all the data files relative with this kernel
-        [iDepStudies, iDepDatas] = bst_get('DataForStudy', iStudy);
-        % Keep only once each study
-        iDepStudies = unique(iDepStudies);
-        % Process all the dependent studies
-        for iSt = 1:length(iDepStudies)
-            % Get the study structure
-            sDepStudy = bst_get('Study', iDepStudies(iSt));
-            % Process each timefreq file separately
-            for iTf = 1:length(sDepStudy.Timefreq)
-                DataFile = sDepStudy.Timefreq(iTf).DataFile;
-                % Keep only the files that are linked to LINKS
-                if isempty(DataFile) || (length(DataFile) < 5) || ~isequal(DataFile(1:5), 'link|')
-                    continue;
-                end
-                % Split link
-                splitFile = str_split(DataFile, '|');
-                % If the kernel is found: add it to the found list
-                if file_compare(splitFile{2}, KernelFile)
-                    sFoundStudy = [sFoundStudy sDepStudy];
-                    iFoundStudy = [iFoundStudy, iDepStudies(iSt)];
-                    iFoundTimefreq = [iFoundTimefreq, iTf];
-                end
-            end
-        end
-        % Return findings
-        argout1 = sFoundStudy;
-        argout2 = iFoundStudy;
-        argout3 = iFoundTimefreq;
         
         
 %% ==== DIPOLES FOR KERNEL ====
     % Find all the dipoles files dependent from links due to a given kernel
-    % Usage: [sStudy, iStudy, iDipoles] = bst_get('TimefreqForKernel', KernelFile) 
+    % Usage: [sStudy, iStudy, iDipoles] = bst_get('DipolesForKernel', KernelFile)
     case 'DipolesForKernel'
-        sFoundStudy = [];
-        iFoundStudy = [];
-        iFoundDipoles = [];
+        deprecationWarning(contextName, 'FilesForKernel');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1728,39 +1655,14 @@ switch contextName
         % Get study in which file is located
         KernelFile = varargin{2};
         KernelFile = file_short(KernelFile);
-        [sStudy, iStudy, iFile, DataType] = bst_get('ResultsFile', KernelFile);
-        if isempty(iStudy)
-            return;
+        sTimefreqFuncFiles = db_get('FilesForKernel', KernelFile, 'dipoles', {'Id', 'Study'});
+
+        % Return results
+        if ~isempty(sTimefreqFuncFiles)
+            argout1 = bst_get('Study', [sTimefreqFuncFiles.Study]);
+            argout2 = [sTimefreqFuncFiles.Study];
+            argout3 = [sTimefreqFuncFiles.Id];
         end
-        % Get all the data files relative with this kernel
-        [iDepStudies, iDepDatas] = bst_get('DataForStudy', iStudy);
-        % Keep only once each study
-        iDepStudies = unique(iDepStudies);
-        % Process all the dependent studies
-        for iSt = 1:length(iDepStudies)
-            % Get the study structure
-            sDepStudy = bst_get('Study', iDepStudies(iSt));
-            % Process each timefreq file separately
-            for iDip = 1:length(sDepStudy.Dipoles)
-                DataFile = sDepStudy.Dipoles(iDip).DataFile;
-                % Keep only the files that are linked to LINKS
-                if isempty(DataFile) || (length(DataFile) < 5) || ~isequal(DataFile(1:5), 'link|')
-                    continue;
-                end
-                % Split link
-                splitFile = str_split(DataFile, '|');
-                % If the kernel is found: add it to the found list
-                if file_compare(splitFile{2}, KernelFile)
-                    sFoundStudy = [sFoundStudy sDepStudy];
-                    iFoundStudy = [iFoundStudy, iDepStudies(iSt)];
-                    iFoundDipoles = [iFoundDipoles, iDip];
-                end
-            end
-        end
-        % Return findings
-        argout1 = sFoundStudy;
-        argout2 = iFoundStudy;
-        argout3 = iFoundDipoles;
         
         
 %% ==== DIPOLES FILE ====
