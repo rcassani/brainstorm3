@@ -655,7 +655,7 @@ switch contextName
             StudyFileName = [];
         elseif (ischar(varargin{2}))
             iStudies = [];
-            StudyFileName = strrep(varargin{2}, ProtocolInfo.STUDIES, '');
+            StudyFileName = file_short(varargin{2});
         end
         % Indices
         iAnalysisStudy = -2;    % CANNOT USE -1 => DISABLES SEARCH FUNCTIONS
@@ -1194,11 +1194,10 @@ switch contextName
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         % Parse inputs
         if (nargin == 2)
             ChannelFile = varargin{2};
-            ChannelFile = strrep(ChannelFile, ProtocolInfo.STUDIES, '');
+            ChannelFile = file_short(ChannelFile);
         else
             error('Invalid call to bst_get().');
         end
@@ -1347,9 +1346,8 @@ switch contextName
             return;
         end
         % Input #2: HeadModelFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         HeadModelFile = varargin{2};
-        HeadModelFile = strrep(HeadModelFile, ProtocolInfo.STUDIES, '');
+        HeadModelFile = file_short(HeadModelFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1372,9 +1370,8 @@ switch contextName
             return;
         end
         % Input #2: NoiseCovFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         NoiseCovFile = varargin{2};
-        NoiseCovFile = strrep(NoiseCovFile, ProtocolInfo.STUDIES, '');
+        NoiseCovFile = file_short(NoiseCovFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1396,9 +1393,8 @@ switch contextName
             return;
         end
         % Input #2: DataFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         DataFile = varargin{2};
-        DataFile = strrep(DataFile, ProtocolInfo.STUDIES, '');
+        DataFile = file_short(DataFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1480,9 +1476,8 @@ switch contextName
             return;
         end
         % Input #2: ResultsFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         ResultsFile = varargin{2};
-        ResultsFile = strrep(ResultsFile, ProtocolInfo.STUDIES, '');
+        ResultsFile = file_short(ResultsFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1503,10 +1498,9 @@ switch contextName
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         % Input #2: DataFile
         DataFile = varargin{2};
-        DataFile = strrep(DataFile, ProtocolInfo.STUDIES, '');
+        DataFile = file_short(DataFile);
         % Determine in which studies to search for ResultsFile
         if (nargin >= 3)
             % Studies specified in argument
@@ -1534,9 +1528,8 @@ switch contextName
             return;
         end
         % Input #2: SataFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         StatFile = varargin{2};
-        StatFile = strrep(StatFile, ProtocolInfo.STUDIES, '');
+        StatFile = file_short(StatFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1557,11 +1550,10 @@ switch contextName
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         % Parse inputs
         if (nargin >= 2)
             DataFile = varargin{2};
-            DataFile = strrep(DataFile, ProtocolInfo.STUDIES, '');
+            DataFile = file_short(DataFile);
         else
             error('Invalid call to bst_get().');
         end
@@ -1591,9 +1583,8 @@ switch contextName
             return;
         end
         % Input #2: TimefreqFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         TimefreqFile = varargin{2};
-        TimefreqFile = strrep(TimefreqFile, ProtocolInfo.STUDIES, '');
+        TimefreqFile = file_short(TimefreqFile);
         % Remove optional RefRowName
         iPipe = find(TimefreqFile == '|', 1);
         if ~isempty(iPipe)
@@ -1616,11 +1607,10 @@ switch contextName
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         % Parse inputs
         if (nargin >= 2)
             FileName = varargin{2};
-            FileName = strrep(FileName, ProtocolInfo.STUDIES, '');
+            FileName = file_short(FileName);
         else
             error('Invalid call to bst_get().');
         end
@@ -1667,11 +1657,10 @@ switch contextName
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         % Parse inputs
         if (nargin >= 2)
             FileName = varargin{2};
-            FileName = strrep(FileName, ProtocolInfo.STUDIES, '');
+            FileName = file_short(FileName);
         else
             error('Invalid call to bst_get().');
         end
@@ -1723,6 +1712,7 @@ switch contextName
         end
         % Get study in which file is located
         KernelFile = varargin{2};
+        KernelFile = file_short(KernelFile);
         [sStudy, iStudy, iFile, DataType] = bst_get('ResultsFile', KernelFile);
         if isempty(iStudy)
             return;
@@ -1771,6 +1761,7 @@ switch contextName
         end
         % Get study in which file is located
         KernelFile = varargin{2};
+        KernelFile = file_short(KernelFile);
         [sStudy, iStudy, iFile, DataType] = bst_get('ResultsFile', KernelFile);
         if isempty(iStudy)
             return;
@@ -1817,9 +1808,8 @@ switch contextName
             return;
         end
         % Input #2: DipolesFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         DipolesFile = varargin{2};
-        DipolesFile = strrep(DipolesFile, ProtocolInfo.STUDIES, '');
+        DipolesFile = file_short(DipolesFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1841,9 +1831,8 @@ switch contextName
             return;
         end
         % Input #2: MatrixFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         MatrixFile = varargin{2};
-        MatrixFile = strrep(MatrixFile, ProtocolInfo.STUDIES, '');
+        MatrixFile = file_short(MatrixFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1864,9 +1853,8 @@ switch contextName
             return;
         end
         % Input #2: ImageFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         ImageFile = varargin{2};
-        ImageFile = strrep(ImageFile, ProtocolInfo.STUDIES, '');
+        ImageFile = file_short(ImageFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1888,6 +1876,7 @@ switch contextName
         if isempty(FileName)
             return
         end
+        FileName = file_short(FileName);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
