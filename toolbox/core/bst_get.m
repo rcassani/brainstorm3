@@ -1109,19 +1109,26 @@ switch contextName
         % Get subject
         if isempty(varargin{2})
             % Get default subject
-            sSubject = bst_get('Subject', 0);
+            sSubject = db_get('Subject', 0);
         elseif ischar(varargin{2})
             FileName = varargin{2};
-            sSubject = bst_get('AnyFile', FileName);
+            [sItem, table] = db_get('AnyFile', FileName);
+            if strcmpi(table, 'Subject')
+                sSubject = sItem;
+            elseif strcmpi(table, 'AnatomyFile')
+                sSubject = db_get('SubjectFromAnatomyFile', sItem.Id);
+            end
         else
             iSubject = varargin{2};
-            sSubject = bst_get('Subject', iSubject);
+            sSubject = db_get('Subject', iSubject);
         end
         % Error handling
         if isempty(sSubject)
             disp('BST> Warning: Subject not found.');
             return;
-        elseif isempty(sSubject.Surface)
+        end
+        sSurfAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'Id', 'surface');
+        if isempty(sSurfAnatFiles)
             return;
         end
         SurfaceType = varargin{3};
@@ -1325,26 +1332,26 @@ switch contextName
             error('Invalid call to bst_get().');
         end
         % Get study 
-        sStudy = bst_get('Study', iStudy);
+        sStudy = db_get('Study', iStudy);
         % === Analysis-Inter node ===
         iAnalysisInter      = -2;
         iGlobalDefaultStudy = -3;
-        if (iStudy == iAnalysisInter)
+        if (sStudy.Id == iAnalysisInter)
             % If no channel file is defined in 'Analysis-intra' node: look in 
             if isempty(sStudy.iHeadModel)
                 % Get global default study
-                sStudy = bst_get('Study', iGlobalDefaultStudy);
+                sStudy = db_get('Study', iGlobalDefaultStudy);
             end
         % === All other nodes ===
         else
             % Get subject attached to study
-            [sSubject, iSubject] = bst_get('Subject', sStudy.BrainStormSubject, 1);
+            sSubject = db_get('Subject', sStudy.Subject, '*', 1);
             if isempty(sSubject)
                 return;
             end
             % Subject uses default channel/headmodel
             if (sSubject.UseDefaultChannel ~= 0)
-                sStudy = bst_get('DefaultStudy', iSubject);
+                sStudy = db_get('DefaultStudy', sSubject.Id);
                 if isempty(sStudy)
                     return
                 end
@@ -1535,7 +1542,8 @@ switch contextName
             iStudy = varargin{3};
         else
             % Get study in which DataFile is located
-            [sStudy, iStudy] = bst_get('DataFile', DataFile);
+            sFuncFile = db_get('FunctionalFile', DataFile, 'Study');
+            iStudy = sFuncFile.Study;
             if isempty(iStudy)
                 return;
             end
@@ -1592,7 +1600,8 @@ switch contextName
             iStudies = varargin{3};
         else
             % Get study in which DataFile is located
-            [sStudies, iStudies] = bst_get('DataFile', DataFile);
+            sFuncFiles = db_get('FunctionalFile', DataFile, 'Study');
+            iStudies = [sFuncFiles.Study];
             if isempty(iStudies)
                 return;
             end
