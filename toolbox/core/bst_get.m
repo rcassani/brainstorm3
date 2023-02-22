@@ -1325,41 +1325,12 @@ switch contextName
 %% ==== HEADMODEL STRUCT FOR STUDY ====
     % Usage: [sHeadModel] = bst_get('HeadModelForStudy', iStudy)
     case 'HeadModelForStudy'
-        % Parse inputs
-        if (nargin == 2)
-            iStudy = varargin{2};
-        else
-            error('Invalid call to bst_get().');
-        end
-        % Get study 
-        sStudy = db_get('Study', iStudy);
-        % === Analysis-Inter node ===
-        iAnalysisInter      = -2;
-        iGlobalDefaultStudy = -3;
-        if (sStudy.Id == iAnalysisInter)
-            % If no channel file is defined in 'Analysis-intra' node: look in 
-            if isempty(sStudy.iHeadModel)
-                % Get global default study
-                sStudy = db_get('Study', iGlobalDefaultStudy);
-            end
-        % === All other nodes ===
-        else
-            % Get subject attached to study
-            sSubject = db_get('Subject', sStudy.Subject, '*', 1);
-            if isempty(sSubject)
-                return;
-            end
-            % Subject uses default channel/headmodel
-            if (sSubject.UseDefaultChannel ~= 0)
-                sStudy = db_get('DefaultStudy', sSubject.Id);
-                if isempty(sStudy)
-                    return
-                end
-            end
-        end
-        % Return HeadModel structure
-        if ~isempty(sStudy.iHeadModel)
-            argout1 = db_convert_functionalfile(db_get('FunctionalFile', sStudy.iHeadModel));
+        deprecationWarning(contextName, contextName);
+
+        iStudy = varargin{2};
+        sHeadModelFuncFile = db_get('HeadModelForStudy', iStudy);
+        if ~isempty(sHeadModelFuncFile)
+            argout1 = db_convert_functionalfile(sHeadModelFuncFile);
         else
             argout1 = [];
         end

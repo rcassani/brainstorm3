@@ -90,6 +90,8 @@ function varargout = db_get(varargin)
 %    - db_get('TimefreqDisplayModalities', FunctionalFileFileName) : Get displayable modalities for a TF file FunctionalFileFileName
 %    - db_get('DataForChannelFile', ChannelFileName, DataFunctFileFields) : Get sDataFuncFiles for a given Channel
 %    - db_get('DataForChannelFile', ChannelID, DataFunctFileFields)       : Get sDataFuncFiles for a given Channel
+%    - db_get('HeadModelForStudy', StudyID)       : Return current HeadModel sFuncFile for target study
+%    - db_get('HeadModelForStudy', StudyFileName) : Return current HeadModel sFuncFile for target study
 %
 % ====== ANY FILE ======================================================================
 %    - db_get('AnyFile', FileName)         : Get any file by FileName
@@ -1397,6 +1399,46 @@ switch contextName
         % Get dependent data files
         sDataFuncFiles = db_get(sqlConn, 'DataForStudy', sChannel.Study, dataFuncFileFields);
         varargout{1} = sDataFuncFiles;
+
+
+%% ==== HEAD MODEL FOR STUDY ====
+    % sHeadModelFuncFile = db_get('HeadModelForStudy', StudyFileName, HeadModelFunctFileFields)
+    % sHeadModelFuncFile = db_get('HeadModelForStudy', StudyID,       HeadModelFunctFileFields)
+    case 'HeadModelForStudy'
+        % Get target study
+        iStudy = args{1};
+        headmodelFields = '*';
+        if length(args) > 1
+            headmodelFields = args{2};
+        end
+        sStudy = db_get(sqlConn, 'Study', iStudy, 'Study');
+        % === Analysis-Inter node ===
+        iAnalysisInter      = -2;
+        iGlobalDefaultStudy = -3;
+        if (sStudy.Id == iAnalysisInter)
+            % If no channel file is defined in 'AnalysisInter' node
+            if isempty(sStudy.iHeadModel)
+                % Get global default study
+                sStudy = db_get(sqlConn, 'Study', iGlobalDefaultStudy);
+            end
+        % === All other nodes ===
+        else
+            % Get subject attached to study
+            sSubject = db_get('Subject', sStudy.Subject, 'UseDefaultChannel', 1);
+            if isempty(sSubject)
+                return;
+            end
+            % Subject uses default channel/headmodel
+            if (sSubject.UseDefaultChannel ~= 0)
+                sStudy = db_get(sqlConn, 'DefaultStudy', sStudy.Subject);
+                if isempty(sStudy)
+                    return
+                end
+            end
+        end
+
+        sHeadModelFuncFile = db_get('FunctionalFile', sStudy.iHeadModel, headmodelFields);
+        varargout{1} = sHeadModelFuncFile;
 
 
 %% ==== ERROR ====      
