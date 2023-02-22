@@ -92,6 +92,7 @@ function varargout = db_get(varargin)
 %    - db_get('DataForChannelFile', ChannelID, DataFunctFileFields)       : Get sDataFuncFiles for a given Channel
 %    - db_get('HeadModelForStudy', StudyID)       : Return current HeadModel sFuncFile for target study
 %    - db_get('HeadModelForStudy', StudyFileName) : Return current HeadModel sFuncFile for target study
+%    - db_get('RelatedDataFile', FileName, DataFunctFileFields) : Get data FuncFile parent (or grandparent) of FileName
 %
 % ====== ANY FILE ======================================================================
 %    - db_get('AnyFile', FileName)         : Get any file by FileName
@@ -1441,6 +1442,29 @@ switch contextName
 
         sHeadModelFuncFile = db_get('FunctionalFile', sStudy.iHeadModel, headmodelFields);
         varargout{1} = sHeadModelFuncFile;
+
+
+%% ==== GET RELATED DATA FILE ====
+    % sDataFunctFile = db_get('RelatedDataFile', FileName, DataFunctFileFields)
+    %                = db_get('RelatedDataFile', FileId,   DataFunctFileFields)
+    case 'RelatedDataFile'
+        FileName = args{1};
+        % Get file in database
+        sFuncFile = db_get('FunctionalFile', FileName, 'Id');
+        % If this functional file does not exist in DB
+        if isempty(sFuncFile)
+            return;
+        end
+        % Get parent file
+        sParentFunctFile = db_get('ParentFromFunctionalFile', sFuncFile.Id);
+        if ~isempty(sParentFunctFile)
+            % If parent file is results: get related data file
+            if ismember(file_gettype(sParentFunctFile.FileName), {'link','results'})
+                sParentFunctFile = bst_get('ParentFromFunctionalFile', sParentFunctFile.Id);
+            end
+        end
+        % Return file
+        varargout{1} = sParentFunctFile;
 
 
 %% ==== ERROR ====      

@@ -1970,36 +1970,12 @@ switch contextName
     % Usage: DataFile = bst_get('RelatedDataFile', FileName, iStudies)
     %        DataFile = bst_get('RelatedDataFile', FileName)
     case 'RelatedDataFile'
-        % Input #2: FileName
+        deprecationWarning(contextName, contextName);
+
         FileName = varargin{2};
-        % Input #3: iStudies
-        if (nargin < 3)
-            iStudies = [];
-        else
-            iStudies = varargin{3};
-        end
-        % Get file in database
-        [sStudy, iStudy, iFile, fileType] = bst_get('AnyFile', FileName, iStudies);
-        % If this data file does not belong to any study
-        if isempty(sStudy)
-            return;
-        end
-        % Get parent file
-        RelatedDataFile = '';
-        sFunctFile = db_get('FunctionalFile', iFile, 'Parent');
-        if ~isempty(sFunctFile.Parent)
-            sFunctFileParent = db_get('FunctionalFile', sFunctFile.Parent, 'FileName');
-            RelatedDataFile = sFunctFileParent.FileName;
-        end
-        % If related file is results: get related data file
-        if ~isempty(RelatedDataFile)
-            relFileType = file_gettype(RelatedDataFile);
-            if ismember(relFileType, {'link','results'})
-                RelatedDataFile = bst_get('RelatedDataFile', RelatedDataFile, iStudy);
-            end
-        end
+        sDataFuncFile = db_get('RelatedDataFile', FileName, 'FileName');
         % Return file
-        argout1 = RelatedDataFile;
+        argout1 = sDataFuncFile.FileName;
         
 %% ==== ALL CONDITIONS FOR ONE SUBJECT ====
     % Usage: [Conditions] =  bst_get('ConditionsForSubject', SubjectFile)
