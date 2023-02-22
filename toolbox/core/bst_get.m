@@ -2406,6 +2406,9 @@ switch contextName
         
 %% ==== GET FILENAMES ====
     case 'GetFilenames'
+        deprecationWarning(contextName, 'FunctionalFile');
+        %TODORC : Does narrowing the search as below, improves speed at reading DB? Test needeed
+
         iStudies = varargin{2};
         iItems = varargin{3};
         DataType = varargin{4};
