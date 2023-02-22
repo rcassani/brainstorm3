@@ -88,6 +88,8 @@ function varargout = db_get(varargin)
 %    - db_get('ChannelModalities', FunctionalFileId) : Get displayable modalities the Channel file related to FunctionalFileFileName
 %    - db_get('TimefreqDisplayModalities', FunctionalFileId)       : Get displayable modalities for a TF file FunctionalFileID
 %    - db_get('TimefreqDisplayModalities', FunctionalFileFileName) : Get displayable modalities for a TF file FunctionalFileFileName
+%    - db_get('DataForChannelFile', ChannelFileName, DataFunctFileFields) : Get sDataFuncFiles for a given Channel
+%    - db_get('DataForChannelFile', ChannelID, DataFunctFileFields)       : Get sDataFuncFiles for a given Channel
 %
 % ====== ANY FILE ======================================================================
 %    - db_get('AnyFile', FileName)         : Get any file by FileName
