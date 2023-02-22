@@ -873,12 +873,14 @@ switch contextName
         end
         defaultStudy = bst_get('DirDefaultStudy');
         % Get Subject
-        sSubject = db_get(sqlConn, 'Subject', iSubject, {'Id', 'UseDefaultChannel'});
-        % If UseDefaultChannel get default Subject
-        if sSubject.UseDefaultChannel == 1
-            sSubject = db_get(sqlConn, 'Subject', '@default_subject', 'Id');
+        sSubject = db_get(sqlConn, 'Subject', iSubject, {'Id', 'Name', 'UseDefaultChannel'});
+        % If UseDefaultChannel == 2 or Subject is @default_subject, get Global @default_study
+        if sSubject.UseDefaultChannel == 2 || strcmp(sSubject.Name, '@default_subject')
+            sStudy = db_get(sqlConn, 'Study', '@default_study', fields);
+        % Otherwise, get Subject's @default_study
+        else
+            sStudy = db_get(sqlConn, 'Study', struct('Subject', sSubject.Id, 'Name', defaultStudy), fields);
         end
-        sStudy = db_get(sqlConn, 'Study', struct('Subject', sSubject.Id, 'Name', defaultStudy), fields);
         varargout{1} = sStudy;
 
 

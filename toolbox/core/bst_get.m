@@ -946,50 +946,16 @@ switch contextName
     %        [sDefaulStudy, iDefaultStudy] = bst_get('DefaultStudy')           : iSubject=0
     %        [sDefaulStudy, iDefaultStudy] = bst_get('DefaultStudy', SubjectFile)
     case 'DefaultStudy'
+        deprecationWarning(contextName, {contextName, 'Study'});
+
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
-        % Parse inputs
-        sSubject = [];
-        if (nargin == 1)
-            iSubject = 0;
-        elseif (nargin == 2) && isnumeric(varargin{2})
-            iSubject = varargin{2};
-            if iSubject ~= 0
-                sSubject = bst_get('Subject', iSubject, 1);
-            end
-        elseif (nargin == 2) && ischar(varargin{2})
-            SubjectFile = varargin{2};
-            % Get subject attached to study
-            [sSubject, iSubject] = bst_get('Subject', SubjectFile, 1);
-        else
-            error('Invalid call to bst_get()');
-        end
-        % === DEFAULT SUBJECT ===
-        % => Return global default study
-        if (iSubject == 0)
-            % Return Global default study
-            argout1 = bst_get('Study', -3);
-            argout2 = -3;
-        % === NORMAL SUBJECT ===
-        else
-            if isempty(sSubject) || ~sSubject.UseDefaultChannel
-                return;
-            end
-            % === GLOBAL DEFAULT STUDY ===
-            if sSubject.UseDefaultChannel == 2
-                % Return Global default study
-                argout1 = bst_get('Study', -3);
-                argout2 = -3;
-            % === SUBJECT'S DEFAULT STUDY ===
-            elseif sSubject.UseDefaultChannel == 1
-                % Get studies related to subject
-                sStudy = db_get('DefaultStudy', iSubject, 'Id');
-                if ~isempty(sStudy)
-                    argout1 = bst_get('Study', sStudy.Id);
-                    argout2 = sStudy.Id;
-                end
-            end
+        sStudy = db_get('DefaultStudy', varargin{2}, 'Id');
+        % Get Study old structure
+        if ~isempty(sStudy)
+            argout1 = bst_get('Study', sStudy.Id);
+            argout2 = sStudy.Id;
         end
         
         
