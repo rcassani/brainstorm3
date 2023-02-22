@@ -754,6 +754,8 @@ switch contextName
     % Usage : [sStudies, iStudies] = bst_get('StudyWithSubject', SubjectFile) : WITHOUT the system studies ('intra_subject', 'default_study')
     %         [sStudies, iStudies] = bst_get(..., 'intra_subject', 'default_study') : WITH the system studies: 'intra_subject' | 'default_study'
     case 'StudyWithSubject'
+        deprecationWarning(contextName, {'StudiesFromSubject', 'Study'});
+
         % Parse inputs
         if (nargin < 2) || ~ischar(varargin{2})
             error('Invalid call to bst_get()');
@@ -775,55 +777,40 @@ switch contextName
             return;
         end
         
-        sqlConn = sql_connect();
         % Get default subject
-        sDefaultSubject = db_get(sqlConn, 'Subject', '@default_subject', 'FileName');
+        sDefaultSubject = db_get('Subject', '@default_subject', 'FileName');
         % If SubjectFile is the default subject filename
         if ~isempty(sDefaultSubject) && ~isempty(sDefaultSubject.FileName) && file_compare(SubjectFile{1}, sDefaultSubject.FileName)
             % Get all the subjects files that use default anatomy
-            sSubject = db_get(sqlConn, 'Subject', struct('UseDefaultAnat', 1), 'FileName');
+            sSubject = db_get('Subject', struct('UseDefaultAnat', 1), 'FileName');
             if isempty(sSubject)
-                sql_close(sqlConn);
                 return
             end
             SubjectFile = {sSubject.FileName};
-            % Also updates inter-subject node
-            InterSubject = 1;
+            % Also updates @inter study
+            InterStudy = 1;
         else
-            InterSubject = 0;
+            InterStudy = 0;
         end
-        % Join query
-        joinQry  = 'Study LEFT JOIN Subject On Study.Subject = Subject.Id';
-        addQuery = 'AND Subject.FileName = "%s"';
-        % Remove "analysis_intra" and "default_study" studies from list
-        notName = {};
-        if ~IntraStudies
-            notName{end + 1} = bst_get('DirAnalysisIntra');
-        end
-        if ~DefaultStudies
-            notName{end + 1} = bst_get('DirDefaultStudy');
-        end
-        if ~InterSubject
-            notName{end + 1} = bst_get('DirAnalysisInter');
-        end
-        if ~isempty(notName)
-            addQuery = [addQuery ' AND Study.Name NOT IN ('];
-            for iName = 1:length(notName)
-                if iName > 1
-                    addQuery = [addQuery ', '];
-                end
-                addQuery = [addQuery '"' notName{iName} '"'];
-            end
-            addQuery = [addQuery ')'];
-        end
-        % Search all the current protocol's studies
+        % Search studies for all subjects
         iStudies = [];
-        for i=1:length(SubjectFile)
-            sStudies = sql_query(sqlConn, 'SELECT', joinQry, [], 'Study.Id', ...
-                                 sprintf (addQuery, SubjectFile{i}));
+        for ix = 1 : length(SubjectFile)
+            if IntraStudies && DefaultStudies
+                sStudies = db_get('StudiesFromSubject', SubjectFile{ix}, 'Id', '@intra', '@default_study');
+            elseif IntraStudies
+                sStudies = db_get('StudiesFromSubject', SubjectFile{ix}, 'Id', '@intra');
+            elseif DefaultStudies
+                sStudies = db_get('StudiesFromSubject', SubjectFile{ix}, 'Id', '@default_study');
+            else
+                sStudies = db_get('StudiesFromSubject', SubjectFile{ix}, 'Id');
+            end
             iStudies = [iStudies, [sStudies.Id]];
         end
-        sql_close(sqlConn);
+        % Add @inter study, if needed
+        if InterStudy
+            sInterStudy = db_get('Study', '@inter', 'Id');
+            iStudies = [iStudies, [sInterStudy.Id]];
+        end
         % Return results
         if ~isempty(iStudies)
             % Return studies
