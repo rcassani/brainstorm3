@@ -169,6 +169,7 @@ function [argout1, argout2, argout3, argout4, argout5] = bst_get( varargin )
 %    - bst_get('TimefreqOptions_fft')
 %    - bst_get('TimefreqOptions_psd')
 %    - bst_get('TimefreqOptions_hilbert')
+%    - bst_get('TimefreqOptions_plv')
 %    - bst_get('OpenMEEGOptions')
 %    - bst_get('DuneuroOptions')
 %    - bst_get('GridOptions_headmodel')
@@ -202,6 +203,15 @@ function [argout1, argout2, argout3, argout4, argout5] = bst_get( varargin )
 %    - bst_get('LastPsdDisplayFunction')  : Display option of measure for spectrum (log, power, magnitude, etc.)
 %    - bst_get('PlotlyCredentials')       : Get the credentials and URL to connect to plot.ly server
 %    - bst_get('ExportBidsOptions')       : Additional metadata for BIDS export
+%    - bst_get('KlustersExecutable')      : Get path tp klusters.exe (ephys)
+%    - bst_get('MontageOptions')          : Get montage options
+%    - bst_get('ComputerName')            : Get this computer name (hostname)
+%    - bst_get('UserName')                : Get username in this computer
+%    - bst_get('InstanceID')              : Get current InstanceID
+%    - bst_get('ProgramStartTime')        : Get Brainstorm start time (Unix time)
+%    - bst_get('CurrentUnixTime')         : Get current time (Unix time)
+
+
 %
 % SEE ALSO bst_set
 
@@ -244,6 +254,8 @@ argout5 = [];
 switch contextName
 %% ==== SUBFUNCTIONS =====
     case 'findFileInStudies'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         [argout1, argout2, argout3] = findFileInStudies(varargin{2:end});
         
 %% ==== BRAINSTORM CONFIGURATION ====
@@ -544,7 +556,8 @@ switch contextName
         argout1 = GlobalData.DataBase.(contextName)(argout2);
 
     case 'ProtocolSubjects'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'AllSubjects');
+        deprecationWarning(contextName, 'AllSubjects');
+
         argout1 = db_template('ProtocolSubjects');
         if GlobalData.DataBase.iProtocol == 0
             % No protocol loaded
@@ -578,7 +591,8 @@ switch contextName
         argout1.Subject = sSubjects;
         
     case 'ProtocolStudies'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'AllStudies');
+        deprecationWarning(contextName, 'AllStudies');
+
         argout1 = db_template('ProtocolStudies');
         if GlobalData.DataBase.iProtocol == 0
             % No protocol loaded
@@ -621,7 +635,7 @@ switch contextName
     %        [sStudy, iStudy] = bst_get('Study')
     %        [sStudy, iStudy] = bst_get('Study', iStudies)
     case 'Study'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
 
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -641,7 +655,7 @@ switch contextName
             StudyFileName = [];
         elseif (ischar(varargin{2}))
             iStudies = [];
-            StudyFileName = strrep(varargin{2}, ProtocolInfo.STUDIES, '');
+            StudyFileName = file_short(varargin{2});
         end
         % Indices
         iAnalysisStudy = -2;    % CANNOT USE -1 => DISABLES SEARCH FUNCTIONS
@@ -740,6 +754,8 @@ switch contextName
     % Usage : [sStudies, iStudies] = bst_get('StudyWithSubject', SubjectFile) : WITHOUT the system studies ('intra_subject', 'default_study')
     %         [sStudies, iStudies] = bst_get(..., 'intra_subject', 'default_study') : WITH the system studies: 'intra_subject' | 'default_study'
     case 'StudyWithSubject'
+        deprecationWarning(contextName, {'StudiesFromSubject', 'Study'});
+
         % Parse inputs
         if (nargin < 2) || ~ischar(varargin{2})
             error('Invalid call to bst_get()');
@@ -761,55 +777,40 @@ switch contextName
             return;
         end
         
-        sqlConn = sql_connect();
         % Get default subject
-        sDefaultSubject = db_get(sqlConn, 'Subject', '@default_subject', 'FileName');
+        sDefaultSubject = db_get('Subject', '@default_subject', 'FileName');
         % If SubjectFile is the default subject filename
         if ~isempty(sDefaultSubject) && ~isempty(sDefaultSubject.FileName) && file_compare(SubjectFile{1}, sDefaultSubject.FileName)
             % Get all the subjects files that use default anatomy
-            sSubject = db_get(sqlConn, 'Subject', struct('UseDefaultAnat', 1), 'FileName');
+            sSubject = db_get('Subject', struct('UseDefaultAnat', 1), 'FileName');
             if isempty(sSubject)
-                sql_close(sqlConn);
                 return
             end
             SubjectFile = {sSubject.FileName};
-            % Also updates inter-subject node
-            InterSubject = 1;
+            % Also updates @inter study
+            InterStudy = 1;
         else
-            InterSubject = 0;
+            InterStudy = 0;
         end
-        % Join query
-        joinQry  = 'Study LEFT JOIN Subject On Study.Subject = Subject.Id';
-        addQuery = 'AND Subject.FileName = "%s"';
-        % Remove "analysis_intra" and "default_study" studies from list
-        notName = {};
-        if ~IntraStudies
-            notName{end + 1} = bst_get('DirAnalysisIntra');
-        end
-        if ~DefaultStudies
-            notName{end + 1} = bst_get('DirDefaultStudy');
-        end
-        if ~InterSubject
-            notName{end + 1} = bst_get('DirAnalysisInter');
-        end
-        if ~isempty(notName)
-            addQuery = [addQuery ' AND Study.Name NOT IN ('];
-            for iName = 1:length(notName)
-                if iName > 1
-                    addQuery = [addQuery ', '];
-                end
-                addQuery = [addQuery '"' notName{iName} '"'];
-            end
-            addQuery = [addQuery ')'];
-        end
-        % Search all the current protocol's studies
+        % Search studies for all subjects
         iStudies = [];
-        for i=1:length(SubjectFile)
-            sStudies = sql_query(sqlConn, 'SELECT', joinQry, [], 'Study.Id', ...
-                                 sprintf (addQuery, SubjectFile{i}));
+        for ix = 1 : length(SubjectFile)
+            if IntraStudies && DefaultStudies
+                sStudies = db_get('StudiesFromSubject', SubjectFile{ix}, 'Id', '@intra', '@default_study');
+            elseif IntraStudies
+                sStudies = db_get('StudiesFromSubject', SubjectFile{ix}, 'Id', '@intra');
+            elseif DefaultStudies
+                sStudies = db_get('StudiesFromSubject', SubjectFile{ix}, 'Id', '@default_study');
+            else
+                sStudies = db_get('StudiesFromSubject', SubjectFile{ix}, 'Id');
+            end
             iStudies = [iStudies, [sStudies.Id]];
         end
-        sql_close(sqlConn);
+        % Add @inter study, if needed
+        if InterStudy
+            sInterStudy = db_get('Study', '@inter', 'Id');
+            iStudies = [iStudies, [sInterStudy.Id]];
+        end
         % Return results
         if ~isempty(iStudies)
             % Return studies
@@ -832,6 +833,8 @@ switch contextName
     %    - '@default_study'             : Protocol's default condition (where the protocol's shared files are stored)
     
     case 'StudyWithCondition'
+        deprecationWarning(contextName, contextName);
+
         % Parse inputs
         if (nargin ~= 2) || ~ischar(varargin{2})
             error('Invalid call to bst_get()');
@@ -856,7 +859,8 @@ switch contextName
 %% ==== CHANNEL STUDIES WITH SUBJECT ====
     % Usage: iStudies = bst_get('ChannelStudiesWithSubject', iSubjects, 'NoIntra')
     case 'ChannelStudiesWithSubject'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
+
         % Parse inputs
         if (nargin >= 2) && isnumeric(varargin{2})
             iSubjects = varargin{2};
@@ -875,23 +879,20 @@ switch contextName
 %% ==== STUDIES COUNT ====
     % Usage: [nbStudies] = bst_get('StudyCount')
     case 'StudyCount'
-        % Nothing
-        if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
-            argout1 = 0;
-            return;
-        end
-        % Get list of current protocol studies
-        ProtocolStudies = GlobalData.DataBase.ProtocolStudies(GlobalData.DataBase.iProtocol);
-        argout1 = length(ProtocolStudies.Study);
+        deprecationWarning(contextName, contextName);
+
+        argout1 = db_get('StudyCount');
 
 %% ==== SUBJECTS COUNT ====
     % Usage: [nbSubjects] = bst_get('SubjectCount')
     case 'SubjectCount'
+        deprecationWarning(contextName, contextName);
+
         argout1 = db_get('SubjectCount');
         
 %% ==== NORMALIZED SUBJECT ====
     case 'NormalizedSubject'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
 
         sNormSubj = db_get('NormalizedSubject');
         % Get full subject structure
@@ -903,6 +904,8 @@ switch contextName
 %% ==== ANALYSIS STUDY (INTRA) ====
     % Usage: [sAnalStudy, iAnalStudy] = bst_get('AnalysisIntraStudy', iSubject) 
     case 'AnalysisIntraStudy'
+        deprecationWarning(contextName, 'StudiesFromSubject');
+
         % Parse inputs
         if (nargin == 2) && isnumeric(varargin{2})
             iSubject = varargin{2};
@@ -919,7 +922,7 @@ switch contextName
 %% ==== ANALYSIS STUDY (INTER) ====
     % Usage: [sAnalStudyInter, iAnalStudyInter] = bst_get('AnalysisInterStudy') 
     case 'AnalysisInterStudy'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'study');
+        deprecationWarning(contextName, 'Study');
 
         iAnalStudyInter = -2;
         [argout1, argout2] = bst_get('Study', iAnalStudyInter);
@@ -930,50 +933,16 @@ switch contextName
     %        [sDefaulStudy, iDefaultStudy] = bst_get('DefaultStudy')           : iSubject=0
     %        [sDefaulStudy, iDefaultStudy] = bst_get('DefaultStudy', SubjectFile)
     case 'DefaultStudy'
+        deprecationWarning(contextName, {contextName, 'Study'});
+
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
-        % Parse inputs
-        sSubject = [];
-        if (nargin == 1)
-            iSubject = 0;
-        elseif (nargin == 2) && isnumeric(varargin{2})
-            iSubject = varargin{2};
-            if iSubject ~= 0
-                sSubject = bst_get('Subject', iSubject, 1);
-            end
-        elseif (nargin == 2) && ischar(varargin{2})
-            SubjectFile = varargin{2};
-            % Get subject attached to study
-            [sSubject, iSubject] = bst_get('Subject', SubjectFile, 1);
-        else
-            error('Invalid call to bst_get()');
-        end
-        % === DEFAULT SUBJECT ===
-        % => Return global default study
-        if (iSubject == 0)
-            % Return Global default study
-            argout1 = bst_get('Study', -3);
-            argout2 = -3;
-        % === NORMAL SUBJECT ===
-        else
-            if isempty(sSubject) || ~sSubject.UseDefaultChannel
-                return;
-            end
-            % === GLOBAL DEFAULT STUDY ===
-            if sSubject.UseDefaultChannel == 2
-                % Return Global default study
-                argout1 = bst_get('Study', -3);
-                argout2 = -3;
-            % === SUBJECT'S DEFAULT STUDY ===
-            elseif sSubject.UseDefaultChannel == 1
-                % Get studies related to subject
-                sStudy = db_get('DefaultStudy', iSubject, 'Id');
-                if ~isempty(sStudy)
-                    argout1 = bst_get('Study', sStudy.Id);
-                    argout2 = sStudy.Id;
-                end
-            end
+        sStudy = db_get('DefaultStudy', varargin{2}, 'Id');
+        % Get Study old structure
+        if ~isempty(sStudy)
+            argout1 = bst_get('Study', sStudy.Id);
+            argout2 = sStudy.Id;
         end
         
         
@@ -985,7 +954,8 @@ switch contextName
     % If isRaw is set: force to return the real brainstormsubject description
     % (ignoring wether it uses protocol's default anatomy or not)
     case 'Subject' 
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
+
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
@@ -1055,7 +1025,8 @@ switch contextName
 %% ==== SURFACE FILE ====
     % Usage : [sSubject, iSubject, iSurface] = bst_get('SurfaceFile', SurfaceFile)
     case 'SurfaceFile'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get('''')', contextName, 'SubjectFromAnatomyFile');
+        deprecationWarning(contextName, {'AnatomyFile', 'SubjectFromAnatomyFile'});
+
         % No protocol in database
         if isempty(GlobalData) || isempty(GlobalData.DataBase) || isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1080,7 +1051,8 @@ switch contextName
     %         [sSurface, iSurface] = bst_get('SurfaceFileByType', MriFile,     SurfaceType)
     %         [sSurface, iSurface] = bst_get('SurfaceFileByType', ...,         SurfaceType, isDefaultOnly)
     case 'SurfaceFileByType'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'AnatomyFilesWithSubject');
+        deprecationWarning(contextName, {'AnatomyFilesWithSubject'});
+
         % By default: return only the default surfaces of the category
         if (nargin < 4)
             isDefaultOnly = 1;
@@ -1090,19 +1062,26 @@ switch contextName
         % Get subject
         if isempty(varargin{2})
             % Get default subject
-            sSubject = bst_get('Subject', 0);
+            sSubject = db_get('Subject', 0);
         elseif ischar(varargin{2})
             FileName = varargin{2};
-            sSubject = bst_get('AnyFile', FileName);
+            [sItem, table] = db_get('AnyFile', FileName);
+            if strcmpi(table, 'Subject')
+                sSubject = sItem;
+            elseif strcmpi(table, 'AnatomyFile')
+                sSubject = db_get('SubjectFromAnatomyFile', sItem.Id);
+            end
         else
             iSubject = varargin{2};
-            sSubject = bst_get('Subject', iSubject);
+            sSubject = db_get('Subject', iSubject);
         end
         % Error handling
         if isempty(sSubject)
             disp('BST> Warning: Subject not found.');
             return;
-        elseif isempty(sSubject.Surface)
+        end
+        sSurfAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'Id', 'surface');
+        if isempty(sSurfAnatFiles)
             return;
         end
         SurfaceType = varargin{3};
@@ -1139,7 +1118,8 @@ switch contextName
 %% ==== MRI FILE ====
     % Usage : [sSubject, iSubject, iMri] = bst_get('MriFile', MriFile)
     case 'MriFile'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''SubjectFromAnatomyFile'')', contextName);
+        deprecationWarning(contextName, {'AnatomyFile', 'SubjectFromAnatomyFile'});
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
@@ -1161,15 +1141,16 @@ switch contextName
 %% ==== CHANNEL FILE ====
     % Usage: [sStudy, iStudy, iChannel] = bst_get('ChannelFile', ChannelFile)
     case 'ChannelFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         % Parse inputs
         if (nargin == 2)
             ChannelFile = varargin{2};
-            ChannelFile = strrep(ChannelFile, ProtocolInfo.STUDIES, '');
+            ChannelFile = file_short(ChannelFile);
         else
             error('Invalid call to bst_get().');
         end
@@ -1180,7 +1161,7 @@ switch contextName
 %% ==== CHANNEL FILE FOR STUDY ====
     % Usage: [ChannelFile, sStudy, iStudy] = bst_get('ChannelFileForStudy', StudyFile/DataFile)
     case 'ChannelFileForStudy'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'ChannelFromStudy'' or ''ChannelFromFunctionalFile');
+        deprecationWarning(contextName, {'ChannelFromStudy', 'ChannelFromFunctionalFile'});
 
         % Parse inputs
         if (nargin == 2)
@@ -1222,6 +1203,8 @@ switch contextName
 %% ==== CHANNEL STRUCT FOR STUDY ====
     % Usage: [sChannel, iChanStudy] = bst_get('ChannelForStudy', iStudies)
     case 'ChannelForStudy'
+        deprecationWarning(contextName, 'ChannelFromStudy');
+
         % Parse inputs
         if (nargin == 2)
             iStudies = varargin{2};
@@ -1250,7 +1233,7 @@ switch contextName
     % Usage: [Modalities, DispMod, DefMod] = bst_get('ChannelModalities', ChannelFile)
     %        [Modalities, DispMod, DefMod] = bst_get('ChannelModalities', DataFile/ResultsFile/TimefreqFile...)
     case 'ChannelModalities'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
 
         [argout1, argout2, argout3] = db_get('ChannelModalities', varargin{2});
 
@@ -1258,7 +1241,7 @@ switch contextName
 %% ==== TIMEFREQ DISPLAY MODALITIES ====
     % Usage: DisplayMod = bst_get('TimefreqDisplayModalities', TimefreqFile)
     case 'TimefreqDisplayModalities'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
         
         argout1 = db_get('TimefreqDisplayModalities', varargin{2});
 
@@ -1294,41 +1277,12 @@ switch contextName
 %% ==== HEADMODEL STRUCT FOR STUDY ====
     % Usage: [sHeadModel] = bst_get('HeadModelForStudy', iStudy)
     case 'HeadModelForStudy'
-        % Parse inputs
-        if (nargin == 2)
-            iStudy = varargin{2};
-        else
-            error('Invalid call to bst_get().');
-        end
-        % Get study 
-        sStudy = bst_get('Study', iStudy);
-        % === Analysis-Inter node ===
-        iAnalysisInter      = -2;
-        iGlobalDefaultStudy = -3;
-        if (iStudy == iAnalysisInter)
-            % If no channel file is defined in 'Analysis-intra' node: look in 
-            if isempty(sStudy.iHeadModel)
-                % Get global default study
-                sStudy = bst_get('Study', iGlobalDefaultStudy);
-            end
-        % === All other nodes ===
-        else
-            % Get subject attached to study
-            [sSubject, iSubject] = bst_get('Subject', sStudy.BrainStormSubject, 1);
-            if isempty(sSubject)
-                return;
-            end
-            % Subject uses default channel/headmodel
-            if (sSubject.UseDefaultChannel ~= 0)
-                sStudy = bst_get('DefaultStudy', iSubject);
-                if isempty(sStudy)
-                    return
-                end
-            end
-        end
-        % Return HeadModel structure
-        if ~isempty(sStudy.iHeadModel)
-            argout1 = db_convert_functionalfile(db_get('FunctionalFile', sStudy.iHeadModel));
+        deprecationWarning(contextName, contextName);
+
+        iStudy = varargin{2};
+        sHeadModelFuncFile = db_get('HeadModelForStudy', iStudy);
+        if ~isempty(sHeadModelFuncFile)
+            argout1 = db_convert_functionalfile(sHeadModelFuncFile);
         else
             argout1 = [];
         end
@@ -1338,14 +1292,15 @@ switch contextName
     % Usage: [sStudy, iStudy, iHeadModel] = bst_get('HeadModelFile', HeadModelFile, iStudies)
     %        [sStudy, iStudy, iHeadModel] = bst_get('HeadModelFile', HeadModelFile)
     case 'HeadModelFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
         % Input #2: HeadModelFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         HeadModelFile = varargin{2};
-        HeadModelFile = strrep(HeadModelFile, ProtocolInfo.STUDIES, '');
+        HeadModelFile = file_short(HeadModelFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1361,14 +1316,15 @@ switch contextName
     % Usage: [sStudy, iStudy, iNoiseCov] = bst_get('DataCovFile', NoiseCovFile, iStudies)
     %        [sStudy, iStudy, iNoiseCov] = bst_get('DataCovFile', NoiseCovFile)
     case {'NoiseCovFile', 'DataCovFile'}
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
         % Input #2: NoiseCovFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         NoiseCovFile = varargin{2};
-        NoiseCovFile = strrep(NoiseCovFile, ProtocolInfo.STUDIES, '');
+        NoiseCovFile = file_short(NoiseCovFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1383,14 +1339,15 @@ switch contextName
     % Usage: [sStudy, iStudy, iData] = bst_get('DataFile', DataFile, iStudies)
     %        [sStudy, iStudy, iData] = bst_get('DataFile', DataFile)
     case 'DataFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
         % Input #2: DataFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         DataFile = varargin{2};
-        DataFile = strrep(DataFile, ProtocolInfo.STUDIES, '');
+        DataFile = file_short(DataFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1404,6 +1361,8 @@ switch contextName
 %% ==== DATA FOR DATA LIST ====
     % Usage: [iFoundData] = bst_get('DataForDataList', iStudy, DataListName)
     case 'DataForDataList'
+        deprecationWarning(contextName, 'FilesInFileList');
+
         iStudy = varargin{2};
         dataListName = varargin{3};
         % Get data files of datalist
@@ -1415,6 +1374,8 @@ switch contextName
 %% ==== MATRIX FOR MATRIX LIST ====
     % Usage: [iFoundMatrix] = bst_get('MatrixForMatrixList', iStudy, MatrixListName)
     case 'MatrixForMatrixList'
+        deprecationWarning(contextName, 'FilesInFileList');
+
         iStudy = varargin{2};
         matrixListName = varargin{3};
         % Get matrix files of matrixlist
@@ -1426,7 +1387,7 @@ switch contextName
 %% ==== DATA FOR STUDY (INCLUDING SHARED STUDIES) ====
     % Usage: [iStudies, iDatas] = bst_get('DataForStudy', iStudy)
     case 'DataForStudy'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, contextName);
+        deprecationWarning(contextName, contextName);
         
         iStudy = varargin{2};
         sDataFuncFiles = db_get('DataForStudy', iStudy, {'Id', 'Study'});
@@ -1437,7 +1398,7 @@ switch contextName
 %% ==== DATA FOR STUDIES (INCLUDING SHARED STUDIES) ====
     % Usage: [iStudies, iDatas] = bst_get('DataForStudies', iStudies)
     case 'DataForStudies'
-        warning('bst_get(''%s'') will be deprecated in new Brainstorm database system. Use db_get(''%s'')', contextName, 'DataForStudy');
+        deprecationWarning(contextName, 'DataForStudy');
 
         iStudies = varargin{2};
         for i = 1:length(iStudies)
@@ -1449,35 +1410,27 @@ switch contextName
 %% ==== DATA FILE FOR CHANNEL FILE ====
     % Usage: DataFiles = bst_get('DataForChannelFile', ChannelFile)
     case 'DataForChannelFile'
+        deprecationWarning(contextName, contextName);
+
         ChannelFile = varargin{2};
-        DataFiles = {};
-        % Get study for the given channel file
-        [sStudy, iStudy] = bst_get('ChannelFile', ChannelFile);
-        if isempty(sStudy)
-            return;
-        end
-        % Get dependent data files
-        [iStudies, iDatas] = bst_get('DataForStudy', iStudy);
+        sDataFuncFiles = db_get('DataForChannelFile', ChannelFile, {'FileName'});
         % Get all the Data filenames
-        for i = 1:length(iStudies)
-            sStudy = bst_get('Study', iStudies(i));
-            DataFiles = cat(2, DataFiles, {sStudy.Data(iDatas(i)).FileName});
-        end
-        argout1 = DataFiles;
+        argout1 = {sDataFuncFiles.FileName};
                 
         
 %% ==== RESULTS FILE ====
     % Usage: [sStudy, iStudy, iResult] = bst_get('ResultsFile', ResultsFile, iStudies)
     %        [sStudy, iStudy, iResult] = bst_get('ResultsFile', ResultsFile)
     case 'ResultsFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
         % Input #2: ResultsFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         ResultsFile = varargin{2};
-        ResultsFile = strrep(ResultsFile, ProtocolInfo.STUDIES, '');
+        ResultsFile = file_short(ResultsFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1492,21 +1445,23 @@ switch contextName
     % Usage: [sStudy, iStudy, iResults] = bst_get('ResultsForDataFile', DataFile)           : search the whole protocol
     % Usage: [sStudy, iStudy, iResults] = bst_get('ResultsForDataFile', DataFile, iStudies) : search only the specified studies
     case 'ResultsForDataFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         % Input #2: DataFile
         DataFile = varargin{2};
-        DataFile = strrep(DataFile, ProtocolInfo.STUDIES, '');
+        DataFile = file_short(DataFile);
         % Determine in which studies to search for ResultsFile
         if (nargin >= 3)
             % Studies specified in argument
             iStudy = varargin{3};
         else
             % Get study in which DataFile is located
-            [sStudy, iStudy] = bst_get('DataFile', DataFile);
+            sFuncFile = db_get('FunctionalFile', DataFile, 'Study');
+            iStudy = sFuncFile.Study;
             if isempty(iStudy)
                 return;
             end
@@ -1519,14 +1474,15 @@ switch contextName
     % Usage: [sStudy, iStudy, iData] = bst_get('StatFile', StatFile, iStudies)
     %        [sStudy, iStudy, iData] = bst_get('StatFile', StatFile)
     case 'StatFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
         % Input #2: SataFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         StatFile = varargin{2};
-        StatFile = strrep(StatFile, ProtocolInfo.STUDIES, '');
+        StatFile = file_short(StatFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1541,15 +1497,16 @@ switch contextName
     % Usage: [sStudy, iStudy, iResults] = bst_get('StatForDataFile', DataFile)           : search the whole protocol
     % Usage: [sStudy, iStudy, iResults] = bst_get('StatForDataFile', DataFile, iStudies) : search only the specified studies
     case 'StatForDataFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         % Parse inputs
         if (nargin >= 2)
             DataFile = varargin{2};
-            DataFile = strrep(DataFile, ProtocolInfo.STUDIES, '');
+            DataFile = file_short(DataFile);
         else
             error('Invalid call to bst_get().');
         end
@@ -1559,7 +1516,8 @@ switch contextName
             iStudies = varargin{3};
         else
             % Get study in which DataFile is located
-            [sStudies, iStudies] = bst_get('DataFile', DataFile);
+            sFuncFiles = db_get('FunctionalFile', DataFile, 'Study');
+            iStudies = [sFuncFiles.Study];
             if isempty(iStudies)
                 return;
             end
@@ -1571,14 +1529,15 @@ switch contextName
     % Usage: [sStudy, iStudy, iTimefreq] = bst_get('TimefreqFile', TimefreqFile, iStudies)
     %        [sStudy, iStudy, iTimefreq] = bst_get('TimefreqFile', TimefreqFile)
     case 'TimefreqFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
         % Input #2: TimefreqFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         TimefreqFile = varargin{2};
-        TimefreqFile = strrep(TimefreqFile, ProtocolInfo.STUDIES, '');
+        TimefreqFile = file_short(TimefreqFile);
         % Remove optional RefRowName
         iPipe = find(TimefreqFile == '|', 1);
         if ~isempty(iPipe)
@@ -1597,50 +1556,26 @@ switch contextName
     % Usage: [sStudy, iStudy, iTimefreq] = bst_get('TimefreqForFile', FileName, iStudies) : search only the specified studies
     %        [sStudy, iStudy, iTimefreq] = bst_get('TimefreqForFile', FileName)           : search the whole protocol
     case 'TimefreqForFile'
+        deprecationWarning(contextName, 'ChildrenFromFunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         % Parse inputs
         if (nargin >= 2)
             FileName = varargin{2};
-            FileName = strrep(FileName, ProtocolInfo.STUDIES, '');
+            FileName = file_short(FileName);
         else
             error('Invalid call to bst_get().');
         end
-        % Get study in which file is located
-        if (nargin >= 3)
-            iStudies = varargin{3};
-            [sStudy, iStudy, iFile, DataType] = bst_get('AnyFile', FileName, iStudies);
-        else
-            [sStudy, iStudy, iFile, DataType] = bst_get('AnyFile', FileName);
-        end
-        % If file was not found
-        if isempty(iStudy)
-            return;
-        end
-        % Search direct dependent files
-        [tmp, tmp, iTf] = findFileInStudies('Timefreq', 'DataFile', FileName, iStudy);
-        % Data files: get all the depending results, and then all the timefreq for those results
-        if strcmpi(DataType, 'data')
-            [tmp, tmp, iResults] = bst_get('ResultsForDataFile', FileName, iStudy);
-            for i = 1:length(iResults)
-                % Get FileName for depending results file
-                sFuncFile = db_get('FunctionalFile', iResults(i), 'FileName');
-                FileNameRes = sFuncFile.FileName;
-                % Search selected studies
-                [tmp, tmp, iTfRes] = findFileInStudies('Timefreq', 'DataFile', FileNameRes, iStudy);
-                if ~isempty(iTfRes)
-                    iTf = [iTf iTfRes];
-                end
-            end
-        end
+        sTimefreqFuncFiles = db_get('ChildrenFromFunctionalFile', FileName, {'Id', 'Study'}, 'timefreq');
+
         % Return results
-        if ~isempty(iTf)
-            argout1 = sStudy;
-            argout2 = iStudy;
-            argout3 = iTf;
+        if ~isempty(sTimefreqFuncFiles)
+            argout1 = bst_get('Study', [sTimefreqFuncFiles.Study]);
+            argout2 = [sTimefreqFuncFiles.Study];
+            argout3 = [sTimefreqFuncFiles.Id];
         end
         
         
@@ -1648,50 +1583,26 @@ switch contextName
     % Usage: [sStudy, iStudy, iDipoles] = bst_get('DipolesForFile', FileName, iStudies) : search only the specified studies
     %        [sStudy, iStudy, iDipoles] = bst_get('DipolesForFile', FileName)           : search the whole protocol
     case 'DipolesForFile'
+        deprecationWarning(contextName, 'ChildrenFromFunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         % Parse inputs
         if (nargin >= 2)
             FileName = varargin{2};
-            FileName = strrep(FileName, ProtocolInfo.STUDIES, '');
+            FileName = file_short(FileName);
         else
             error('Invalid call to bst_get().');
         end
-        % Get study in which file is located
-        if (nargin >= 3)
-            iStudies = varargin{3};
-            [sStudy, iStudy, iFile, DataType] = bst_get('AnyFile', FileName, iStudies);
-        else
-            [sStudy, iStudy, iFile, DataType] = bst_get('AnyFile', FileName);
-        end
-        % If file was not found
-        if isempty(iStudy)
-            return;
-        end
-        % Search direct dependent files
-        [tmp, tmp, iDip] = findFileInStudies('Dipoles', 'DataFile', FileName, iStudy);
-        % Data files: get all the depending results, and then all the timefreq for those results
-        if strcmpi(DataType, 'data')
-            [tmp, tmp, iResults] = bst_get('ResultsForDataFile', FileName, iStudy);
-            for i = 1:length(iResults)
-                % Get FileName for depending results file
-                sFuncFile = db_get('FunctionalFile', iResults(i), 'FileName');
-                FileNameRes = sFuncFile.FileName;
-                % Search selected studies
-                [tmp, tmp, iDipRes] = findFileInStudies('Dipoles', 'DataFile', FileNameRes, iStudy);
-                if ~isempty(iDipRes)
-                    iDip = [iDip, iDipRes];
-                end
-            end
-        end
+        sDipoleFuncFiles = db_get('ChildrenFromFunctionalFile', FileName, {'Id', 'Study'}, 'dipoles');
+
         % Return results
-        if ~isempty(iDip)
-            argout1 = sStudy;
-            argout2 = iStudy;
-            argout3 = iDip;
+        if ~isempty(sDipoleFuncFiles)
+            argout1 = bst_get('Study', [sDipoleFuncFiles.Study]);
+            argout2 = [sDipoleFuncFiles.Study];
+            argout3 = [sDipoleFuncFiles.Id];
         end
         
         
@@ -1699,110 +1610,61 @@ switch contextName
     % Find all the timefreq files dependent from links due to a given kernel
     % Usage: [sStudy, iStudy, iTimefreq] = bst_get('TimefreqForKernel', KernelFile) 
     case 'TimefreqForKernel'
-        sFoundStudy = [];
-        iFoundStudy = [];
-        iFoundTimefreq = [];
+        deprecationWarning(contextName, 'FilesForKernel');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
         % Get study in which file is located
         KernelFile = varargin{2};
-        [sStudy, iStudy, iFile, DataType] = bst_get('ResultsFile', KernelFile);
-        if isempty(iStudy)
-            return;
+        KernelFile = file_short(KernelFile);
+        sTimefreqFuncFiles = db_get('FilesForKernel', KernelFile, 'timefreq', {'Id', 'Study'});
+
+        % Return results
+        if ~isempty(sTimefreqFuncFiles)
+            argout1 = bst_get('Study', [sTimefreqFuncFiles.Study]);
+            argout2 = [sTimefreqFuncFiles.Study];
+            argout3 = [sTimefreqFuncFiles.Id];
         end
-        % Get all the data files relative with this kernel
-        [iDepStudies, iDepDatas] = bst_get('DataForStudy', iStudy);
-        % Keep only once each study
-        iDepStudies = unique(iDepStudies);
-        % Process all the dependent studies
-        for iSt = 1:length(iDepStudies)
-            % Get the study structure
-            sDepStudy = bst_get('Study', iDepStudies(iSt));
-            % Process each timefreq file separately
-            for iTf = 1:length(sDepStudy.Timefreq)
-                DataFile = sDepStudy.Timefreq(iTf).DataFile;
-                % Keep only the files that are linked to LINKS
-                if isempty(DataFile) || (length(DataFile) < 5) || ~isequal(DataFile(1:5), 'link|')
-                    continue;
-                end
-                % Split link
-                splitFile = str_split(DataFile, '|');
-                % If the kernel is found: add it to the found list
-                if file_compare(splitFile{2}, KernelFile)
-                    sFoundStudy = [sFoundStudy sDepStudy];
-                    iFoundStudy = [iFoundStudy, iDepStudies(iSt)];
-                    iFoundTimefreq = [iFoundTimefreq, iTf];
-                end
-            end
-        end
-        % Return findings
-        argout1 = sFoundStudy;
-        argout2 = iFoundStudy;
-        argout3 = iFoundTimefreq;
         
         
 %% ==== DIPOLES FOR KERNEL ====
     % Find all the dipoles files dependent from links due to a given kernel
-    % Usage: [sStudy, iStudy, iDipoles] = bst_get('TimefreqForKernel', KernelFile) 
+    % Usage: [sStudy, iStudy, iDipoles] = bst_get('DipolesForKernel', KernelFile)
     case 'DipolesForKernel'
-        sFoundStudy = [];
-        iFoundStudy = [];
-        iFoundDipoles = [];
+        deprecationWarning(contextName, 'FilesForKernel');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
         % Get study in which file is located
         KernelFile = varargin{2};
-        [sStudy, iStudy, iFile, DataType] = bst_get('ResultsFile', KernelFile);
-        if isempty(iStudy)
-            return;
+        KernelFile = file_short(KernelFile);
+        sTimefreqFuncFiles = db_get('FilesForKernel', KernelFile, 'dipoles', {'Id', 'Study'});
+
+        % Return results
+        if ~isempty(sTimefreqFuncFiles)
+            argout1 = bst_get('Study', [sTimefreqFuncFiles.Study]);
+            argout2 = [sTimefreqFuncFiles.Study];
+            argout3 = [sTimefreqFuncFiles.Id];
         end
-        % Get all the data files relative with this kernel
-        [iDepStudies, iDepDatas] = bst_get('DataForStudy', iStudy);
-        % Keep only once each study
-        iDepStudies = unique(iDepStudies);
-        % Process all the dependent studies
-        for iSt = 1:length(iDepStudies)
-            % Get the study structure
-            sDepStudy = bst_get('Study', iDepStudies(iSt));
-            % Process each timefreq file separately
-            for iDip = 1:length(sDepStudy.Dipoles)
-                DataFile = sDepStudy.Dipoles(iDip).DataFile;
-                % Keep only the files that are linked to LINKS
-                if isempty(DataFile) || (length(DataFile) < 5) || ~isequal(DataFile(1:5), 'link|')
-                    continue;
-                end
-                % Split link
-                splitFile = str_split(DataFile, '|');
-                % If the kernel is found: add it to the found list
-                if file_compare(splitFile{2}, KernelFile)
-                    sFoundStudy = [sFoundStudy sDepStudy];
-                    iFoundStudy = [iFoundStudy, iDepStudies(iSt)];
-                    iFoundDipoles = [iFoundDipoles, iDip];
-                end
-            end
-        end
-        % Return findings
-        argout1 = sFoundStudy;
-        argout2 = iFoundStudy;
-        argout3 = iFoundDipoles;
         
         
 %% ==== DIPOLES FILE ====
     % Usage: [sStudy, iStudy, iDipole] = bst_get('DipolesFile', DipolesFile, iStudies)
     %        [sStudy, iStudy, iDipole] = bst_get('DipolesFile', DipolesFile)
     case 'DipolesFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
         % Input #2: DipolesFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         DipolesFile = varargin{2};
-        DipolesFile = strrep(DipolesFile, ProtocolInfo.STUDIES, '');
+        DipolesFile = file_short(DipolesFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1817,14 +1679,15 @@ switch contextName
     % Usage: [sStudy, iStudy, iDipole] = bst_get('MatrixFile', MatrixFile, iStudies)
     %        [sStudy, iStudy, iDipole] = bst_get('MatrixFile', MatrixFile)
     case 'MatrixFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
         % Input #2: MatrixFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         MatrixFile = varargin{2};
-        MatrixFile = strrep(MatrixFile, ProtocolInfo.STUDIES, '');
+        MatrixFile = file_short(MatrixFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1838,14 +1701,15 @@ switch contextName
     % Usage: [sStudy, iStudy, iDipole] = bst_get('ImageFile', ImageFile, iStudies)
     %        [sStudy, iStudy, iDipole] = bst_get('ImageFile', ImageFile)
     case 'ImageFile'
+        deprecationWarning(contextName, 'FunctionalFile');
+
         % No protocol in database
         if isempty(GlobalData.DataBase.iProtocol) || (GlobalData.DataBase.iProtocol == 0)
             return;
         end
         % Input #2: ImageFile
-        ProtocolInfo = GlobalData.DataBase.ProtocolInfo(GlobalData.DataBase.iProtocol);
         ImageFile = varargin{2};
-        ImageFile = strrep(ImageFile, ProtocolInfo.STUDIES, '');
+        ImageFile = file_short(ImageFile);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1860,11 +1724,14 @@ switch contextName
     % Usage: [sStudy, iStudy, iFile, DataType, sItem] = bst_get('AnyFile', FileName, iStudies)
     %        [sStudy, iStudy, iFile, DataType, sItem] = bst_get('AnyFile', FileName)
     case 'AnyFile'
+        deprecationWarning(contextName, contextName);
+
         % Input #2: FileName
         FileName = varargin{2};
         if isempty(FileName)
             return
         end
+        FileName = file_short(FileName);
         % Input #3: iStudies
         if (nargin < 3)
             iStudies = [];
@@ -1992,36 +1859,12 @@ switch contextName
     % Usage: DataFile = bst_get('RelatedDataFile', FileName, iStudies)
     %        DataFile = bst_get('RelatedDataFile', FileName)
     case 'RelatedDataFile'
-        % Input #2: FileName
+        deprecationWarning(contextName, contextName);
+
         FileName = varargin{2};
-        % Input #3: iStudies
-        if (nargin < 3)
-            iStudies = [];
-        else
-            iStudies = varargin{3};
-        end
-        % Get file in database
-        [sStudy, iStudy, iFile, fileType] = bst_get('AnyFile', FileName, iStudies);
-        % If this data file does not belong to any study
-        if isempty(sStudy)
-            return;
-        end
-        % Get parent file
-        RelatedDataFile = '';
-        sFunctFile = db_get('FunctionalFile', iFile, 'Parent');
-        if ~isempty(sFunctFile.Parent)
-            sFunctFileParent = db_get('FunctionalFile', sFunctFile.Parent, 'FileName');
-            RelatedDataFile = sFunctFileParent.FileName;
-        end
-        % If related file is results: get related data file
-        if ~isempty(RelatedDataFile)
-            relFileType = file_gettype(RelatedDataFile);
-            if ismember(relFileType, {'link','results'})
-                RelatedDataFile = bst_get('RelatedDataFile', RelatedDataFile, iStudy);
-            end
-        end
+        sDataFuncFile = db_get('RelatedDataFile', FileName, 'FileName');
         % Return file
-        argout1 = RelatedDataFile;
+        argout1 = sDataFuncFile.FileName;
         
 %% ==== ALL CONDITIONS FOR ONE SUBJECT ====
     % Usage: [Conditions] =  bst_get('ConditionsForSubject', SubjectFile)
@@ -2354,6 +2197,9 @@ switch contextName
         
 %% ==== GET FILENAMES ====
     case 'GetFilenames'
+        deprecationWarning(contextName, 'FunctionalFile');
+        %TODORC : Does narrowing the search as below, improves speed at reading DB? Test needeed
+
         iStudies = varargin{2};
         iItems = varargin{3};
         DataType = varargin{4};
@@ -3885,7 +3731,6 @@ end
 % USAGE:  [sFoundStudy, iFoundStudy, iItem] = findFileInStudies(fieldGroup, fieldName, fieldFile, iStudiesList)
 %         [sFoundStudy, iFoundStudy, iItem] = findFileInStudies(fieldGroup, fieldName, fieldFile)
 function [sFoundStudy, iFoundStudy, iItem] = findFileInStudies(fieldGroup, fieldName, fieldFile, iStudiesList)
-    global GlobalData;
     sFoundStudy = [];
     iFoundStudy = [];
     iItem       = [];
@@ -3909,51 +3754,43 @@ function [sFoundStudy, iFoundStudy, iItem] = findFileInStudies(fieldGroup, field
     else
         fieldFolders = {fileparts(fieldFile)};
     end
-    % Get protocol information
-    ProtocolStudies = bst_get('ProtocolStudies');
+    % Get all studies information
+    sStudies = db_get('AllStudies', {'Id', 'FileName'}, '@inter', '@default_study');
     % List studies to process
     if (nargin < 4) || isempty(iStudiesList)
-        iStudiesList = [-2, -3, 1:length(ProtocolStudies.Study)];
+        iStudiesList = [sStudies.Id];
     end
-    
-    % NORMAL STUDIES: Look for surface file in all the surfaces of all subjects
-    for iStudy = iStudiesList
+
+    % Process each study
+    for ix = 1 : length(iStudiesList)
+        iStudy = iStudiesList(ix);
         % Get study
-        switch (iStudy)
-            case -2,    sStudy = ProtocolStudies.AnalysisStudy;
-            case -3,    sStudy = ProtocolStudies.DefaultStudy;
-            otherwise,  sStudy = ProtocolStudies.Study(iStudy);
-        end
-        % Check if field is available for the study
+        sStudy = sStudies([sStudies.Id] == iStudy);
         if isempty(sStudy)
-            continue;
-        end
-        if isempty(sStudy.(fieldGroup))
             continue;
         end
          % Check we are in the correct folder
         if ~any(file_compare(fieldFolders, fileparts(sStudy.FileName)))
             continue;
         end
-        % Get list of files from study
-        filesList = {sStudy.(fieldGroup).(fieldName)};
-        if isempty(filesList)
+        % For groups with DataFile field (Dipoles, Result, Stat and TimeFreq), it is called ExtraStr1 in new DB
+        if strcmpi('DataFile', fieldName)
+            fieldName = 'ExtraStr1';
+        end
+        % Check if study has functional files with: type (fieldGroup), fieldName and fieldFile
+        sFuncFiles = db_get('FunctionalFile', struct('Study', iStudy, 'Type', lower(fieldGroup), fieldName, fieldFile));
+        % For NoiseCov group, search for functional files of types noisecov and ndatacov
+        if strcmpi(fieldGroup, 'noisecov')
+            sFuncFilesb = db_get('FunctionalFile', struct('Study', iStudy, 'Type', 'ndatacov', fieldName, fieldFile));
+            sFuncFiles = [sFuncFiles, sFuncFilesb];
+        end
+        if isempty(sFuncFiles)
             continue;
         end
-        % Replace empty cells with empty strings
-        iValidFiles = find(cellfun(@ischar, filesList));
-        if isempty(iValidFiles)
-            continue;
-        end
-        % Find target in this list
-        iItem = find(file_compare(filesList(iValidFiles), fieldFile));
-        if ~isempty(iItem)
-            sFoundStudy  = sStudy;
-            iFoundStudy  = sStudy.Id;
-            sFuncFile = db_get('FunctionalFile', {sStudy.(fieldGroup)(iValidFiles(iItem)).FileName}, 'Id');
-            iItem = [sFuncFile.Id];
-            return
-        end
+        iItem = [sFuncFiles.Id];
+        iFoundStudy  = sFuncFiles(1).Study;
+        sFoundStudy  = bst_get('Study', iFoundStudy);
+        return
     end
 end
 
@@ -3969,7 +3806,22 @@ function bstPref = FillMissingFields(PrefName, defPref)
     end
 end
 
+%% ===== DEPRECATION WARNING =====
+function deprecationWarning(context_bst_get, contexts_db_get)
+    if ischar(contexts_db_get)
+        dbgetStr = ['db_get(''', contexts_db_get, ''')'];
+    else
+        dbgetStr = ['db_get(''', contexts_db_get{1}, ''')'];
+        for iContext = 2 : length(contexts_db_get)
+            dbgetStr = [dbgetStr, ' or ', 'db_get(''', contexts_db_get{iContext}, ''')'];
+       end
+    end
 
+    warning(['Call to bst_get(''', context_bst_get, ''') ', ...
+             'will be deprecated in new Brainstorm database system.', char(10), ...
+             '         Use instead:', char(10) ...
+             '         ', dbgetStr, char(10)]);
+end
 
 
 

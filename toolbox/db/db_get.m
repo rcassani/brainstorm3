@@ -54,6 +54,7 @@ function varargout = db_get(varargin)
 %    - db_get('AllStudies')          : Get all Studies in current protocol, excluding @inter and global @default_study
 %    - db_get('AllStudies', Fields)  : Get all Studies in current protocol, excluding @inter and global @default_study
 %    - db_get('AllStudies', Fields, '@inter', '@default_study')  : Get all Studies in current protocol including @inter and global @default_study
+%    - db_get('StudyCount')                                : Get number of studies in current protocol, excluding @inter and global @default_study
 %    - db_get('StudyWithCondition', ConditionPath, Fields) : Get studies for a given condition path
 %
 % ====== FUNCTIONAL FILES ==============================================================
@@ -87,6 +88,11 @@ function varargout = db_get(varargin)
 %    - db_get('ChannelModalities', FunctionalFileId) : Get displayable modalities the Channel file related to FunctionalFileFileName
 %    - db_get('TimefreqDisplayModalities', FunctionalFileId)       : Get displayable modalities for a TF file FunctionalFileID
 %    - db_get('TimefreqDisplayModalities', FunctionalFileFileName) : Get displayable modalities for a TF file FunctionalFileFileName
+%    - db_get('DataForChannelFile', ChannelFileName, DataFunctFileFields) : Get sDataFuncFiles for a given Channel
+%    - db_get('DataForChannelFile', ChannelID, DataFunctFileFields)       : Get sDataFuncFiles for a given Channel
+%    - db_get('HeadModelForStudy', StudyID)       : Return current HeadModel sFuncFile for target study
+%    - db_get('HeadModelForStudy', StudyFileName) : Return current HeadModel sFuncFile for target study
+%    - db_get('RelatedDataFile', FileName, DataFunctFileFields) : Get data FuncFile parent (or grandparent) of FileName
 %
 % ====== ANY FILE ======================================================================
 %    - db_get('AnyFile', FileName)         : Get any file by FileName
@@ -868,12 +874,14 @@ switch contextName
         end
         defaultStudy = bst_get('DirDefaultStudy');
         % Get Subject
-        sSubject = db_get(sqlConn, 'Subject', iSubject, {'Id', 'UseDefaultChannel'});
-        % If UseDefaultChannel get default Subject
-        if sSubject.UseDefaultChannel == 1
-            sSubject = db_get(sqlConn, 'Subject', '@default_subject', 'Id');
+        sSubject = db_get(sqlConn, 'Subject', iSubject, {'Id', 'Name', 'UseDefaultChannel'});
+        % If UseDefaultChannel == 2 or Subject is @default_subject, get Global @default_study
+        if sSubject.UseDefaultChannel == 2 || strcmp(sSubject.Name, '@default_subject')
+            sStudy = db_get(sqlConn, 'Study', '@default_study', fields);
+        % Otherwise, get Subject's @default_study
+        else
+            sStudy = db_get(sqlConn, 'Study', struct('Subject', sSubject.Id, 'Name', defaultStudy), fields);
         end
-        sStudy = db_get(sqlConn, 'Study', struct('Subject', sSubject.Id, 'Name', defaultStudy), fields);
         varargout{1} = sStudy;
 
 
@@ -979,6 +987,12 @@ switch contextName
         end
         
         varargout{1} = sql_query(sqlConn, 'SELECT', 'Study', [], fields, addQuery);
+
+
+%% ==== STUDIES COUNT ====
+    % nStudies = db_get('StudyCount')
+    case 'StudyCount'
+        varargout{1} = sql_query(sqlConn, 'COUNT', 'Study', [], [], [' AND Name <> "', bst_get('DirAnalysisInter'), '" AND (Subject <> 0 OR Name <> "@default_study")']);
 
 
 %% ==== SUBJECT FROM FUNCTIONAL FILE ====              
@@ -1333,7 +1347,7 @@ switch contextName
         varargout{1} = sStudies;
 
 %% ==== DATA FOR STUDY (INCLUDING SHARED STUDIES) ====
-    % Usage: sDataFunctFile = db_get('DataForStudy', StudyId, DataFunctFileFields)
+    % sDataFunctFile = db_get('DataForStudy', StudyId, DataFunctFileFields)
     case 'DataForStudy'
         % Get target study
         iStudy = args{1};
@@ -1371,6 +1385,86 @@ switch contextName
             sDataFunctFiles = [sDataFunctFiles, tmp_sDataFunctFiles];
         end
         varargout{1} = sDataFunctFiles;
+
+
+%% ==== DATA FILE FOR CHANNEL FILE ====
+    % sDataFuncFiles = db_get('DataForChannelFile', ChannelFileName, DataFunctFileFields)
+    % sDataFuncFiles = db_get('DataForChannelFile', ChannelID,       DataFunctFileFields)
+    case 'DataForChannelFile'
+        % Get target study
+        iChannel = args{1};
+        dataFuncFileFields = '*';
+        if length(args) > 1
+            dataFuncFileFields = args{2};
+        end
+        % Get study for the given channel file
+        sChannel = db_get(sqlConn, 'FunctionalFile', iChannel, 'Study');
+        % Get dependent data files
+        sDataFuncFiles = db_get(sqlConn, 'DataForStudy', sChannel.Study, dataFuncFileFields);
+        varargout{1} = sDataFuncFiles;
+
+
+%% ==== HEAD MODEL FOR STUDY ====
+    % sHeadModelFuncFile = db_get('HeadModelForStudy', StudyFileName, HeadModelFunctFileFields)
+    % sHeadModelFuncFile = db_get('HeadModelForStudy', StudyID,       HeadModelFunctFileFields)
+    case 'HeadModelForStudy'
+        % Get target study
+        iStudy = args{1};
+        headmodelFields = '*';
+        if length(args) > 1
+            headmodelFields = args{2};
+        end
+        sStudy = db_get(sqlConn, 'Study', iStudy, 'Study');
+        % === Analysis-Inter node ===
+        iAnalysisInter      = -2;
+        iGlobalDefaultStudy = -3;
+        if (sStudy.Id == iAnalysisInter)
+            % If no channel file is defined in 'AnalysisInter' node
+            if isempty(sStudy.iHeadModel)
+                % Get global default study
+                sStudy = db_get(sqlConn, 'Study', iGlobalDefaultStudy);
+            end
+        % === All other nodes ===
+        else
+            % Get subject attached to study
+            sSubject = db_get('Subject', sStudy.Subject, 'UseDefaultChannel', 1);
+            if isempty(sSubject)
+                return;
+            end
+            % Subject uses default channel/headmodel
+            if (sSubject.UseDefaultChannel ~= 0)
+                sStudy = db_get(sqlConn, 'DefaultStudy', sStudy.Subject);
+                if isempty(sStudy)
+                    return
+                end
+            end
+        end
+
+        sHeadModelFuncFile = db_get('FunctionalFile', sStudy.iHeadModel, headmodelFields);
+        varargout{1} = sHeadModelFuncFile;
+
+
+%% ==== GET RELATED DATA FILE ====
+    % sDataFunctFile = db_get('RelatedDataFile', FileName, DataFunctFileFields)
+    %                = db_get('RelatedDataFile', FileId,   DataFunctFileFields)
+    case 'RelatedDataFile'
+        FileName = args{1};
+        % Get file in database
+        sFuncFile = db_get('FunctionalFile', FileName, 'Id');
+        % If this functional file does not exist in DB
+        if isempty(sFuncFile)
+            return;
+        end
+        % Get parent file
+        sParentFunctFile = db_get('ParentFromFunctionalFile', sFuncFile.Id);
+        if ~isempty(sParentFunctFile)
+            % If parent file is results: get related data file
+            if ismember(file_gettype(sParentFunctFile.FileName), {'link','results'})
+                sParentFunctFile = bst_get('ParentFromFunctionalFile', sParentFunctFile.Id);
+            end
+        end
+        % Return file
+        varargout{1} = sParentFunctFile;
 
 
 %% ==== ERROR ====      
