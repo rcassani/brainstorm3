@@ -339,34 +339,37 @@ switch contextName
         argout1 = userDir;
     
     case 'UserName'
-        try
-            if ispc
-                userName = getenv('username');
-            else
-                userName = char(java.lang.System.getProperty('user.name'));
-            end
-        catch
-            userName = '';
-        end
-        if isempty(userName)
+        % Common for Linux, Windows and MacOS
+        [status, userName] = system('whoami');
+        if status ~= 0
             userName = 'Unknown';
+            try
+                if ispc
+                    userName = getenv('username');
+                else
+                    userName = char(java.lang.System.getProperty('user.name'));
+                end
+            catch
+            end
         end
-        argout1 = userName;
+        % Get username in case of 'host/username' or 'host\username'
+        argout1 = regexp(strtrim(userName), '\w*$' , 'match', 'once');
         
     case 'ComputerName'
-        try
-            if ispc
-                computerName = getenv('computername');
-            else
-                computerName = char(java.net.InetAddress.getLocalHost.getHostName());
-            end
-        catch
-            computerName = '';
-        end
-        if isempty(computerName)
+        % Common for Linux, Windows and MacOS
+        [status, computerName] = system('hostname');
+        if status ~= 0
             computerName = 'Unknown';
+            try
+                if ispc
+                    computerName = getenv('computername');
+                else
+                    computerName = char(java.net.InetAddress.getLocalHost.getHostName());
+                end
+            catch
+            end
         end
-        argout1 = computerName;
+        argout1 = strtrim(computerName);
     
     case 'InstanceID'
         if isempty(GlobalData.Program.InstanceID)
