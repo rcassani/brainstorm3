@@ -133,7 +133,7 @@ switch contextName
         GlobalData.DataBase.BrainstormDbDir = contextValue;
     case 'BrainstormTmpDir'
         GlobalData.Preferences.BrainstormTmpDir = contextValue;
-    case 'ProgramStartTime'
+    case 'ProgramStartUnixTime'
         GlobalData.Program.StartTime = contextValue;
 
 %% ==== PROTOCOL ====

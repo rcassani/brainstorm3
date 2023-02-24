@@ -133,7 +133,7 @@ bstVersion = struct('Name',    Name, ...
                     'Date',    Date, ...
                     'Commit',  Commit);
 bst_set('Version', bstVersion);
-bst_set('ProgramStartTime', bst_get('CurrentUnixTime'));
+bst_set('ProgramStartUnixTime', bst_get('CurrentUnixTime'));
 % Display version number
 disp(['BST> Version: ' Date ]);
 % Get release date

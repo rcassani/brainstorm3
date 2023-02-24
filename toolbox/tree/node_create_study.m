@@ -63,7 +63,7 @@ else
 end
 
 % Nodes considered new are less than an hour old
-bstStartTime = bst_get('ProgramStartTime');
+bstStartTime = bst_get('ProgramStartUnixTime');
 newNodeTime  = bst_get('CurrentUnixTime') - 3600;
 ProtocolInfo = bst_get('ProtocolInfo');
 
