@@ -1192,7 +1192,7 @@ function destFile = PasteNode( targetNode )
     
     % Cannot copy anat files to a subject using default anatomy
     if isAnatomy
-        sSubjectTarget = bst_get('Subject', iTarget);
+        sSubjectTarget = db_get('Subject', iTarget, 'UseDefaultAnat');
         if (iTarget > 0) && sSubjectTarget.UseDefaultAnat
             bst_error('Destination subject uses the default anatomy.', 'Clipboard', 0);
             destFile = {};
@@ -1206,9 +1206,9 @@ function destFile = PasteNode( targetNode )
     % Channel/Headmodel/NoiseCov/Kernel: Make sure that target study is the right one
     if ismember(firstSrcType, {'channel', 'headmodel', 'noisecov', 'ndatacov', 'kernel'})
         % Get channel study for the target study
-        [sChannel, iChanStudy] = bst_get('ChannelForStudy', iTarget);
+        sChannel = db_get('ChannelFromStudy', iTarget, 'Study');
         % If not the same: error
-        if (iChanStudy ~= iTarget)
+        if (sChannel.Study ~= iTarget)
             bst_error('Invalid destination.', 'Clipboard', 0);
             destFile = {};
             return;
@@ -1225,7 +1225,7 @@ function destFile = PasteNode( targetNode )
     for i = 1:length(srcNodes)
         % Get source filename
         srcFile = char(srcNodes(i).getFileName());
-        srcType = lower(char(srcNodes(i).getType()));
+        srcType = file_gettype(srcFile);
         iSrcStudy = srcNodes(i).getStudyIndex();
         % Special case if we're moving to a subfolder
         if strcmpi(targetNode(1).getType(), 'folder')
