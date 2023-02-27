@@ -35,13 +35,20 @@ end
 OutputFiles = {};
 
 % ===== GET SOURCE STUDY =====
-% Get source study
-sSrcStudy = bst_get('Study', iSrcStudy);
+% Get Channel and Study for source study
+[sSrcChannel, sSrcStudy] = db_get('ChannelFromStudy', iSrcStudy);
+% Check for DataCov or NoiseCov for study
+if isDataCov
+    sFileCov = db_get('FunctionalFilesWithStudy', iSrcStudy, '*', 'ndatacov');
+else
+    sFileCov = db_get('FunctionalFilesWithStudy', iSrcStudy, '*', 'noisecov');
+end
+
 % Check for noise covariance matrix
-if isempty(sSrcStudy.Channel)
+if isempty(sSrcChannel)
     error('This operation requires that you have a channel file defined in the source and destination studies.');
 end
-if isempty(sSrcStudy.NoiseCov) || (~isDataCov && isempty(sSrcStudy.NoiseCov(1).FileName)) || (isDataCov && ((length(sSrcStudy.NoiseCov) < 2) || isempty(sSrcStudy.NoiseCov(2).FileName)))
+if isempty(sFileCov)
     error('No noise covariance available in the source study.');
 end
     
@@ -51,27 +58,31 @@ if isnumeric(Target)
     iDestStudies = Target;
 elseif strcmpi(Target, 'AllConditions')
     % Get all the studies for this subject
-    [sDestStudies, iDestStudies] = bst_get('StudyWithSubject', sSrcStudy.BrainStormSubject);
+    sDestStudies = db_get('StudiesFromSubject', sSrcStudy.Subject, 'Id');
+    iDestStudies = [sDestStudies.Id];
 elseif strcmpi(Target, 'AllSubjects')
     % Get the whole database
-    ProtocolSubjects = bst_get('ProtocolSubjects');
+    sSubjects = db_get('AllSubjects', {'Name', 'Id'});
     % Get list of subjects (sorted alphabetically => same order as in the tree)
-    [uniqueSubjects, iUniqueSubjects] = sort({ProtocolSubjects.Subject.Name});
+    [uniqueSubjects, iUniqueSubjects] = sort({sSubjects.Name});
     % Process each subject
     iDestStudies = [];
     for iSubj = 1:length(uniqueSubjects)
         % Get subject filename
         iSubject = iUniqueSubjects(iSubj);
-        SubjectFile = ProtocolSubjects.Subject(iSubject).FileName;
         % Get all the studies for this subject
-        [sStudies, iStudies] = bst_get('StudyWithSubject', SubjectFile, 'intra_subject', 'default_study');
-        iDestStudies = [iDestStudies, iStudies];
+        sStudies = db_get('StudiesFromSubject', sSubjects(iSubject).Id, 'Id', '@intra', '@default_study');
+        iDestStudies = [iDestStudies, [sStudies.Id]];
     end
 else 
     return;
 end
 % Get the channels studies for those studies
-[sDestChannels, iDestChanStudies] = bst_get('ChannelForStudy', iDestStudies);
+iDestChanStudies = [];
+for ix = 1 : length(iDestStudies)
+    [~, sDestChanStudy] = db_get('ChannelFromStudy', iDestStudies(ix), 'Id', 'Id');
+    iDestChanStudies = [iDestChanStudies, sDestChanStudy.Id];
+end
 % Unique list
 iDestChanStudies = unique(iDestChanStudies);
 % Remove the one the NoiseCov file comes from
@@ -82,28 +93,24 @@ if isempty(iDestChanStudies)
 end
 
 % ===== READ SOURCE DATA =====
-% Load noisecov file
-if isDataCov
-    SrcNoiseCovMat = load(file_fullpath(sSrcStudy.NoiseCov(2).FileName));
-else
-    SrcNoiseCovMat = load(file_fullpath(sSrcStudy.NoiseCov(1).FileName));
-end
+% Load noisecov or ndatacov file
+SrcNoiseCovMat = load(file_fullpath(sFileCov.FileName));
 % Load channel file
-SrcChannelMat = in_bst_channel(sSrcStudy.Channel.FileName);
+SrcChannelMat = in_bst_channel(sSrcChannel.FileName);
 
 % ===== APPLY NOISECOV =====
 % Process each target study
 for i = 1:length(iDestChanStudies)
     % Get destination study
     iDestStudy = iDestChanStudies(i);
-    sDestStudy = bst_get('Study', iDestStudy);
+    [sDestChannel, sDestStudy] = db_get('ChannelFromStudy', iDestStudy, 'FileName', 'FileName');
     % If no channel defined: ignore destination channel
-    if isempty(sDestStudy.Channel) || isempty(sDestStudy.Channel.FileName)
+    if isempty(sDestChannel)
         disp(['BST> Warning: No channel file in ' bst_fileparts(sDestStudy.FileName) ': Ignoring condition...']);
         continue;
     end
     % Load destination channel file
-    DestChannelMat = in_bst_channel(sDestStudy.Channel.FileName);
+    DestChannelMat = in_bst_channel(sDestChannel.FileName);
     % Intialize destination noise covariance matrix
     nbDestChan = length(DestChannelMat.Channel);
     DestNoiseCovMat = SrcNoiseCovMat;
