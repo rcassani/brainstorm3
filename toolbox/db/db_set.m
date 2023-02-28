@@ -202,6 +202,8 @@ switch contextName
                 % Check for noisecov and ndatacov
                 if strcmpi(type, 'noisecov') && length(sTypeFuncFiles) == 2
                     sTypeFuncFiles(2).Type = 'ndatacov';
+                    % Ignore entries without FileName: if study has only ndatacov, sStudy.NoiseCov(1).FileName is empty
+                    sTypeFuncFiles(cellfun(@isempty, {sTypeFuncFiles.FileName})) = [];
                 end
                 sFuncFiles = [sFuncFiles, sTypeFuncFiles];
             end
