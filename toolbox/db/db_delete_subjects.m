@@ -41,7 +41,6 @@ if ~isempty(iInvalid)
     iSubjects(iInvalid) = [];
 end
 
-% TODO: This could be done more efficient with ON DELETE CASCADE
 % For each subject
 for i = 1:length(iSubjects)
     sSubject = db_get(sqlConn, 'Subject', iSubjects(i), {'Id','FileName'});
@@ -60,10 +59,8 @@ for i = 1:length(iSubjects)
     if (file_delete(bst_fullfile(ProtocolInfo.SUBJECTS, bst_fileparts(sSubject.FileName)), 1, 1) ~= 1)
         return;
     end
-    % Remove Subject from DB
+    % Delete from DB, Subject, and their AnatomyFiles, Studies and FunctionalFiles through cascade
     db_set(sqlConn, 'Subject', 'Delete', sSubject.Id);
-    % Remove AnatomyFiles for Subject from DB
-    db_set(sqlConn, 'AnatomyFilesWithSubject', 'Delete', sSubject.Id);
     save_db = 1;
 end
 % If something was deleted, save database

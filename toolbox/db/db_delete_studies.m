@@ -44,11 +44,8 @@ for iStudy = iStudies
     end
     % If the study was removed
     if (result == 1)
-        % TODO: This could be done more efficient with ON DELETE CASCADE
-        % Remove Study from DB
+        % Delete from DB, Study and its FunctionalFiles through cascade
         db_set(sqlConn, 'Study', 'Delete', iStudy);
-        % Remove FunctionalFiles for Study from DB
-        db_set(sqlConn, 'FunctionalFilesWithStudy', 'Delete', iStudy);
         save_db = 1;
     end
 %     % Try to remove all the parents dirs until STUDIES dir, if they are empty

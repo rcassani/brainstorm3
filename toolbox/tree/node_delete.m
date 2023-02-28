@@ -114,7 +114,7 @@ switch (lower(nodeType{1}))
             end
         end
         bst_progress('start', 'Delete nodes', 'Deleting conditions...');
-        % Studies that cannot be deleted : DefaultStudy and AnalysisStudy
+        % Studies that cannot be deleted : global DefaultStudy and AnalysisStudy
         sStudyInter = db_get(sqlConn, 'Study', '@inter', 'Id');
         sStudyDef   = db_get(sqlConn, 'Study', '@default_study', 'Id');
         iStudyKeep  = [sStudyInter.Id, sStudyDef.Id];
@@ -264,14 +264,10 @@ switch (lower(nodeType{1}))
         % === DELETE FILES ===
         if (file_delete(FullFilesList, ~isUserConfirm, isRecursive) == 1)
             % Get unique list of studies
-            uniqueStudies = unique([iStudies_data, iStudies_results]);
+            uniqueStudies = unique(iStudies_data);
             for i = 1:length(uniqueStudies)
                 iStudy = uniqueStudies(i);
-                iDataDel     = iDatas(iStudies_data == iStudy);
-                iResultDel   = iResults(iStudies_results == iStudy);
-                iTimefreqDel = iTimefreq(iStudies_timefreq == iStudy);
-                iDipolesDel  = iDipoles(iStudies_dipoles == iStudy);
-                iFuncFiles   = [iDataDel, iResultDel, iTimefreqDel, iDipolesDel];
+                iDataDel = iDatas(iStudies_data == iStudy);
                 % Update list of bad trials
                 sFuncFiles = db_get(sqlConn, 'FunctionalFile', struct('Study', iStudy, 'Type', 'data'), {'Id', 'FileName', 'ExtraNum'});
                 iBad = find([sFuncFiles.ExtraNum]); % .BadTrial
@@ -288,9 +284,9 @@ switch (lower(nodeType{1}))
                     % Save list of bad trials in the study file
                     bst_save(StudyFile, StudyMat, 'v7');
                 end
-                % Delete functional files per study
-                for j = 1 : length(iFuncFiles)
-                    db_set(sqlConn, 'FunctionalFile', 'Delete', iFuncFiles(j));
+                % Delete from DB, data FunctionalFiles and their children FunctionalFiles through cascade
+                for j = 1 : length(iDataDel)
+                    db_set(sqlConn, 'FunctionalFile', 'Delete', iDataDel(j));
                 end
             end
             iModifiedStudies = uniqueStudies;
@@ -339,17 +335,14 @@ switch (lower(nodeType{1}))
             iStudies     = iItem;
             iResultsList = iSubItem;
             % Get unique list of studies
-            uniqueStudies = unique([iStudies, iStudies_timefreq, iStudies_dipoles]);
+            uniqueStudies = unique(iStudies);
             for i = 1:length(uniqueStudies)
                 iStudy = uniqueStudies(i);
                 iResultsDel  = iResultsList(iStudies == iStudy);
-                iTimefreqDel = iTimefreq(iStudies_timefreq == iStudy);
-                iDipolesDel  = iDipoles(iStudies_dipoles == iStudy);
-                iFuncFiles   = [iResultsDel, iTimefreqDel, iDipolesDel];
                 sStudy = db_get(sqlConn, 'Study', iStudy);
-                % Delete functional files per study
-                for j = 1 : length(iFuncFiles)
-                    db_set(sqlConn, 'FunctionalFile', 'Delete', iFuncFiles(j));
+                % Delete from DB, result FunctionalFiles and their children FunctionalFiles through cascade
+                for j = 1 : length(iResultsDel)
+                    db_set(sqlConn, 'FunctionalFile', 'Delete', iResultsDel(j));
                 end
                 % If result deleted from a 'default_study' node
                 isDefaultStudy = strcmpi(sStudy.Name, bst_get('DirDefaultStudy'));
@@ -381,13 +374,13 @@ switch (lower(nodeType{1}))
         FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.STUDIES,f), {sFuncFiles.FileName}, 'UniformOutput',0);
         % Delete files
         if (file_delete(FullFilesList, ~isUserConfirm) == 1)
-            iUniqueStudies = unique([sFuncFiles.Study]);
+            iUniqueStudies = unique(iStudies_matrix);
             for i = 1:length(iUniqueStudies)
-                % Delete functional files per study
                 iStudy = iUniqueStudies(i);
-                ixs = find([sFuncFiles.Study] == iStudy);
-                for j = 1 : length(ixs)
-                    db_set(sqlConn, 'FunctionalFile', 'Delete', sFuncFiles(ixs(j)).Id);
+                iMatrixDel = iMatrix(iStudies_matrix == iStudy);
+                % Delete from DB, matrix FunctionalFiles and their children FunctionalFiles through cascade
+                for j = 1 : length(iMatrixDel)
+                    db_set(sqlConn, 'FunctionalFile', 'Delete', iMatrixDel(j));
                 end
             end
             iModifiedStudies = iUniqueStudies;
