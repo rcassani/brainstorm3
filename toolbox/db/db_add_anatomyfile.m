@@ -93,9 +93,3 @@ if ~strcmpi(SubType, 'other')
     db_surface_default(iSubject, SubType, iAnatFile);
 end
 
-% ===== UPDATE TREE =====
-panel_protocols('UpdateNode', 'Subject', iSubject);
-panel_protocols('SelectNode', [], FileName);
-% Save database
-db_save();
-

@@ -108,9 +108,9 @@ else
     % Update database
     db_set(sqlConn, 'FunctionalFile', sNew, iItem);
 end
-sql_close(sqlConn);
 
 % Get study only if necessary
 if nargout > 0
-    sStudy = bst_get('Study', iStudy);
+    sStudy = db_get(sqlConn, 'Study', iStudy);
 end
+sql_close(sqlConn);
