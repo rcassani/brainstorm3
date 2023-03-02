@@ -1225,7 +1225,7 @@ function destFile = PasteNode( targetNode )
     for i = 1:length(srcNodes)
         % Get source filename
         srcFile = char(srcNodes(i).getFileName());
-        srcType = file_gettype(srcFile);
+        srcType = lower(char(srcNodes(i).getType()));
         iSrcStudy = srcNodes(i).getStudyIndex();
         % Special case if we're moving to a subfolder
         if strcmpi(targetNode(1).getType(), 'folder')
@@ -1238,7 +1238,7 @@ function destFile = PasteNode( targetNode )
             destFile{i} = CopyFile(iTarget, srcFile, srcType, iSrcStudy, [], targetNode(1).getItemIndex());
         else
             % Cannot copy (channel/noisecov/MRI) or move to the same folder
-            if (isCut || ismember(srcType, {'channel', 'noisecov', 'ndatacov', 'anatomy'})) && (iSrcStudy == iTarget)
+            if (isCut || ismember(srcType, {'channel', 'noisecov', 'ndatacov', 'anatomy', 'volatlas'})) && (iSrcStudy == iTarget)
                 bst_error('Source and destination folders are the same.', 'Clipboard', 0);
                 destFile = {};
                 return;
