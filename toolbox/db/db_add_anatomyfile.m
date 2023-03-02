@@ -85,8 +85,8 @@ sAnatFile.SubType = SubType;
 % Add AnatomyFile to database
 iAnatFile = db_set('AnatomyFile', sAnatFile);
 
-% Make surface as default (if not 'Other')
-if ~strcmpi(SubType, 'other')
+% Make surface as default (if not 'Other' nor Atlas)
+if ~ismember(lower(SubType), {'other', 'atlas'})
     if strcmpi(SubType, 'image')
         SubType = 'Anatomy';
     end
