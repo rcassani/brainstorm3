@@ -403,17 +403,15 @@ function UpdateMenus(sAtlas, sSurf)
     % Create atlas from volumes in subject anatomy
     jMenuAnat = gui_component('Menu', jMenu, [], 'From subject anatomy', IconLoader.ICON_VOLATLAS, [], []);
     if ~isempty(sSurf) && ~strcmpi(sSurf.Name, 'FEM') && ~isempty(sSurf.FileName) && (sSurf.FileName(1) ~= '#')
-        sSubject = bst_get('SurfaceFile', sSurf.FileName);
-        if ~isempty(sSubject.Anatomy)
-            iAnatAtlases = find(~cellfun(@(c)isempty(strfind(c, '_volatlas')), {sSubject.Anatomy.FileName}));
-            if ~isempty(iAnatAtlases)
-                for iAnat = iAnatAtlases
-                    gui_component('MenuItem', jMenuAnat, [], sSubject.Anatomy(iAnat).Comment, IconLoader.ICON_VOLATLAS, [], @(h,ev)bst_call(@LoadScouts, file_fullpath(sSubject.Anatomy(iAnat).FileName), 1));
-                end
-            else
-                jEmpty = gui_component('MenuItem', jMenuAnat, [], '<HTML><I>No volume atlas in subject anatomy</I>', [], [], []);
-                jEmpty.setEnabled(0);
+        sSubject = db_get('SubjectFromAnatomyFile', sSurf.FileName, 'Id');
+        sAnatAtlases = db_get('AnatomyFilesWithSubject', sSubject.Id, {'FileName', 'Comment'}, 'volume', 'Atlas');
+        if ~isempty(sAnatAtlases)
+            for iAnat = 1 : length(sAnatAtlases)
+                gui_component('MenuItem', jMenuAnat, [], sAnatAtlases(iAnat).Comment, IconLoader.ICON_VOLATLAS, [], @(h,ev)bst_call(@LoadScouts, file_fullpath(sAnatAtlases(iAnat).FileName), 1));
             end
+        else
+            jEmpty = gui_component('MenuItem', jMenuAnat, [], '<HTML><I>No volume atlas in subject anatomy</I>', [], [], []);
+            jEmpty.setEnabled(0);
         end
     end
     jMenu.addSeparator();
@@ -492,19 +490,20 @@ function UpdateMenus(sAtlas, sSurf)
     % === MENU PROJECT ====
     % Offer these projection menus only for Cortex surfaces
     if ~isempty(sAtlas) && ~isempty(jMenuProject) && strcmpi(sSurf.Name, 'Cortex')
-        % Get subjectlist
-        nSubjects = bst_get('SubjectCount');
+        % Get all subjects including @default_subject
+        sSubjects = db_get('AllSubjects', {'Id', 'Name', 'UseDefaultAnat'}, '@default_subject');
         nMenus = 0;
         % Process all the subjects
-        for iSubject = 0:nSubjects
+        for ix = 1 : length(sSubjects)
             % Get subject 
-            sSubject = bst_get('Subject', iSubject);
+            sSubject = sSubjects(ix);
+            iSubject = sSubject.Id;
             % Skip subjects that use the default anatomy
             if (iSubject ~= 0) && sSubject.UseDefaultAnat
                 continue;
             end
             % Get all the cortex surfaces
-            sAllCortex = bst_get('SurfaceFileByType', iSubject, 'Cortex', 0);
+            sAllCortex = db_get('AnatomyFilesWithSubject', iSubject, {'FileName', 'Comment'}, 'surface', 'Cortex');
             % If no cortex surfaces available
             if isempty(sAllCortex)
                 continue;

@@ -200,15 +200,14 @@ function [sFib,iFib] = LoadFibers(FibFile)
     if isnumeric(FibFile)
         % Get subject
         iSubject = FibFile;
-        sSubject = bst_get('Subject', iSubject);
+        sSubject = db_get('Subject', iSubject, {'Name', 'iFibers'});
         % If subject does not have fibers
-        if isempty(sSubject.Surface) || isempty(sSubject.iFibers)
+        if isempty(sSubject.iFibers)
             error('No fiber available for subject "%s".', sSubject.Name);
         end
         % Get fibers file
-        FibFile = sSubject.Surface(sSubject.iFibers).FileName;
-    else
-        [sSubject, iSubject, iSurfDb] = bst_get('SurfaceFile', FibFile);
+        sAnatFib = db_get('AnatomyFile', sSubject.iFibers, 'FileName');
+        FibFile = sAnatFib.FileName;
     end
 
     % ===== CHECK IF LOADED =====
@@ -267,13 +266,20 @@ function [sSurf, iSurf] = LoadSurface(varargin)
         % Get inputs
         iSubject = varargin{1};
         SurfaceType = varargin{2};
-        % Get surface
-        sDbSurf = bst_get('SurfaceFileByType', iSubject, SurfaceType);
-        SurfaceFile = sDbSurf.FileName;
+        % Get Subject (from either iSubject or MriFile)
+        [sItem, table] = db_get('AnyFile', iSubject);
+        if strcmpi(table, 'Subject')
+            sSubject = sItem;
+        elseif strcmpi(table, 'AnatomyFile')
+            sSubject = db_get('Subject', sItem.Subject);
+        end
+        field = ['i' SurfaceType];
+        sAnatFile = db_get('AnatomyFile', sSubject(field), 'FileName');
+        SurfaceFile = sAnatFile.FileName;
     end
-    % Get subject and surface type
+    % Get surface and surface type
     sAnatFile = db_get('AnatomyFile', SurfaceFile);
-    if isempty(sAnatFile.Subject)
+    if isempty(sAnatFile)
         SurfaceType = 'Other';
     else
         SurfaceType = sAnatFile.SubType;

@@ -300,7 +300,7 @@ function UpdateFigureName(hFig)
     sSubject = [];
     % Get study
     if ~isempty(GlobalData.DataSet(iDS).StudyFile)
-        [sStudy, iStudy] = bst_get('Study', GlobalData.DataSet(iDS).StudyFile);
+        sStudy = db_get('Study', GlobalData.DataSet(iDS).StudyFile);
     end
     % Get subject
     if ~isempty(GlobalData.DataSet(iDS).SubjectFile)
@@ -313,7 +313,7 @@ function UpdateFigureName(hFig)
     isFileSet = 0;
     % Add condition name, data comment, and inverse comment
     if ~isempty(sStudy)
-        isInterSubject = (iStudy == -2);
+        isInterSubject = (sStudy.Id == -2);
         % === CONDITION NAME ===
         if ~isempty(sStudy.Condition)
             for iCond = 1:length(sStudy.Condition)
@@ -326,22 +326,22 @@ function UpdateFigureName(hFig)
         % === DATA FILE COMMENT ===
         % If a DataFile is defined for this dataset
         % AND there is MORE THAN ONE data files in this study => display data file comment
-        if ~isempty(GlobalData.DataSet(iDS).DataFile) && (length(sStudy.Data) >= 2)
+        if ~isempty(GlobalData.DataSet(iDS).DataFile) && (length(db_get('FunctionalFilesWithStudy', sStudy.Id, 'Id', 'data')) >=2)
             % Look for current data file in study database structure
-            iData = find(file_compare({sStudy.Data.FileName}, GlobalData.DataSet(iDS).DataFile), 1);
+            sFuncFile = db_get('FunctionalFile', GlobalData.DataSet(iDS).DataFile, 'Comment');
             % If a data file is found
-            if ~isempty(iData)
-                figureName = [figureName '/' sStudy.Data(iData).Comment];
+            if ~isempty(sFuncFile)
+                figureName = [figureName '/' sFuncFile.Comment];
                 isFileSet = 1; 
             end
         end
         % === DATA/STAT FILE COMMENT ===
-        if ~isempty(GlobalData.DataSet(iDS).DataFile) && (length(sStudy.Stat) >= 2)
+        if ~isempty(GlobalData.DataSet(iDS).DataFile) && (length(db_get('FunctionalFilesWithStudy', sStudy.Id, 'Id', 'stat')) >=2)
             % Look for current stat file in study database structure
-            iStat = find(file_compare({sStudy.Stat.FileName}, GlobalData.DataSet(iDS).DataFile), 1);
+            sFuncFile = db_get('FunctionalFile', GlobalData.DataSet(iDS).DataFile, 'Comment');
             % If a stat file is found
-            if ~isempty(iStat)
-                figureName = [figureName '/' sStudy.Stat(iStat).Comment];
+            if ~isempty(sFuncFile)
+                figureName = [figureName '/' sFuncFile.Comment];
                 isFileSet = 1; 
             end
         end
@@ -349,28 +349,28 @@ function UpdateFigureName(hFig)
         % If a ResultsFile is defined for this FIGURE
         % AND there is MORE THAN ONE results files in this study => display results file indice
         figResultsFile = getappdata(hFig, 'ResultsFile');
-        if ~isempty(figResultsFile) && (length(sStudy.Result) >= 2)
+        if ~isempty(figResultsFile) && (length(db_get('FunctionalFilesWithStudy', sStudy.Id, 'Id', 'result')) >=2)
             % Look for current results file in study database structure
-            iResult = find(file_compare({sStudy.Result.FileName}, figResultsFile), 1);
-            % If a data file is found
-            if ~isempty(iResult)
-                figureName = [figureName '/' sStudy.Result(iResult).Comment];
+            sFuncFile = db_get('FunctionalFile', figResultsFile, 'Comment');
+            % If a result file is found
+            if ~isempty(sFuncFile)
+                figureName = [figureName '/' sFuncFile.Comment];
                 isFileSet = 1; 
             end
         end
         % === RESULTS/STAT FILE COMMENT ===
-        if ~isempty(figResultsFile) && (length(sStudy.Stat) >= 2)
+        if ~isempty(figResultsFile) && (length(db_get('FunctionalFilesWithStudy', sStudy.Id, 'Id', 'stat')) >=2)
             % Look for current stat file in study database structure
-            iStat = find(file_compare({sStudy.Stat.FileName}, figResultsFile), 1);
+            sFuncFile = db_get('FunctionalFile', figResultsFile, 'Comment');
             % If a stat file is found
-            if ~isempty(iStat)
-                figureName = [figureName '/' sStudy.Stat(iStat).Comment];
+            if ~isempty(sFuncFile)
+                figureName = [figureName '/' sFuncFile.Comment];
                 isFileSet = 1; 
             end
         end
         % === TIME-FREQ FILE COMMENT ===
         TfInfo = getappdata(hFig, 'Timefreq');
-        if ~isempty(TfInfo) && ~isempty(TfInfo.FileName) && (length(sStudy.Timefreq) >= 2)
+        if ~isempty(TfInfo) && ~isempty(TfInfo.FileName) && (length(db_get('FunctionalFilesWithStudy', sStudy.Id, 'Id', 'timefreq')) >=2)
             iPipe = find(TfInfo.FileName == '|', 1);
             if ~isempty(iPipe)
                 TimefreqFile = TfInfo.FileName(1:iPipe-1);
@@ -380,10 +380,10 @@ function UpdateFigureName(hFig)
                 RefRowName = '';
             end
             % Look for current timefreq file in study database structure
-            iTimefreq = find(file_compare({sStudy.Timefreq.FileName}, TimefreqFile), 1);
+            sFuncFile = db_get('FunctionalFile', TimefreqFile, 'Comment');
             % If a stat file is found
-            if ~isempty(iTimefreq)
-                figureName = [figureName '/' sStudy.Timefreq(iTimefreq).Comment, RefRowName];
+            if ~isempty(sFuncFile)
+                figureName = [figureName '/' sFuncFile.Comment, RefRowName];
                 isFileSet = 1; 
             end
         end
@@ -434,9 +434,11 @@ function UpdateFigureName(hFig)
             % Matrix file: display the file name
             TsInfo = getappdata(hFig, 'TsInfo');
             if ~isempty(TsInfo) && ~isempty(TsInfo.FileName) && strcmpi(file_gettype(TsInfo.FileName), 'matrix')
-                iMatrix = find(file_compare({sStudy.Matrix.FileName}, TsInfo.FileName), 1);
-                if ~isempty(iMatrix)
-                    figureName = [figureName '/' sStudy.Matrix(iMatrix).Comment];
+                % Look for matrix file in study database structure
+                sFuncFile = db_get('FunctionalFile', TsInfo.FileName, 'Comment');
+                % If a matrix file is found
+                if ~isempty(sFuncFile)
+                    figureName = [figureName '/' sFuncFile.Comment];
                 end
             end
         case 'Topography'
@@ -480,48 +482,43 @@ function UpdateFigureName(hFig)
             % Add dependent file comment
             FileName = getappdata(hFig, 'FileName');
             if ~isempty(FileName)
-                [sStudy, iStudy, iFile, DataType] = bst_get('AnyFile', FileName);
-                if ~isempty(sStudy)
-                    switch (DataType)
-                        case {'data'}
-                            % Get current montage
-                            TsInfo = getappdata(hFig, 'TsInfo');
-                            if isempty(TsInfo) || isempty(TsInfo.MontageName) || ~isempty(TsInfo.RowNames)
-                                strMontage = 'All';
-                            elseif ~isempty(strfind(TsInfo.MontageName, 'Average reference')) || ~isempty(strfind(TsInfo.MontageName, '(local average ref)'))
-                                strMontage = 'AvgRef';
-                            elseif ~isempty(strfind(TsInfo.MontageName, 'Scalp current density'))
-                                strMontage = 'SCD';
-                            elseif strcmpi(TsInfo.MontageName, 'Head distance')
-                                strMontage = 'Head';
-                            elseif strcmpi(TsInfo.MontageName, 'Bad channels')
-                                strMontage = 'Bad';
-                            else
-                                strMontage = TsInfo.MontageName;
-                            end
-                            figureName = [figureNameModality strMontage ': ' figureName];
-                            %figureName = ['Recordings: ' figureName];
-                            imageFile = ['/' sStudy.Data(iFile).Comment];
-                        case {'results', 'link'}
-                            figureName = ['Sources: ' figureName];
-                            imageFile = ['/' sStudy.Results(iFile).Comment];
-                        case {'timefreq'}
-                            if isequal(FigureId.SubType, 'trialimage')
-                                figureName = ['Image: ' figureName];
-                            else
-                                figureName = ['Connect: ' figureName];
-                            end
-                            imageFile = ['/' sStudy.Timefreq(iFile).Comment];
-                        case 'matrix'
-                            figureName = ['Matrix: ' figureName];
-                            imageFile = ['/' sStudy.Matrix(iFile).Comment];
-                        case {'pdata', 'ptimefreq', 'presults', 'pmatrix'}
-                            figureName = ['Stat: ' figureName];
-                            imageFile = ['/' sStudy.Stat(iFile).Comment];
-                    end
-                    if ~isFileSet
-                        figureName = [figureName, imageFile];
-                    end
+                sFuncFile = db_get('FunctionalFile', FileName);
+                DataType = file_gettype(FileName);
+                switch (DataType)
+                    case {'data'}
+                        % Get current montage
+                        TsInfo = getappdata(hFig, 'TsInfo');
+                        if isempty(TsInfo) || isempty(TsInfo.MontageName) || ~isempty(TsInfo.RowNames)
+                            strMontage = 'All';
+                        elseif ~isempty(strfind(TsInfo.MontageName, 'Average reference')) || ~isempty(strfind(TsInfo.MontageName, '(local average ref)'))
+                            strMontage = 'AvgRef';
+                        elseif ~isempty(strfind(TsInfo.MontageName, 'Scalp current density'))
+                            strMontage = 'SCD';
+                        elseif strcmpi(TsInfo.MontageName, 'Head distance')
+                            strMontage = 'Head';
+                        elseif strcmpi(TsInfo.MontageName, 'Bad channels')
+                            strMontage = 'Bad';
+                        else
+                            strMontage = TsInfo.MontageName;
+                        end
+                        figureName = [figureNameModality strMontage ': ' figureName];
+                        %figureName = ['Recordings: ' figureName];
+                    case {'results', 'link'}
+                        figureName = ['Sources: ' figureName];
+                    case {'timefreq'}
+                        if isequal(FigureId.SubType, 'trialimage')
+                            figureName = ['Image: ' figureName];
+                        else
+                            figureName = ['Connect: ' figureName];
+                        end
+                    case 'matrix'
+                        figureName = ['Matrix: ' figureName];
+                    case {'pdata', 'ptimefreq', 'presults', 'pmatrix'}
+                        figureName = ['Stat: ' figureName];
+                end
+                imageFile = ['/' sFuncFile.Comment];
+                if ~isFileSet
+                    figureName = [figureName, imageFile];
                 end
             end
         case 'Video'

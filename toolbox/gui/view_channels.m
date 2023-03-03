@@ -50,8 +50,10 @@ ChannelFile = file_short(ChannelFile);
     
 % ===== GET/CREATE DATASET =====
 if isempty(hFig)
-    % Get Study that holds this ChannelFile
-    sStudy = bst_get('ChannelFile', ChannelFile);
+    % Get Study and Subject that holds this ChannelFile
+    sFuncFile = db_get('FunctionalFile', ChannelFile, 'Study');
+    sStudy    = db_get('Study', sFuncFile.Study, 'FileName');
+    sSubject  = db_get('SubjectFromFunctionalFile', ChannelFile, 'FileName');
     % If this surface does not belong to any subject
     if isempty(sStudy)
         StudyFile = '';
@@ -64,7 +66,7 @@ if isempty(hFig)
         end
     else
         StudyFile   = sStudy.FileName;
-        SubjectFile = sStudy.BrainStormSubject;
+        SubjectFile = sSubject.FileName;
         iDS = [];
         % Get GlobalData DataSet associated with channel file
         iDSChannel = bst_memory('GetDataSetChannel', ChannelFile);
