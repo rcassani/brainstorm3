@@ -610,7 +610,7 @@ function CreateSubjectNode(nodeSubject, isAnatomyView) %#ok<DEFNU>
     else
         iSubject = nodeSubject.getItemIndex();
     end
-    sSubject = db_get('Subject', iSubject);
+    sSubject = db_get('Subject', iSubject, '*', 1);
     if isempty(sSubject)
         return;
     end
