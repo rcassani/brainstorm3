@@ -1157,6 +1157,7 @@ function isCopied = CopyNode( bstNodes, isCut )
         listNodes = bstNodes;
         bstNodes = repmat(bstNodes, 0);
         for iList = 1:length(listNodes)
+            CreateFunctionalNode(listNodes(iList));
             for iChild = 1:listNodes(iList).getChildCount()
                 bstNodes = [bstNodes, listNodes(iList).getChildAt(iChild-1)];
             end
