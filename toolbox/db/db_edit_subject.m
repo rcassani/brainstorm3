@@ -170,7 +170,8 @@ UpdatePanel();
         % ==== EDIT SUBJECT ====
         else
             % Get studies where there should be channel files for this subject
-            iOldChannelStudies = bst_get('ChannelStudiesWithSubject', iSubject, 'NoIntra');
+            sOldChannelStudies = db_get('ChannelStudiesWithSubject', iSubject, 'Id');
+            iOldChannelStudies = [sOldChannelStudies.Id];
             % Normalization required
             if (sOldSubject.UseDefaultChannel < sSubject.UseDefaultChannel) && (length(iOldChannelStudies) > 1)
                 % Ask user the confirmation
