@@ -60,11 +60,12 @@ switch fileType
     % channel
     case 'channel'
         sFuncFile.Type = fileType;
-        sMatFields = [sMatFields, {'nbChannels', 'Modalities', 'DisplayableSensorTypes'}];
+        sMatFields = [sMatFields, {'Channel'}];
         sMat = load(file_fullpath(FileName), sMatFields{:});
-        sFuncFile.ExtraNum  = sMat.nbChannels;
-        sFuncFile.ExtraStr1 = str_join(sMat.Modalities, ',');
-        sFuncFile.ExtraStr2 = str_join(sMat.DisplayableSensorTypes, ',');
+        sFuncFile.ExtraNum  = length(sMat.Channel);
+        [modalitiesTmp, displayableSensorTypesTmp] = channel_get_modalities(sMat.Channel);
+        sFuncFile.ExtraStr1 = str_join(modalitiesTmp, ',');
+        sFuncFile.ExtraStr2 = str_join(displayableSensorTypesTmp, ',');
 
     % {data, spike} --> data
     case {'data', 'spike'}
@@ -103,16 +104,16 @@ switch fileType
     % results --> result
     case 'results'
         sFuncFile.Type = 'result';
-        sMatFields = [sMatFields, {'DataFile', 'isLink', 'HeadModelType'}];
+        sMatFields = [sMatFields, {'DataFile', 'HeadModelType'}];
         sMat = load(file_fullpath(FileName), sMatFields{:});
-        sFuncFile.ExtraNum   = sMat.isLink;
+        sFuncFile.ExtraNum   = 0; % isLink
         sFuncFile.ExtraStr1  = sMat.DataFile;
         sFuncFile.ExtraStr2  = sMat.HeadModelType;
 
     % {presults, pdata, ptimefreq, pmatrix} -- > stat
     case {'presults', 'pdata', 'ptimefreq', 'pmatrix'}
         sFuncFile.Type = 'stat';
-        sMatFields = [sMatFields, {'Type', 'DataFile', 'pThreshold'}];
+        sMatFields = [sMatFields, {'Type'}];
         sMat = load(file_fullpath(FileName), sMatFields{:});
         sFuncFile.SubType   = sMat.Type;
         % TODORC : Fields 'DataFile' and 'pThreshold' are not present in stat files
@@ -128,7 +129,7 @@ switch fileType
         sFuncFile.ExtraStr1 = sMat.DataFile;
 
     % image, matrix, noisecov, ndatacov
-    case 'image'
+    case {'image', 'matrix', 'noisecov', 'ndatacov'}
         sFuncFile.Type = fileType;
         if ~isempty(sMatFields)
             sMat = load(file_fullpath(FileName), sMatFields{:});
