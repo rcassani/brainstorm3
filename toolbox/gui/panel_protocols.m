@@ -1206,9 +1206,9 @@ function destFile = PasteNode( targetNode )
     % Channel/Headmodel/NoiseCov/Kernel: Make sure that target study is the right one
     if ismember(firstSrcType, {'channel', 'headmodel', 'noisecov', 'ndatacov', 'kernel'})
         % Get channel study for the target study
-        sChannel = db_get('ChannelFromStudy', iTarget, 'Study');
+        [sChannel, sStudy] = db_get('ChannelFromStudy', iTarget, 'Study');
         % If not the same: error
-        if (sChannel.Study ~= iTarget)
+        if isempty(sStudy) || (sStudy.Id ~= iTarget)
             bst_error('Invalid destination.', 'Clipboard', 0);
             destFile = {};
             return;

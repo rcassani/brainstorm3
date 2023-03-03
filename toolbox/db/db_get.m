@@ -681,10 +681,10 @@ switch contextName
 
                 if ~isempty(sChannel)
                     varargout{1} = sChannel;
-                    if nargout > 1
-                        sStudy = db_get(sqlConn, 'Study', iChanStudy, studyFields);
-                        varargout{2} = sStudy;
-                    end
+                end
+                if nargout > 1
+                    sStudy = db_get(sqlConn, 'Study', iChanStudy, studyFields);
+                    varargout{2} = sStudy;
                 end
             end
         end
@@ -733,7 +733,7 @@ switch contextName
         if strcmpi(sFuncFile.Type, 'channel')
             sFuncFile = db_get(sqlConn, 'FunctionalFile', sFuncFile.Id);
         else
-            sFuncFile = db_get(sqlConn, 'ChannelForStudy', sFuncFile.Study);
+            sFuncFile = db_get(sqlConn, 'ChannelFromStudy', sFuncFile.Study);
         end
         sChannel = db_convert_functionalfile(sFuncFile);
 
@@ -1301,7 +1301,7 @@ switch contextName
                 table = 'AnatomyFile';
             % Functional file
             case {'channel', 'headmodel', 'noisecov', 'ndatacov', ...
-                  'data', 'results', 'link', ...
+                  'data', 'spike', 'results', 'link', ...
                   'presults', 'pdata','ptimefreq','pmatrix', ...
                   'dipoles', 'timefreq', 'matrix', 'image', 'video', 'videolink'}
                 table = 'FunctionalFile';
