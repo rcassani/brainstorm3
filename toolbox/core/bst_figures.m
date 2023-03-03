@@ -316,9 +316,7 @@ function UpdateFigureName(hFig)
         isInterSubject = (sStudy.Id == -2);
         % === CONDITION NAME ===
         if ~isempty(sStudy.Condition)
-            for iCond = 1:length(sStudy.Condition)
-                figureName = [figureName '/' sStudy.Condition{iCond}];
-            end
+            figureName = [figureName '/' sStudy.Condition];
         % Inter-subject node
         elseif isInterSubject
             figureName = [figureName 'Inter-subject'];
@@ -1186,8 +1184,8 @@ function SetCurrentFigure(hFig, Type)
             [tmp__, iStudy, iDip] = bst_get('DipolesFile', Dipoles.FileName);
             panel_protocols('SelectNode', [], 'dipoles', iStudy, iDip);
         elseif ~isempty(StudyFile)
-            [tmp__, iStudy] = bst_get('Study', StudyFile);
-            panel_protocols('SelectNode', [], 'studysubject', iStudy, -1);
+            sStudy = db_get('Study', StudyFile);
+            panel_protocols('SelectNode', [], 'studysubject', sStudy.Id, -1);
         elseif ~isempty(SubjectFile)
             sSubject = db_get('Subject', SubjectFile);
             panel_protocols('SelectNode', [], 'subject', -1, sSubject.Id);
