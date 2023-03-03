@@ -93,7 +93,7 @@ switch (lower(nodeType{1}))
             if strcmpi(nodeType{1}, 'rawcondition')
                 % Identify if the raw file is in the brainstorm datbase or not
                 sStudy = db_get(sqlConn, 'StudyWithCondition', bst_fileparts(FileName{1}), 'Id');
-                sFuncFileRaw = db_get(sqlConn, 'FunctionalFile', struct('Study', sStudy.Id, 'Type', 'Data', 'SubType', 'raw'), 'FileName');
+                sFuncFileRaw = db_get(sqlConn, 'FunctionalFile', struct('Study', sStudy.Id, 'Type', 'data', 'SubType', 'raw'), 'FileName');
                 if isempty(sFuncFileRaw)
                     questStr = [];
                 % Raw file to delete is in the database
@@ -193,7 +193,7 @@ switch (lower(nodeType{1}))
                     sStudyHeadModels = db_get(sqlConn, 'FunctionalFile', struct('Study', iStudy, 'Type', 'headmodel'), 'Id');
                     % Update default headmodel
                     if isempty(sStudyHeadModels)
-                        db_set(sqlConn, 'Study', strcut('iHeadModel', []), iStudy);
+                        db_set(sqlConn, 'Study', struct('iHeadModel', []), iStudy);
                     else
                         sStudy = db_get(sqlConn, 'Study', iStudy, 'iHeadModel');
                         if ~ismember(sStudy.iHeadmodel, [sStudyHeadModels.Id])
