@@ -42,8 +42,10 @@ iFig = [];
 isShowCoils = ismember(Modality, {'Vectorview306', 'CTF', '4D', 'KIT', 'KRISS', 'BabyMEG', 'NIRS-BRS', 'RICOH'});
 
 % === DISPLAY SURFACE ===
-% Get subject
-sSubject = db_get('SubjectFromFunctionalFile', FileNames{1});
+% Get Subject Id
+sSubject = db_get('SubjectFromFunctionalFile', FileNames{1}, 'Id');
+% Get non-raw subject
+sSubject = db_get('Subject', sSubject.Id);
 % View surface if available
 if ~isempty(sSubject)
     % If displaying MEG coils: remove completely the transparency for nicer display with Matlab >= 2014b
