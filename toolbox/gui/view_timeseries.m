@@ -48,7 +48,7 @@ elseif ischar(RowNames)
 end
 if (nargin < 2) || isempty(Modality)
     % Get default modality
-    [AllMod,DispMod,Modality] = bst_get('ChannelModalities', DataFile);
+    [AllMod,DispMod,Modality] = db_get('ChannelModalities', DataFile);
     % Replace SEEG and ECOG with SEEG+ECOG
     if ~isempty(DispMod) && all(ismember({'SEEG','ECOG'}, DispMod))
         DispMod = cat(2, {'ECOG+SEEG'}, setdiff(DispMod, {'SEEG','ECOG'}));
@@ -96,9 +96,9 @@ end
 
 %% ===== GET A DATASET AND LOAD DATA =====
 % Get DataFile information
-[sStudy, iData, ChannelFile] = bst_memory('GetFileInfo', DataFile);
+sChannel = db_get('ChannelFromFunctionalFile', DataFile);
 % If Channel is not defined
-if isempty(ChannelFile)
+if isempty(sChannel)
     Modality = 'EEG';
 end
 % If not loaded yet

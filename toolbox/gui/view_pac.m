@@ -61,9 +61,9 @@ end
 
    
 %% ===== GET ALL ACCESSIBLE DATA =====
-% Get study
-[sStudy, iStudy, iTf] = bst_get('TimefreqFile', PacFile);
-if isempty(sStudy)
+% Get functional file
+sFuncFile = db_get('FunctionalFile', PacFile);
+if isempty(sFuncFile)
     error('File is not registered in database.');
 end
 
@@ -121,7 +121,7 @@ FigureId.Type     = 'Pac';
 FigureId.SubType  = '';
 FigureId.Modality = Modality;
 % Create TimeSeries figure
-[hFig, iFig] = bst_figures('CreateFigure', iDS, FigureId, CreateMode, sStudy.Timefreq(iTf).FileName);
+[hFig, iFig] = bst_figures('CreateFigure', iDS, FigureId, CreateMode, sFuncFile.FileName);
 if isempty(hFig)
     bst_error('Cannot create figure', 'View DirectPAC', 0);
     return;
@@ -139,8 +139,8 @@ setappdata(hFig, 'isStaticFreq', isStaticFreq);
 % Get figure data
 TfInfo = getappdata(hFig, 'Timefreq');
 % Create time-freq information structure
-TfInfo.FileName = sStudy.Timefreq(iTf).FileName;
-TfInfo.Comment  = sStudy.Timefreq(iTf).Comment;
+TfInfo.FileName = sFuncFile.FileName;
+TfInfo.Comment  = sFuncFile.Comment;
 TfInfo.RowName  = RowName;
 TfInfo.Function = 'directpac';
 % Set figure data

@@ -1116,21 +1116,21 @@ function SetCurrentFigure(hFig, Type)
         end
         % Try to select a node in the tree
         if ~isempty(TfInfo) && ~isempty(TfInfo.FileName)
-            [tmp__, iStudy, iTimefreq] = bst_get('TimefreqFile', TfInfo.FileName);
-            if ~isempty(iStudy)
+            sFuncFile = db_get('FunctionalFile', struct('FileName', TfInfo.FileName, 'Type', 'timefreq'), {'Id', 'Study'});
+            if ~isempty(sFuncFile)
                 if ~isempty(strfind(TfInfo.FileName, '_psd')) || ~isempty(strfind(TfInfo.FileName, '_fft'))
-                    panel_protocols('SelectNode', [], 'spectrum', iStudy, iTimefreq);
+                    panel_protocols('SelectNode', [], 'spectrum', sFuncFile.Study, sFuncFile.Id);
                 else
-                    panel_protocols('SelectNode', [], 'timefreq', iStudy, iTimefreq);
+                    panel_protocols('SelectNode', [], 'timefreq', sFuncFile.Study, sFuncFile.Id);
                 end
             % File not found: Try in stat files
             else
-                [tmp__, iStudy, iStat] = bst_get('StatFile', TfInfo.FileName);
-                if ~isempty(iStudy)
+                sFuncFile = db_get('FunctionalFile', struct('FileName', TfInfo.FileName, 'Type', 'stat'), {'Id', 'Study'});
+                if ~isempty(sFuncFile)
                     if ~isempty(strfind(TfInfo.FileName, '_psd')) || ~isempty(strfind(TfInfo.FileName, '_fft'))
-                        panel_protocols('SelectNode', [], 'pspectrum', iStudy, iStat);
+                        panel_protocols('SelectNode', [], 'pspectrum', sFuncFile.Study, sFuncFile.Id);
                     else
-                        panel_protocols('SelectNode', [], 'ptimefreq', iStudy, iStat);
+                        panel_protocols('SelectNode', [], 'ptimefreq', sFuncFile.Study, sFuncFile.Id);
                     end
                     isStat = 1;
                 end
@@ -1139,23 +1139,23 @@ function SetCurrentFigure(hFig, Type)
             if iscell(ResultsFile)
                 ResultsFile = ResultsFile{1};
             end
-            [tmp__, iStudy, iResult] = bst_get('ResultsFile', ResultsFile);
-            if ~isempty(iStudy)
+            sFuncFile = db_get('FunctionalFile', struct('FileName', ResultsFile, 'Type', 'result'), {'Id', 'Study'});
+            if ~isempty(sFuncFile)
                 if isequal(ResultsFile(1:4), 'link')
-                    panel_protocols('SelectNode', [], 'link', iStudy, iResult);
+                    panel_protocols('SelectNode', [], 'link', sFuncFile.Study, sFuncFile.Id);
                 else
-                    panel_protocols('SelectNode', [], 'results', iStudy, iResult);
+                    panel_protocols('SelectNode', [], 'results', sFuncFile.Study, sFuncFile.Id);
                 end
             % ResultsFile not found: Try in stat files
             else
-                [tmp__, iStudy, iStat] = bst_get('StatFile', ResultsFile);
-                if ~isempty(iStudy)
-                    panel_protocols('SelectNode', [], 'presults', iStudy, iStat);
+                sFuncFile = db_get('FunctionalFile', struct('FileName', ResultsFile, 'Type', 'stat'), {'Id', 'Study'});
+                if ~isempty(sFuncFile)
+                    panel_protocols('SelectNode', [], 'presults', sFuncFile.Study, sFuncFile.Id);
                     isStat = 1;
                 else
-                    [tmp__, iStudy, iTimefreq] = bst_get('TimefreqFile', ResultsFile);
-                    if ~isempty(iStudy)
-                        panel_protocols('SelectNode', [], 'presults', iStudy, iTimefreq);
+                    sFuncFile = db_get('FunctionalFile', struct('FileName', ResultsFile, 'Type', 'timefreq'), {'Id', 'Study'});
+                    if ~isempty(sFuncFile)
+                        panel_protocols('SelectNode', [], 'presults', sFuncFile.Study, sFuncFile.Id);
                         isStat = 1;
                     end
                 end
@@ -1164,14 +1164,14 @@ function SetCurrentFigure(hFig, Type)
             if iscell(DataFile)
                 DataFile = DataFile{1};
             end
-            [tmp__, iStudy, iData] = bst_get('DataFile', DataFile);
-            if ~isempty(iStudy)
-                panel_protocols('SelectNode', [], 'data', iStudy, iData);
+            sFuncFile = db_get('FunctionalFile', struct('FileName', DataFile, 'Type', 'data'), {'Id', 'Study'});
+            if ~isempty(sFuncFile)
+                panel_protocols('SelectNode', [], 'data', sFuncFile.Study, sFuncFile.Id);
             % DataFile not found: Try in stat files
             else
-                [tmp__, iStudy, iStat] = bst_get('StatFile', DataFile);
-                if ~isempty(iStudy)
-                    panel_protocols('SelectNode', [],'pdata', iStudy, iStat);
+                sFuncFile = db_get('FunctionalFile', struct('FileName', DataFile, 'Type', 'stat'), {'Id', 'Study'});
+                if ~isempty(sFuncFile)
+                    panel_protocols('SelectNode', [],'pdata', sFuncFile.Study, sFuncFile.Id);
                     isStat = 1;
                 end
             end
@@ -1181,8 +1181,8 @@ function SetCurrentFigure(hFig, Type)
                 isStat = 1;
             end
         elseif ~isempty(Dipoles) && ~isempty(Dipoles.FileName)
-            [tmp__, iStudy, iDip] = bst_get('DipolesFile', Dipoles.FileName);
-            panel_protocols('SelectNode', [], 'dipoles', iStudy, iDip);
+            sFuncFile = db_get('FunctionalFile', struct('FileName', DataFile, 'Type', 'dipoles'), {'Id', 'Study'});
+            panel_protocols('SelectNode', [], 'dipoles', sFuncFile.Study, sFuncFile.Id);
         elseif ~isempty(StudyFile)
             sStudy = db_get('Study', StudyFile);
             panel_protocols('SelectNode', [], 'studysubject', sStudy.Id, -1);

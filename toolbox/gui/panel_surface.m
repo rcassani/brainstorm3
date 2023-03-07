@@ -1401,12 +1401,12 @@ function [isOk, TessInfo] = SetSurfaceData(hFig, iTess, dataType, dataFile, isSt
             
         case 'Timefreq'
             % Get study
-            [sStudy, iStudy, iTf, DataType, sTimefreq] = bst_get('AnyFile', dataFile);
-            if isempty(sStudy)
+            sFuncFile = db_get('FunctionalFile', dataFile);
+            if isempty(sFuncFile)
                 error('File is not registered in database.');
             end
             % Get loaded time-freq structure
-            [iDS, iTimefreq] = bst_memory('LoadTimefreqFile', sTimefreq.FileName);
+            [iDS, iTimefreq] = bst_memory('LoadTimefreqFile', sFuncFile.FileName);
              % Set "Static" status for this figure
             setappdata(hFig, 'isStatic', (GlobalData.DataSet(iDS).Timefreq(iTimefreq).NumberOfSamples <= 2));
             isStaticFreq = (size(GlobalData.DataSet(iDS).Timefreq(iTimefreq).TF,3) <= 1);
@@ -1414,8 +1414,8 @@ function [isOk, TessInfo] = SetSurfaceData(hFig, iTess, dataType, dataFile, isSt
 
             % Create options structure
             TfInfo = db_template('TfInfo');
-            TfInfo.FileName = sTimefreq.FileName;
-            TfInfo.Comment  = sTimefreq.Comment;
+            TfInfo.FileName = sFuncFile.FileName;
+            TfInfo.Comment  = sFuncFile.Comment;
             % Select channels
             if strcmpi(GlobalData.DataSet(iDS).Timefreq(iTimefreq).DataType, 'data')
                 % Get all the channels allowed in the current figure

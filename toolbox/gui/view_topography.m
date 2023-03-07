@@ -313,8 +313,8 @@ if UseMontage
         end
     end
 end
-% Get subject
-sSubject = bst_get('Subject', GlobalData.DataSet(iDS).SubjectFile);
+% Get no-raw subject
+sSubject = db_get('Subject', GlobalData.DataSet(iDS).SubjectFile);
 % Create topography information structure
 TopoInfo = db_template('TopoInfo');
 TopoInfo.FileName   = DataFile;
@@ -337,9 +337,9 @@ bst_colormaps('AddColormapToFigure', hFig, ColormapType, DisplayUnits);
 
 % Time-freq structure
 if strcmpi(FileType, 'Timefreq')
-    % Get study
-    [sStudy, iStudy, iItem, DataType, sTimefreq] = bst_get('AnyFile', DataFile);
-    if isempty(sStudy)
+    % Get functional file
+    sFuncFile = db_get('FunctionalFile', DataFile, 'Comment');
+    if isempty(sFuncFile)
         error('File is not registered in database.');
     end
     % If displaying a NxN connectivity matrix and no reference sensors selection was made: Pick the first one
@@ -356,7 +356,7 @@ if strcmpi(FileType, 'Timefreq')
     % Create options structure
     TfInfo = db_template('TfInfo');
     TfInfo.FileName   = DataFile;
-    TfInfo.Comment    = sTimefreq.Comment;
+    TfInfo.Comment    = sFuncFile.Comment;
     TfInfo.RowName    = [];
     TfInfo.RefRowName = RefRowName;
     TfInfo.Function   = process_tf_measure('GetDefaultFunction', GlobalData.DataSet(iDS).Timefreq(iTimefreq));
@@ -402,12 +402,15 @@ if isNewFig && ismember(TopoType, {'3DSensorCap', '3DElectrodes', '3DOptodes'})
         end
     end
     % Display surface
-    if isequal(SurfaceType, 'cortex') && ~isempty(sSubject.iCortex) && (sSubject.iCortex <= length(sSubject.Surface))
-        iSurf = panel_surface('AddSurface', hFig, sSubject.Surface(sSubject.iCortex).FileName);
-    elseif isequal(SurfaceType, 'scalp') && ~isempty(sSubject.iScalp) && (sSubject.iScalp <= length(sSubject.Surface))
-        iSurf = panel_surface('AddSurface', hFig, sSubject.Surface(sSubject.iScalp).FileName);
-    elseif isequal(SurfaceType, 'anatomy') && ~isempty(sSubject.iAnatomy) && (sSubject.iAnatomy <= length(sSubject.Anatomy))
-        iSurf = panel_surface('AddSurface', hFig, sSubject.Anatomy(sSubject.iAnatomy).FileName);
+    if isequal(SurfaceType, 'cortex') && ~isempty(sSubject.iCortex)
+        sAnatFile = db_get('AnatomyFile', sSubject.iCortex, 'FileName');
+        iSurf = panel_surface('AddSurface', hFig, sAnatFile.FileName);
+    elseif isequal(SurfaceType, 'scalp') && ~isempty(sSubject.iScalp)
+        sAnatFile = db_get('AnatomyFile', sSubject.iScalp, 'FileName');
+        iSurf = panel_surface('AddSurface', hFig, sAnatFile.FileName);
+    elseif isequal(SurfaceType, 'anatomy') && ~isempty(sSubject.iAnatomy)
+        sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+        iSurf = panel_surface('AddSurface', hFig, sAnatFile.FileName);
     else
         iSurf = [];
     end

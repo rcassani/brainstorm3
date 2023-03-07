@@ -32,14 +32,11 @@ global GlobalData;
 if (nargin < 2) || isempty(ViewMode)
     ViewMode = '';
 end
-% Get study
-[sStudy, iStudy, iDip] = bst_get('DipolesFile', DipolesFile);
-if isempty(sStudy)
-    error('File is not registered in database.');
-end
-% Get subject
-[sSubject, iSubject] = bst_get('Subject', sStudy.BrainStormSubject);
-if isempty(sStudy)
+% Get SubjectId for DipoleFile
+sSubject = db_get('SubjectFromFunctionalFile', DipolesFile, 'Id');
+% Get non-raw Subject
+sSubject = db_get('Subject', sSubject.Id, {'iAnatomy', 'iCortex'});
+if isempty(sSubject)
     error('Subject is not registered in database.');
 end
 
@@ -107,10 +104,11 @@ end
 switch lower(ViewMode)
     case 'mri3d'
         % Get MRI file
-        if isempty(sSubject.Anatomy)
+        if isempty(sSubject.iAnatomy)
             error('No MRI registered for this subject.');
         end
-        MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
+        sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+        MriFile = sAnatFile.FileName;
         % Plot surface 
         hFig = view_mri_3d(MriFile, [], .2, hFig);
         % Load dipoles in figure
@@ -124,7 +122,8 @@ switch lower(ViewMode)
         if isempty(sSubject.iCortex)
             error('No default cortex for this subject.');
         end
-        SurfaceFile = sSubject.Surface(sSubject.iCortex).FileName;
+        sAnatFile = db_get('AnatomyFile', sSubject.iCortex, 'FileName');
+        SurfaceFile = sAnatFile.FileName;
         % Plot surface 
         hFigTmp = view_surface(SurfaceFile, .5, [], hFig);
         % Load dipoles in figure
@@ -139,10 +138,11 @@ switch lower(ViewMode)
         
     case 'mriviewer'
         % Get MRI file
-        if isempty(sSubject.Anatomy)
+        if isempty(sSubject.iAnatomy)
             error('No MRI registered for this subject.');
         end
-        MriFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
+        sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+        MriFile = sAnatFile.FileName;
         % Open MRI Viewer 
         [hFig, iDS, iFig] = view_mri(MriFile, DipolesFile);
 end

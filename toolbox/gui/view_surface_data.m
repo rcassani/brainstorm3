@@ -68,13 +68,15 @@ end
 
 %% ===== GET OVERLAY FILE =====
 % Get file in database
-[sStudy, iStudy, iFile, DataType, sFileMat] = bst_get('AnyFile', OverlayFile);
+sFuncFile = db_get('FunctionalFile', OverlayFile);
+sStudy    = db_get('Study', sFuncFile.Study);
+DataType  = file_gettype(sFuncFile.FileName);
 % If this data file does not belong to any study
-if isempty(sStudy)
+if isempty(sFuncFile)
     error(['File not found in database: "', OverlayFile, '"']);
 end
 % Get associated data file
-RelatedDataFile = bst_get('RelatedDataFile', OverlayFile);
+RelatedDataFile = db_get('RelatedDataFile', OverlayFile);
 % Results / stat
 isResults  = any(strcmpi(DataType, {'results', 'presults', 'link'}));
 isData     = any(strcmpi(DataType, {'data', 'pdata'}));
@@ -90,28 +92,30 @@ if isempty(SurfaceFile)
         ResultsMat = in_bst_results(OverlayFile, 0, 'SurfaceFile', 'HeadModelType');
         % Volume/surface
         if strcmpi(ResultsMat.HeadModelType, 'volume')
-            sSubject = bst_get('Subject', sStudy.BrainStormSubject);
-            SurfaceFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
+            sSubject = db_get('Subject', sStudy.Subject);
+            sAnatFileVol = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+            SurfaceFile = sAnatFileVol.FileName;
         else
             SurfaceFile = ResultsMat.SurfaceFile;
         end
     elseif isTimefreq
-        ResultsFile = sFileMat.DataFile;
+        ResultsFile = sFuncFile.ExtraStr1; % .DataFile;
         % If a result file is available: use it
         if ~isempty(ResultsFile)
             ResultsMat = in_bst_results(ResultsFile, 0, 'SurfaceFile');
             SurfaceFile = ResultsMat.SurfaceFile;
         % Else, try to read a SurfaceField field from the Timefreq file
         else
-            TfMat = in_bst_timefreq(sFileMat.FileName, 0, 'SurfaceFile');
+            TfMat = in_bst_timefreq(sFuncFile.FileName, 0, 'SurfaceFile');
             SurfaceFile = TfMat.SurfaceFile;
         end
         % If nothing found, try to use the current cortex
         if isempty(SurfaceFile)
             disp('BST> WARNING: No source file associated with this TF decomposition. Try using the default cortex...');
-            sSubject = bst_get('Subject', sStudy.BrainStormSubject);
+            sSubject = db_get('Subject', sStudy.Subject);
             if ~isempty(sSubject.iCortex)
-                SurfaceFile = sSubject.Surface(sSubject.iCortex).FileName;
+                sAnatFileCortex = db_get('AnatomyFile', sSubject.iCortex, 'FileName');
+                SurfaceFile = sAnatFileCortex.FileName;
             else
                 error('The default cortex is not available, or does not match this file. The cannot be displayed.');
             end
@@ -289,7 +293,8 @@ end
 %% ===== CONFIGURE FIGURE =====
 setappdata(hFig, 'StudyFile',    sStudy.FileName);
 setappdata(hFig, 'DataFile',     RelatedDataFile);
-setappdata(hFig, 'SubjectFile',  sStudy.BrainStormSubject);
+sSubject = db_get('Subject', sStudy.Subject, 'FileName');
+setappdata(hFig, 'SubjectFile',  sSubject.FileName);
 
 
 %% ===== OVERLAY DATA ON SURFACE =====

@@ -26,10 +26,10 @@ if (nargin < 2) || isempty(Modality)
     Modality = [];
 end
 
-% Get study for this file
-[sStudy, iStudy] = bst_get('AnyFile', NoiseCovFile);
+% Get channel related to this functional file
+sChannelFuncFile = db_get('ChannelFromFunctionalFile', NoiseCovFile, 'FileName');
 % Read channel file
-ChannelMat = in_bst_channel(sStudy.Channel.FileName);
+ChannelMat = in_bst_channel(sChannelFuncFile.FileName);
 % Get channel types
 AllMod = unique({ChannelMat.Channel.Type});
 % Load noise covariance file
