@@ -1862,11 +1862,14 @@ switch contextName
     %        DataFile = bst_get('RelatedDataFile', FileName)
     case 'RelatedDataFile'
         deprecationWarning(contextName, contextName);
+        argout1 = [];
 
         FileName = varargin{2};
         sDataFuncFile = db_get('RelatedDataFile', FileName, 'FileName');
         % Return file
-        argout1 = sDataFuncFile.FileName;
+        if ~isempty(sDataFuncFile)
+            argout1 = sDataFuncFile.FileName;
+        end
         
 %% ==== ALL CONDITIONS FOR ONE SUBJECT ====
     % Usage: [Conditions] =  bst_get('ConditionsForSubject', SubjectFile)
