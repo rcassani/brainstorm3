@@ -365,8 +365,8 @@ function [tess2mri_interp, sMri] = GetTess2MriInterp(iSurf, MriFile)
         if ~isempty(MriFile)
             sMri = LoadMri(MriFile);
         else
-            [sSubject, iSubject] = bst_get('SurfaceFile', SurfaceFile);
-            sMri = LoadMri(iSubject);
+            sAnatFile = db_get('AnatomyFile', SurfaceFile);
+            sMri = LoadMri(sAnatFile.Subject);
         end
     end
     % If interpolation matrix was not lready computed: return it
@@ -392,10 +392,10 @@ function grid2mri_interp = GetGrid2MriInterp(iDS, iResult, GridSmooth) %#ok<DEFN
     % Else: compute it
     else
         % Get subject
-        [sSubject, iSubject] = bst_get('Subject', GlobalData.DataSet(iDS).SubjectFile);
+        sSubject = db_get('Subject', GlobalData.DataSet(iDS).SubjectFile, 'Id');
         SurfaceFile = GlobalData.DataSet(iDS).Results(iResult).SurfaceFile;
         % Load MRI
-        sMri = LoadMri(iSubject);
+        sMri = LoadMri(sSubject.Id);
         % Get the grid points to interpolate
         switch (GlobalData.DataSet(iDS).Results(iResult).HeadModelType)
             case 'volume'

@@ -196,7 +196,8 @@ UpdatePanel();
             % Update channel files
             if (sSubject.UseDefaultChannel ~= sOldSubject.UseDefaultChannel)
                 % Get studies where there should be channel files for this subject
-                iNewChannelStudies = bst_get('ChannelStudiesWithSubject', iSubject);
+                sNewChannelStudies = db_get('ChannelStudiesWithSubject', iSubject, 'Id');
+                iNewChannelStudies = [sNewChannelStudies.Id];
                 % Update channel files
                 UpdateSubjectChannelFiles(sOldSubject.UseDefaultChannel, iOldChannelStudies, sSubject.UseDefaultChannel, iNewChannelStudies);
                 % Update results links
