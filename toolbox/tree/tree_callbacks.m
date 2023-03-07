@@ -351,8 +351,9 @@ switch (lower(action))
                     view_pac(filenameRelative, [], 'DynamicPAC');
                     return;
                 end
-                % Get subject 
-                sSubject = db_get('SubjectFromStudy', iStudy);
+                % Get non-raw subject
+                sStudy = db_get('Study', iStudy, 'Subject');
+                sSubject = db_get('Subject', sStudy.Subject);
                 switch DataType
                     % Results: display on cortex or MRI
                     case 'results'
