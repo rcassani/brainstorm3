@@ -1460,7 +1460,7 @@ switch contextName
         if ~isempty(sParentFunctFile)
             % If parent file is results: get related data file
             if ismember(file_gettype(sParentFunctFile.FileName), {'link','results'})
-                sParentFunctFile = bst_get('ParentFromFunctionalFile', sParentFunctFile.Id);
+                sParentFunctFile = db_get('ParentFromFunctionalFile', sParentFunctFile.Id);
             end
         end
         % Return file

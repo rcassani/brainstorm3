@@ -435,8 +435,8 @@ switch (lower(action))
                     end
                     DataFile = [];
                 else
-                    DataType = sTimeFreq.DataType;
-                    DataFile = sTimeFreq.DataFile;
+                    DataType = sTimeFreq.SubType;   % .DataType;
+                    DataFile = sTimeFreq.ExtraStr1; % .DataFile;
                 end
                 % Get subject 
                 sSubject = db_get('SubjectFromStudy', iStudy);
