@@ -96,7 +96,7 @@ end
 %% ===== UPDATE DATABASE =====
 % Update subject definition
 sqlConn = sql_connect();
-sSubject = db_get(sqlConn, 'Subject', oldName, {'Id', 'Name', 'FileName'}, 1);
+sSubject = db_get(sqlConn, 'Subject', oldName, {'Id', 'Name', 'FileName'}, 'raw');
 sSubject.Name = newName;
 % Update subject filename
 [fPath, fBase, fExt] = bst_fileparts(sSubject.FileName);

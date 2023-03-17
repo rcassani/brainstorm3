@@ -161,12 +161,13 @@ switch contextName
     %          = db_get('Subject', CondQuery,          Fields, isRaw);
     %          = db_get('Subject', '@default_subject', Fields);    
     %          = db_get('Subject');
-    % If isRaw is set: force to return the real brainstormsubject description
+    % If isRaw == 'raw' : force to return the real brainstormsubject description
     % (ignoring whether it uses protocol's default anatomy or not)    
     case 'Subject'
         % Default parameters
         fields = '*';   
-        isRaw = 0;
+        isRaw = '';
+        addedFieldUDA = 0;
         templateStruct = db_template('Subject');     
         resultStruct = templateStruct; 
 
@@ -182,6 +183,7 @@ switch contextName
             if strcmp(iSubjects, '@default_subject')
                 iSubjects = struct('Name', iSubjects);
                 condQuery = iSubjects;           
+                isRaw = 'raw';
             else
                 iSubjects = {iSubjects};
             end
@@ -195,6 +197,10 @@ switch contextName
             if ~strcmp(fields, '*')
                 if ischar(fields)
                     fields = {fields};
+                end
+                addedFieldUDA = ~ismember('UseDefaultAnat', fields);
+                if addedFieldUDA
+                    fields = [fields, {'UseDefaultAnat'}];
                 end
                 % Verify requested fields
                 if ~all(isfield(templateStruct, fields))
@@ -245,29 +251,35 @@ switch contextName
             sSubjects = sql_query(sqlConn, 'SELECT', 'Subject', condQuery(1), fields);
         end
 
-        % Retrieve default subject if needed
-        if ~isRaw && isequal(fields, '*') && any(find([sSubjects.UseDefaultAnat]))
-            iDefaultSubject = find(ismember({sSubjects.Name}, '@default_subject'));
-            if iDefaultSubject
-                sDefaultSubject = sSubjects(iDefaultSubject);
-            else
-                sDefaultSubject = db_get(sqlConn, 'Subject', struct('Name', '@default_subject'));
-            end
-            % Update fields in Subjects using default Anatomy
+        % Retrieve default subject:
+        % If raw was not requested AND at least was subject needs fields from @default_subject AND that subject is not @default_subject
+        fieldsNotCopyFromDef = {'Id', 'Name', 'Comments', 'DateOfAcquisition', 'UseDefaultAnat', 'UseDefaultChannel'};
+        if ~strcmpi(isRaw, 'raw')                 && ...
+           any(find([sSubjects.UseDefaultAnat]))  && any(~ismember(fields, fieldsNotCopyFromDef)) && ...
+           ~(length(sSubjects) == 1 && ( (isfield(sSubjects(1), 'Id')   && sSubjects(1).Id == 0) || ...
+                                         (isfield(sSubjects(1), 'Name') && strcmp(sSubjects(1).Name, '@default_subject' == 0)) || ...
+                                         (isfield(sSubjects(1), 'FileName') && ~isempty(regexp(sSubjects(1).FileName, '^@default_subject', 'once')))))
+
+            sDefaultSubject = db_get(sqlConn, 'Subject', '@default_subject', fields);
             if ~isempty(sDefaultSubject)
+                % Fields in output
+                fields = fieldnames(sSubjects);
                 for i = 1:length(sSubjects)
-                    if sSubjects(i).UseDefaultAnat 
-                        tmp = sDefaultSubject;
-                        tmp.Id                = sSubjects(i).Id;
-                        tmp.Name              = sSubjects(i).Name;
-                        tmp.Comments          = sSubjects(i).Comments;
-                        tmp.DateOfAcquisition = sSubjects(i).DateOfAcquisition;
-                        tmp.UseDefaultAnat    = sSubjects(i).UseDefaultAnat;
-                        tmp.UseDefaultChannel = sSubjects(i).UseDefaultChannel;
-                        sSubjects(i) = tmp;                   
+                    % Update fields in Subjects using default Anatomy
+                    if sSubjects(i).UseDefaultAnat
+                        % Copy fields from @default_subject
+                        for iField = 1 : length(fields)
+                            if ~ismember(fields{iField}, fieldsNotCopyFromDef)
+                                sSubjects(i).(fields{iField}) = sDefaultSubject.(fields{iField});
+                            end
+                        end
                     end    
                 end
             end
+        end
+        % Remove 'UseDefaultAnat' field if needed
+        if addedFieldUDA
+            sSubjects = rmfield(sSubjects, 'UseDefaultAnat');
         end
 
         varargout{1} = sSubjects;   
@@ -1427,7 +1439,7 @@ switch contextName
         % === All other nodes ===
         else
             % Get subject attached to study
-            sSubject = db_get('Subject', sStudy.Subject, 'UseDefaultChannel', 1);
+            sSubject = db_get('Subject', sStudy.Subject, 'UseDefaultChannel', 'raw');
             if isempty(sSubject)
                 return;
             end

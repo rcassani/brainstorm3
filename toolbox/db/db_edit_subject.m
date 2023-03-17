@@ -71,7 +71,7 @@ UpdatePanel();
         if ~isNewSubject
             panelTitle = sprintf('Edit subject #%d',iSubject);
             % Get subject
-            sSubject = db_get('Subject', iSubject, '*', 1);
+            sSubject = db_get('Subject', iSubject, '*', 'raw');
         % NEW SUBJECT
         else
             panelTitle = sprintf('Create subject #%d',iSubject);

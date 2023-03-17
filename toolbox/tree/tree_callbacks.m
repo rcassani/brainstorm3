@@ -2674,7 +2674,7 @@ end % END SWITCH( ACTION )
 
         % ===== DEFAULT ANATOMY =====
         % Get default subject
-        sDefSubject = db_get('Subject',0);
+        sDefSubject = db_get('Subject', '@default_subject');
         % Get all anatomies for default subject
         sDefAnats = db_get('AnatomyFilesWithSubject', sDefSubject.Id, '*', 'Anatomy');
         % Get all cortex surfaces for default subject

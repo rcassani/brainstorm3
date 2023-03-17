@@ -291,10 +291,10 @@ end
     
 
 %% ===== CONFIGURE FIGURE =====
-setappdata(hFig, 'StudyFile',    sStudy.FileName);
-setappdata(hFig, 'DataFile',     RelatedDataFile);
-sSubject = db_get('Subject', sStudy.Subject, 'FileName');
-setappdata(hFig, 'SubjectFile',  sSubject.FileName);
+sSubject = db_get('Subject',    sStudy.Subject, 'FileName', 'raw');
+setappdata(hFig, 'StudyFile',   sStudy.FileName);
+setappdata(hFig, 'DataFile',    RelatedDataFile);
+setappdata(hFig, 'SubjectFile', sSubject.FileName);
 
 
 %% ===== OVERLAY DATA ON SURFACE =====

@@ -700,7 +700,7 @@ switch contextName
                 end
                 
                 % Add missing fields to complete output of bst_get('Study')
-                sSubject = db_get(sqlConn, 'Subject', sStudy.Subject, 'FileName');
+                sSubject = db_get(sqlConn, 'Subject', sStudy.Subject, 'FileName', 'raw');
                 sStudy.BrainStormSubject = sSubject.FileName;
                 if isempty(sStudy.Condition)
                     sStudy.Condition = {sStudy.Name};
@@ -784,7 +784,7 @@ switch contextName
         % If SubjectFile is the default subject filename
         if ~isempty(sDefaultSubject) && ~isempty(sDefaultSubject.FileName) && file_compare(SubjectFile{1}, sDefaultSubject.FileName)
             % Get all the subjects files that use default anatomy
-            sSubject = db_get('Subject', struct('UseDefaultAnat', 1), 'FileName');
+            sSubject = db_get('Subject', struct('UseDefaultAnat', 1), 'FileName', 'raw');
             if isempty(sSubject)
                 return
             end
@@ -976,8 +976,10 @@ switch contextName
             if (iSubject == 0)
                 sSubject = db_get(sqlConn, 'Subject', '@default_subject');
             % Normal subject 
+            elseif isRaw
+                sSubject = db_get(sqlConn, 'Subject', iSubject, '*', 'raw');
             else
-                sSubject = db_get(sqlConn, 'Subject', iSubject, '*', isRaw);
+                sSubject = db_get(sqlConn, 'Subject', iSubject);
             end
 
         % Call: bst_get('subject', []);            
@@ -996,7 +998,11 @@ switch contextName
             else
                 SubjectFileName = bst_fullfile(file_standardize(varargin{2}), 'brainstormsubject.mat');
             end
-            sSubject = db_get(sqlConn, 'Subject', SubjectFileName, '*', isRaw);
+            if isRaw
+                sSubject = db_get(sqlConn, 'Subject', SubjectFileName, '*', 'raw');
+            else
+                sSubject = db_get(sqlConn, 'Subject', SubjectFileName);
+            end
                             
         % Call: bst_get('subject');   => looking for current subject 
         elseif (nargin < 2)
@@ -1064,7 +1070,7 @@ switch contextName
         % Get subject
         if isempty(varargin{2})
             % Get default subject
-            sSubject = db_get('Subject', 0);
+            sSubject = db_get('Subject', '@default_subject');
         elseif ischar(varargin{2})
             FileName = varargin{2};
             [sItem, table] = db_get('AnyFile', FileName);

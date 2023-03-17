@@ -49,7 +49,7 @@ end
 % Loop on all subjects
 for i = 1:length(iSubjects)
     % Get raw subject directory
-    sSubject = db_get(sqlConn, 'Subject', iSubjects(i), 'FileName', 1);
+    sSubject = db_get(sqlConn, 'Subject', iSubjects(i), 'FileName', 'raw');
     subjectSubDir = bst_fileparts(sSubject.FileName);
     % Check the existance of the subject's directory
     if ~file_exist(bst_fullfile(ProtocolInfo.SUBJECTS, subjectSubDir))

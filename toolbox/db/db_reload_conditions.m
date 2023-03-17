@@ -44,7 +44,7 @@ sqlConn = sql_connect();
 % Process all the subjects
 for i = 1:length(iSubjects)
     % Get subject
-    sSubject = db_get(sqlConn, 'Subject', iSubjects(i), '*', 1);
+    sSubject = db_get(sqlConn, 'Subject', iSubjects(i), '*', 'raw');
     % Get all the dependent studies at the moment
     sOldStudies = db_get(sqlConn, 'StudiesFromSubject', sSubject.Id, {'Id', 'FileName'}, '@inter', '@intra', '@default_study');
     % Get subject directory for studies

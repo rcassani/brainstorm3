@@ -43,7 +43,7 @@ end
 
 % For each subject
 for i = 1:length(iSubjects)
-    sSubject = db_get(sqlConn, 'Subject', iSubjects(i), {'Id','FileName'});
+    sSubject = db_get(sqlConn, 'Subject', iSubjects(i), {'Id','FileName'}, 'raw');
     % === DELETE STUDIES ===
     % Find all the studies that are associated with the current brainstormsubject file
     sStudies = db_get(sqlConn, 'StudiesFromSubject', sSubject.Id, {'Id','FileName'}, '@intra', '@default_study');

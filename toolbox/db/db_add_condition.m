@@ -71,7 +71,7 @@ if ischar(SubjectName) && (SubjectName(1) == '*')
     sSubjects = db_get(sqlConn, 'AllSubjects', subjectFields);
 % Else: Look for subject
 else
-    sSubjects = db_get(sqlConn, 'Subject', SubjectName, subjectFields, 1);
+    sSubjects = db_get(sqlConn, 'Subject', SubjectName, subjectFields, 'raw');
 end
 % No subject found
 if isempty(sSubjects)

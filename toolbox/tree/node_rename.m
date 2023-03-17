@@ -57,7 +57,7 @@ switch lower(nodeType)
             iSubject = iItem;
         end
         % Get subject
-        sSubject = db_get('Subject', iSubject, {'Name', 'FileName'}, 1);
+        sSubject = db_get('Subject', iSubject, {'Name', 'FileName'}, 'raw');
         % If subject is not default subject or group subject
         if strcmp(sSubject.Name, bst_get('DirDefaultSubject')) || strcmp(sSubject.Name, bst_get('NormalizedSubjectName'))
             return
