@@ -1075,9 +1075,10 @@ switch contextName
             FileName = varargin{2};
             [sItem, table] = db_get('AnyFile', FileName);
             if strcmpi(table, 'Subject')
-                sSubject = sItem;
+                sSubject = db_get('Subject', sItem.Id);
             elseif strcmpi(table, 'AnatomyFile')
-                sSubject = db_get('SubjectFromAnatomyFile', sItem.Id);
+                sSubject = db_get('SubjectFromAnatomyFile', sItem.Id, 'Id');
+                sSubject = db_get('Subject', sSubject.Id);
             end
         else
             iSubject = varargin{2};
@@ -1088,7 +1089,8 @@ switch contextName
             disp('BST> Warning: Subject not found.');
             return;
         end
-        sSurfAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'Id', 'surface');
+        % Get all AnatFiles for non-raw Subject
+        sSurfAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.FileName, 'Id', 'surface');
         if isempty(sSurfAnatFiles)
             return;
         end
