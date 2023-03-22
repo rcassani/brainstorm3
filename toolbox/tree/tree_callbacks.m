@@ -293,7 +293,9 @@ switch (lower(action))
                 sFunctFile = db_get('FunctionalFile', iResult, 'ExtraStr2'); % HeadModelType
                 % Volume: MRI Viewer
                 if strcmpi(sFunctFile.ExtraStr2, 'volume')
-                    sSubject  = db_get('SubjectFromFunctionalFile', iResult, 'iAnatomy');
+                    % Get default anatomy for Subject
+                    sSubject  = db_get('SubjectFromFunctionalFile', iResult, 'Id');
+                    sSubject  = db_get('Subject', sSubject.Id, 'iAnatomy');
                     sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
                     view_mri(sAnatFile.FileName, filenameRelative);
                 % Otherwise: 3D display
@@ -307,7 +309,9 @@ switch (lower(action))
                 ResultsMat = in_bst_results(filenameRelative, 0, 'HeadModelType');
                 % Volume: MRI Viewer
                 if strcmpi(ResultsMat.HeadModelType, 'volume')
-                    sSubject  = db_get('SubjectFromFunctionalFile', filenameRelative, 'iAnatomy');
+                    % Get default anatomy for Subject
+                    sSubject  = db_get('SubjectFromFunctionalFile', filenameRelative, 'Id');
+                    sSubject  = db_get('Subject', sSubject.Id, 'iAnatomy');
                     sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
                     view_mri(sAnatFile.FileName, filenameRelative);
                 % Otherwise: 3D display
