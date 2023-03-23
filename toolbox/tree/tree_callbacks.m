@@ -293,7 +293,9 @@ switch (lower(action))
                 sFunctFile = db_get('FunctionalFile', iResult, 'ExtraStr2'); % HeadModelType
                 % Volume: MRI Viewer
                 if strcmpi(sFunctFile.ExtraStr2, 'volume')
-                    sSubject  = db_get('SubjectFromFunctionalFile', iResult, 'iAnatomy');
+                    % Get default anatomy for Subject
+                    sSubject  = db_get('SubjectFromFunctionalFile', iResult, 'Id');
+                    sSubject  = db_get('Subject', sSubject.Id, 'iAnatomy');
                     sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
                     view_mri(sAnatFile.FileName, filenameRelative);
                 % Otherwise: 3D display
@@ -307,7 +309,9 @@ switch (lower(action))
                 ResultsMat = in_bst_results(filenameRelative, 0, 'HeadModelType');
                 % Volume: MRI Viewer
                 if strcmpi(ResultsMat.HeadModelType, 'volume')
-                    sSubject  = db_get('SubjectFromFunctionalFile', filenameRelative, 'iAnatomy');
+                    % Get default anatomy for Subject
+                    sSubject  = db_get('SubjectFromFunctionalFile', filenameRelative, 'Id');
+                    sSubject  = db_get('Subject', sSubject.Id, 'iAnatomy');
                     sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
                     view_mri(sAnatFile.FileName, filenameRelative);
                 % Otherwise: 3D display
@@ -351,8 +355,9 @@ switch (lower(action))
                     view_pac(filenameRelative, [], 'DynamicPAC');
                     return;
                 end
-                % Get subject 
-                sSubject = db_get('SubjectFromStudy', iStudy);
+                % Get non-raw subject
+                sStudy = db_get('Study', iStudy, 'Subject');
+                sSubject = db_get('Subject', sStudy.Subject);
                 switch DataType
                     % Results: display on cortex or MRI
                     case 'results'
@@ -435,8 +440,8 @@ switch (lower(action))
                     end
                     DataFile = [];
                 else
-                    DataType = sTimeFreq.DataType;
-                    DataFile = sTimeFreq.DataFile;
+                    DataType = sTimeFreq.SubType;   % .DataType;
+                    DataFile = sTimeFreq.ExtraStr1; % .DataFile;
                 end
                 % Get subject 
                 sSubject = db_get('SubjectFromStudy', iStudy);
@@ -2673,7 +2678,7 @@ end % END SWITCH( ACTION )
 
         % ===== DEFAULT ANATOMY =====
         % Get default subject
-        sDefSubject = db_get('Subject',0);
+        sDefSubject = db_get('Subject', '@default_subject');
         % Get all anatomies for default subject
         sDefAnats = db_get('AnatomyFilesWithSubject', sDefSubject.Id, '*', 'Anatomy');
         % Get all cortex surfaces for default subject

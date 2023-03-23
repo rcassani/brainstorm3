@@ -847,10 +847,13 @@ end
 
 %% ===== GET CONTENTS =====
 function curContents = GetContents(iStudies, iItems, ProcessType)
-    % Get all filenames
-    sFuncFiles = db_get('FunctionalFile', iItems, 'FileName');
-    curFilenames = {sFuncFiles.FileName};
-    %curFilenames = bst_get('GetFilenames', iStudies, iItems, ProcessType);
+    curFilenames = {};
+    if ~isempty(iItems)
+        % Get all filenames
+        sFuncFiles = db_get('FunctionalFile', iItems, 'FileName');
+        curFilenames = {sFuncFiles.FileName};
+        %curFilenames = bst_get('GetFilenames', iStudies, iItems, ProcessType);
+    end
     % Create lists
     curContents = [curFilenames{:}, num2str(iStudies), num2str(iItems)];
 end

@@ -42,13 +42,10 @@ iFig = [];
 isShowCoils = ismember(Modality, {'Vectorview306', 'CTF', '4D', 'KIT', 'KRISS', 'BabyMEG', 'NIRS-BRS', 'RICOH'});
 
 % === DISPLAY SURFACE ===
-% Get study
-[sStudy, iStudy] = bst_get('ChannelFile', FileNames{1});
-if isempty(sStudy)
-    return
-end
-% Get subject
-sSubject = bst_get('Subject', sStudy.BrainStormSubject);
+% Get Subject Id
+sSubject = db_get('SubjectFromFunctionalFile', FileNames{1}, 'Id');
+% Get non-raw subject
+sSubject = db_get('Subject', sSubject.Id);
 % View surface if available
 if ~isempty(sSubject)
     % If displaying MEG coils: remove completely the transparency for nicer display with Matlab >= 2014b
@@ -67,9 +64,10 @@ if ~isempty(sSubject)
     % Display surface
     switch lower(SurfaceType)
         case 'cortex'
-            if ~isempty(sSubject.iCortex) && (sSubject.iCortex <= length(sSubject.Surface))
+            if ~isempty(sSubject.iCortex)
                 if isempty(SurfaceFile)
-                    SurfaceFile = sSubject.Surface(sSubject.iCortex).FileName;
+                    sAnatFile = db_get('AnatomyFile', sSubject.iCortex, 'FileName');
+                    SurfaceFile = sAnatFile.FileName;
                 end
                 switch (Modality)
                     case 'SEEG',  SurfAlpha = .8;
@@ -79,9 +77,10 @@ if ~isempty(sSubject)
                 hFig = view_surface(SurfaceFile, SurfAlpha, [], 'NewFigure');
             end
         case 'innerskull'
-            if ~isempty(sSubject.iInnerSkull) && (sSubject.iInnerSkull <= length(sSubject.Surface))
+            if ~isempty(sSubject.iInnerSkull)
                 if isempty(SurfaceFile)
-                    SurfaceFile = sSubject.Surface(sSubject.iInnerSkull).FileName;
+                    sAnatFile = db_get('AnatomyFile', sSubject.iInnerSkull, 'FileName');
+                    SurfaceFile = sAnatFile.FileName;
                 end
                 switch (Modality)
                     case 'SEEG',  SurfAlpha = .5;
@@ -91,9 +90,10 @@ if ~isempty(sSubject)
                 hFig = view_surface(SurfaceFile, SurfAlpha, [], 'NewFigure');
             end
         case 'scalp'
-            if ~isempty(sSubject.iScalp) && (sSubject.iScalp <= length(sSubject.Surface))
+            if ~isempty(sSubject.iScalp)
                 if isempty(SurfaceFile)
-                    SurfaceFile = sSubject.Surface(sSubject.iScalp).FileName;
+                    sAnatFile = db_get('AnatomyFile', sSubject.iScalp, 'FileName');
+                    SurfaceFile = sAnatFile.FileName;
                 end
                 switch (Modality)
                     case 'SEEG',  SurfAlpha = .8;
@@ -110,9 +110,10 @@ if ~isempty(sSubject)
                 hFig = view_surface(SurfaceFile, SurfAlpha, [], 'NewFigure');
             end
         case {'anatomy', 'subjectimage'}
-            if ~isempty(sSubject.iAnatomy) && (sSubject.iAnatomy <= length(sSubject.Anatomy))
+            if ~isempty(sSubject.iAnatomy)
                 if isempty(SurfaceFile)
-                    SurfaceFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
+                    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                    SurfaceFile = sAnatFile.FileName;
                 end
                 SurfAlpha = .1;
                 hFig = view_mri_3d(SurfaceFile, [], SurfAlpha, 'NewFigure');

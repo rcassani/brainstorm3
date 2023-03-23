@@ -105,7 +105,7 @@ for iNode = 1:length(bstNodes)
                 end
                 % For each subject
                 for ix = 1:length(sSubjects)
-                    sSubject = db_get(sqlConn, 'Subject', sSubjects(ix), {'Id', 'UseDefaultChannel'}, 1);
+                    sSubject = db_get(sqlConn, 'Subject', sSubjects(ix), {'Id', 'UseDefaultChannel'}, 'raw');
                     % If subject uses local default subject (shares Channel file but not anatomy)
                     if (sSubject.UseDefaultChannel == 1)
                         iStudies = addAllSubjectsStudies(sqlConn, iStudies, sSubject.Id, NoIntra);

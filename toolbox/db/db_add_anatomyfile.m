@@ -85,17 +85,11 @@ sAnatFile.SubType = SubType;
 % Add AnatomyFile to database
 iAnatFile = db_set('AnatomyFile', sAnatFile);
 
-% Make surface as default (if not 'Other')
-if ~strcmpi(SubType, 'other')
+% Make surface as default (if not 'Other' nor Atlas)
+if ~ismember(lower(SubType), {'other', 'atlas'})
     if strcmpi(SubType, 'image')
         SubType = 'Anatomy';
     end
     db_surface_default(iSubject, SubType, iAnatFile);
 end
-
-% ===== UPDATE TREE =====
-panel_protocols('UpdateNode', 'Subject', iSubject);
-panel_protocols('SelectNode', [], FileName);
-% Save database
-db_save();
 

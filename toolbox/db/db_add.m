@@ -161,17 +161,17 @@ if ismember(fileType, {'subjectimage', 'channel', 'noisecov', 'ndatacov'})
 %                 delfile = bst_fullfile(ProtocolInfo.SUBJECTS, sSubject.Anatomy(1).FileName);
 %             end
         case 'channel'
-            sFuncFile = db_get(sqlConn, 'FunctionalFile', struct('Study', iTarget, 'Type', 'channel'), 'Filename');
+            sFuncFile = db_get(sqlConn, 'FunctionalFile', struct('Study', iTarget, 'Type', 'channel'), 'FileName');
             if ~isempty(sFuncFile)
                 delfile = bst_fullfile(ProtocolInfo.STUDIES, sFuncFile.FileName);
             end
         case 'noisecov'
-            sFuncFile = db_get(sqlConn, 'FunctionalFile', struct('Study', iTarget, 'Type', 'noisecov'), 'Filename');
+            sFuncFile = db_get(sqlConn, 'FunctionalFile', struct('Study', iTarget, 'Type', 'noisecov'), 'FileName');
             if ~isempty(sFuncFile)
                 delfile = bst_fullfile(ProtocolInfo.STUDIES, sFuncFile(1).FileName);
             end
         case 'ndatacov'
-            sFuncFile = db_get(sqlConn, 'FunctionalFile', struct('Study', iTarget, 'Type', 'ndatacov'), 'Filename');
+            sFuncFile = db_get(sqlConn, 'FunctionalFile', struct('Study', iTarget, 'Type', 'ndatacov'), 'FileName');
             if ~isempty(sFuncFile)
                 delfile = bst_fullfile(ProtocolInfo.STUDIES, sFuncFile(1).FileName);
             end
@@ -245,22 +245,7 @@ bst_save(OutputFileFull, sMat, matVer);
 if isAnatomy
     db_add_anatomyfile(iTarget, OutputFile);
 else
-    sFile = db_template('FunctionalFile');
-    sFile.Study = iTarget;
-    sFile.Parent = iParent;
-    sFile.Type = fileType;
-    sFile.FileName = OutputFile;
-    sFile.Comment = sMat.Comment;
-    switch fileType
-        case 'data'
-            sFile.SubType = sMat.DataType;
-            sFile.ExtraNum = 0; % BadTrial
-        otherwise
-            error('Unsupported for now.');
-    end
-    %TODO, get rest of metadata from file (see db_parse_study)
-    db_set(sqlConn, 'FunctionalFile', sFile);
-    % Update count of parent file is done in db_set('FunctionalFile')
+    db_add_functionalfile(iTarget, OutputFile, iParent)
 end
 sql_close(sqlConn);
 

@@ -35,9 +35,9 @@ if ischar(filename)
     % Load file 
     MatContents = load(filename);
     % Try to get file in database
-    [sStudy, iStudy, iItem] = bst_get('AnyFile', filename);
+    sItem = db_get('AnyFile', filename);
     % Display header : file path, file name
-    if isempty(sStudy)
+    if isempty(sItem)
         [filePath, fileBase, fileExt] = bst_fileparts(filename);
         fileBase = [fileBase, fileExt];
     else

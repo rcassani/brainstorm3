@@ -50,7 +50,9 @@ if (nargin < 3) || isempty(iSurface)
     % Try to find the default anatomy / surface file
     if ~isempty(defSurfFile)
         sAnatFile = db_get(sqlConn, 'AnatomyFile', defSurfFile);
-        iSurface = sAnatFile.Id;
+        if ~isempty(sAnatFile)
+            iSurface = sAnatFile.Id;
+        end
     end
     % If no default file, or it was not found: Use the first one
     if isempty(iSurface)

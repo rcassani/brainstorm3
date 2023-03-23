@@ -67,7 +67,7 @@ end
 
 % ===== GET SUBJECT INFO =====
 % Get Subject that holds this MRI
-[sSubject, iSubject, iMri] = bst_get('MriFile', MriFile);
+sSubject = db_get('SubjectFromAnatomyFile', MriFile, 'FileName');
 SubjectFile = sSubject.FileName;
 % Create dataset
 if isempty(iDS)

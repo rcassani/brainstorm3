@@ -1295,7 +1295,7 @@ function SetStandardView(hFig, viewNames)
         sqlConn = sql_connect();
         sAnatFile = db_get(sqlConn, 'AnatomyFile', TessInfo(1).SurfaceFile, 'Subject');
         % If there is an MRI associated with it
-        if ~isempty(sAnatFile.Subject)
+        if ~isempty(sAnatFile)
             sSubject  = db_get(sqlConn, 'Subject', sAnatFile.Subject, 'iAnatomy');
             sAnatFile = db_get(sqlConn, 'AnatomyFile', sSubject.iAnatomy);
             % Load the SCS+MNI transformation from this file

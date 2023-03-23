@@ -87,7 +87,7 @@ if all(isfield(inStructs, {'Id', 'Type'}))
                                 error('Unsupported modality for head model method.');
                         end
                     end                       
-                case {'result', 'results'}
+                case 'result'
                     outStructs(iStruct).DataFile      = inStructs(iStruct).ExtraStr1;
                     outStructs(iStruct).isLink        = inStructs(iStruct).ExtraNum;
                     outStructs(iStruct).HeadModelType = inStructs(iStruct).ExtraStr2;                                                          

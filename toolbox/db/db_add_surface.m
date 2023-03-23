@@ -33,20 +33,10 @@ function [ iAnatFile ] = db_add_surface( iSubject, FileName, Comment, SurfaceTyp
 
 % If surface type is not defined : detect it
 if (nargin < 4)
-    % Get surface type 
-    fileType = file_gettype(FileName);
-    switch (fileType)
-        case 'cortex',      SurfaceType = 'Cortex';
-        case 'scalp',       SurfaceType = 'Scalp';
-        case 'outerskull',  SurfaceType = 'OuterSkull';
-        case 'innerskull',  SurfaceType = 'InnerSkull';  
-        case 'fibers',      SurfaceType = 'Fibers';
-        case 'fem',         SurfaceType = 'FEM';
-        otherwise,          SurfaceType = 'Other';  
-    end
+    SurfaceType = [];
 end
 
-% Add surface file to database
+% Add surface AnatomyFile to database
 iAnatFile = db_add_anatomyfile(iSubject, FileName, Comment, SurfaceType);
 
 

@@ -92,8 +92,8 @@ else
     % Update subject in database
     iSubject = db_set(sqlConn, 'Subject', sSubject, sSubject.Id);
 end
-% Get Subject from DB
-sSubject = db_get(sqlConn, 'Subject', iSubject);
+% Get raw Subject from DB
+sSubject = db_get(sqlConn, 'Subject', iSubject, '*', 'raw');
 sql_close(sqlConn);
 
 %% ===== SAVE SUBJECT FILE =====
@@ -115,6 +115,9 @@ catch
     iSubject = [];
     return
 end
+
+% Update node
+panel_protocols('UpdateNode', 'Subject', iSubject);
 
 % === Create extra system conditions ===
 % Add conditions: analysis_intra and default_study

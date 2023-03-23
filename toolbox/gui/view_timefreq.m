@@ -67,9 +67,9 @@ else
 end
 
 %% ===== GET ALL ACCESSIBLE DATA =====
-% Get study
-[sStudy, iStudy, iItem, DataType, sTimefreq] = bst_get('AnyFile', TimefreqFile);
-if isempty(sStudy)
+% Get functional file
+sFuncFile = db_get('FunctionalFile', TimefreqFile);
+if isempty(sFuncFile)
     error('File is not registered in database.');
 end
 
@@ -142,7 +142,7 @@ FigureId.Type     = 'Timefreq';
 FigureId.SubType  = DisplayMode;
 FigureId.Modality = Modality;
 % Create TimeSeries figure
-[hFig, iFig] = bst_figures('CreateFigure', iDS, FigureId, CreateMode, sTimefreq.FileName);
+[hFig, iFig] = bst_figures('CreateFigure', iDS, FigureId, CreateMode, sFuncFile.FileName);
 if isempty(hFig)
     error('Cannot create figure');
 end
@@ -159,8 +159,8 @@ setappdata(hFig, 'isStaticFreq', 0);
 % Get figure data
 TfInfo = getappdata(hFig, 'Timefreq');
 % Create options structure
-TfInfo.FileName    = sTimefreq.FileName;
-TfInfo.Comment     = sTimefreq.Comment;
+TfInfo.FileName    = sFuncFile.FileName;
+TfInfo.Comment     = sFuncFile.Comment;
 TfInfo.DisplayMode = DisplayMode;
 TfInfo.iFreqs      = [];
 if ismember(TfInfo.DisplayMode, {'2DLayout', '2DLayoutOpt', 'AllSensors'})

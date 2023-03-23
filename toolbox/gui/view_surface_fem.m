@@ -75,7 +75,7 @@ end
 
 %% ===== GET INFORMATION =====
 % Get Subject that holds this surface
-[sSubject, iSubject, iSurface] = bst_get('SurfaceFile', SurfaceFile);
+sSubject = db_get('SubjectFromAnatomyFile', SurfaceFile, 'FileName');
 % If this surface does not belong to any subject
 if isempty(iDS)
     if isempty(sSubject)

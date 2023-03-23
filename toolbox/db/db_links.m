@@ -65,14 +65,14 @@ elseif (length(varargin) == 2) && ischar(varargin{1}) && strcmpi(varargin{1}, 'S
     % CALL: db_links('Subject', SubjectFile)
     if ischar(varargin{2})
         SubjectFile = varargin{2};
-        sSubject = db_get(sqlConn, 'Subject', SubjectFile, '*', 1);
+        sSubject = db_get(sqlConn, 'Subject', SubjectFile, '*', 'raw');
     % CALL: db_links('Subject', iSubject)
     else
         iSubject = varargin{2};
         if (length(iSubject) > 1)
             error('Cannot process more than one subject.');
         end
-        sSubject = db_get(sqlConn, 'Subject', iSubject, '*', 1);
+        sSubject = db_get(sqlConn, 'Subject', iSubject, '*', 'raw');
     end
     % Check for weird bugs
     if isempty(sSubject)

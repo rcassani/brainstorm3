@@ -610,7 +610,7 @@ function CreateSubjectNode(nodeSubject, isAnatomyView) %#ok<DEFNU>
     else
         iSubject = nodeSubject.getItemIndex();
     end
-    sSubject = db_get('Subject', iSubject);
+    sSubject = db_get('Subject', iSubject, '*', 'raw');
     if isempty(sSubject)
         return;
     end
@@ -1157,6 +1157,7 @@ function isCopied = CopyNode( bstNodes, isCut )
         listNodes = bstNodes;
         bstNodes = repmat(bstNodes, 0);
         for iList = 1:length(listNodes)
+            CreateFunctionalNode(listNodes(iList));
             for iChild = 1:listNodes(iList).getChildCount()
                 bstNodes = [bstNodes, listNodes(iList).getChildAt(iChild-1)];
             end
@@ -1192,7 +1193,7 @@ function destFile = PasteNode( targetNode )
     
     % Cannot copy anat files to a subject using default anatomy
     if isAnatomy
-        sSubjectTarget = bst_get('Subject', iTarget);
+        sSubjectTarget = db_get('Subject', iTarget, 'UseDefaultAnat');
         if (iTarget > 0) && sSubjectTarget.UseDefaultAnat
             bst_error('Destination subject uses the default anatomy.', 'Clipboard', 0);
             destFile = {};
@@ -1206,9 +1207,9 @@ function destFile = PasteNode( targetNode )
     % Channel/Headmodel/NoiseCov/Kernel: Make sure that target study is the right one
     if ismember(firstSrcType, {'channel', 'headmodel', 'noisecov', 'ndatacov', 'kernel'})
         % Get channel study for the target study
-        [sChannel, iChanStudy] = bst_get('ChannelForStudy', iTarget);
+        [sChannel, sStudy] = db_get('ChannelFromStudy', iTarget, 'Study');
         % If not the same: error
-        if (iChanStudy ~= iTarget)
+        if isempty(sStudy) || (sStudy.Id ~= iTarget)
             bst_error('Invalid destination.', 'Clipboard', 0);
             destFile = {};
             return;
@@ -1238,7 +1239,7 @@ function destFile = PasteNode( targetNode )
             destFile{i} = CopyFile(iTarget, srcFile, srcType, iSrcStudy, [], targetNode(1).getItemIndex());
         else
             % Cannot copy (channel/noisecov/MRI) or move to the same folder
-            if (isCut || ismember(srcType, {'channel', 'noisecov', 'ndatacov', 'anatomy'})) && (iSrcStudy == iTarget)
+            if (isCut || ismember(srcType, {'channel', 'noisecov', 'ndatacov', 'anatomy', 'volatlas'})) && (iSrcStudy == iTarget)
                 bst_error('Source and destination folders are the same.', 'Clipboard', 0);
                 destFile = {};
                 return;

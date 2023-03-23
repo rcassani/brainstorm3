@@ -185,10 +185,10 @@ if ~isempty(iStudies)
     for i = 1:length(iStudies)
         % Get study
         iStudy = iStudies(i);
-        sStudy = bst_get('Study', iStudy);
+        [sChannel, sStudy] = db_get('ChannelFromStudy', iStudy);
         studySubDir = bst_fileparts(sStudy.FileName);
         % Load ChannelFile
-        ChannelMat = in_bst_channel(sStudy.Channel(1).FileName, 'Channel');
+        ChannelMat = in_bst_channel(sChannel.FileName, 'Channel');
 
         % Use identity matrix
         if isequal(NoiseCovFile, 'Identity')
@@ -204,7 +204,7 @@ if ~isempty(iStudies)
             % Create an identity matrix [nChannels x nChannels]
             NoiseCovMat.NoiseCov = diag(NoiseDiag);
         % If there is a Channel file defined, and we know the names of the noisecov rows
-        elseif ~isempty(sStudy.Channel) && ~isempty(sensorsNames)
+        elseif ~isempty(sChannel) && ~isempty(sensorsNames)
             % For each row of the noisecov matrix
             iRowChan = [];
             iRowCov  = [];
@@ -228,7 +228,7 @@ if ~isempty(iStudies)
             NoiseCovMat.NoiseCov = fullNoiseCov;
         else
             % Check the number of sensors
-            if ~isempty(sStudy.Channel) && (size(NoiseCovMat.NoiseCov,1) ~= length(ChannelMat.Channel))
+            if ~isempty(sChannel) && (size(NoiseCovMat.NoiseCov,1) ~= length(ChannelMat.Channel))
                 error('This noise covariance file does not correspond to the channel file.');
             end
         end
@@ -261,8 +261,9 @@ if ~isempty(iStudies)
                     % Nothing to do
                     continue;
                 case 1  % REPLACE
-                    % Delete previous noisecov file
+                    % Delete previous noisecov file from disk and from DB
                     file_delete(noisecovFilesFull, 1);
+                    db_set('FunctionalFile', 'Delete', noisecovFilesFull);
                 case 2  % MERGE
                     % Load existing file: use it as the base
                     PrevMat = load(noisecovFilesFull{1});
@@ -322,17 +323,20 @@ if ~isempty(iStudies)
         newNoiseCov(1).FileName = file_short(BstNoisecovFile);
         newNoiseCov.Comment     = NoiseCovMat.Comment;
 
-        % Add noisecov to study
-        if isempty(sStudy.NoiseCov) && ~isstruct(sStudy.NoiseCov)
-            sStudy.NoiseCov = repmat(newNoiseCov, 0);
-        end
+        % Update or Insert in database
         if isDataCov
-            sStudy.NoiseCov(2) = newNoiseCov;
+            funcFileType = 'ndatacov';
         else
-            sStudy.NoiseCov(1) = newNoiseCov;
+            funcFileType = 'noisecov';
         end
-        % Update database
-        bst_set('Study', iStudy, sStudy);  
+        newNoiseCov = db_convert_functionalfile(newNoiseCov, funcFileType);
+        newNoiseCov.Study = iStudy;
+        sOldNoiseCov = db_get('FunctionalFile', struct('FileName', newNoiseCov.FileName, 'Study', iStudy), 'Id');
+        if ~isempty(sOldNoiseCov)
+            db_set('FunctionalFile', newNoiseCov, sOldNoiseCov.Id);
+        else
+            db_set('FunctionalFile', newNoiseCov);
+        end
     end
 
     % Update tree

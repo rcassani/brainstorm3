@@ -89,9 +89,10 @@ if ~isempty(hFig)
     StudyFile = GlobalData.DataSet(iDS).StudyFile;
 % If display is related to a file
 elseif ~isempty(FileName)
-    % Get study
-    [sStudy, iStudy, iFile, DataType] = bst_get('AnyFile', FileName);
-    if isempty(sStudy)
+    % Get info for functional file
+    [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', FileName, 'FileName', 'FileName', 'FileName');
+    DataType = file_gettype(sFuncFile.FileName);
+    if isempty(sFuncFile)
         error('File is not registered in database.');
     end
     StudyFile = sStudy.FileName;
@@ -112,7 +113,7 @@ elseif ~isempty(FileName)
     % Create new dataset
     if isempty(iDS)
         iDS = bst_memory('GetDataSetEmpty');
-        GlobalData.DataSet(iDS).SubjectFile = file_short(sStudy.BrainStormSubject);
+        GlobalData.DataSet(iDS).SubjectFile = file_short(sSubject.FileName);
         GlobalData.DataSet(iDS).StudyFile   = file_short(sStudy.FileName);
     else
         iDS = iDS(1);

@@ -71,7 +71,7 @@ UpdatePanel();
         if ~isNewSubject
             panelTitle = sprintf('Edit subject #%d',iSubject);
             % Get subject
-            sSubject = db_get('Subject', iSubject, '*', 1);
+            sSubject = db_get('Subject', iSubject, '*', 'raw');
         % NEW SUBJECT
         else
             panelTitle = sprintf('Create subject #%d',iSubject);
@@ -170,7 +170,8 @@ UpdatePanel();
         % ==== EDIT SUBJECT ====
         else
             % Get studies where there should be channel files for this subject
-            iOldChannelStudies = bst_get('ChannelStudiesWithSubject', iSubject, 'NoIntra');
+            sOldChannelStudies = db_get('ChannelStudiesWithSubject', iSubject, 'Id');
+            iOldChannelStudies = [sOldChannelStudies.Id];
             % Normalization required
             if (sOldSubject.UseDefaultChannel < sSubject.UseDefaultChannel) && (length(iOldChannelStudies) > 1)
                 % Ask user the confirmation
@@ -195,7 +196,8 @@ UpdatePanel();
             % Update channel files
             if (sSubject.UseDefaultChannel ~= sOldSubject.UseDefaultChannel)
                 % Get studies where there should be channel files for this subject
-                iNewChannelStudies = bst_get('ChannelStudiesWithSubject', iSubject);
+                sNewChannelStudies = db_get('ChannelStudiesWithSubject', iSubject, 'Id');
+                iNewChannelStudies = [sNewChannelStudies.Id];
                 % Update channel files
                 UpdateSubjectChannelFiles(sOldSubject.UseDefaultChannel, iOldChannelStudies, sSubject.UseDefaultChannel, iNewChannelStudies);
                 % Update results links

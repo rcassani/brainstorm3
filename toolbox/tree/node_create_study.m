@@ -124,7 +124,9 @@ if (~UseDefaultChannel || isDefaultStudyNode)
     end
     % Data covariance
     if ~isempty(iDataCovs)
-        CreateNode(nodeParent, 'noisecov', sFiles(iDataCovs(1)).Comment, ...
+        % TODORC Creating node wity Typy 'ndatacov' implies create case ndatacov in bst-java
+        % https://github.com/brainstorm-tools/bst-java/blob/master/brainstorm/src/org/brainstorm/tree/BstCellRenderer.java#L166
+        CreateNode(nodeParent, 'ndatacov', sFiles(iDataCovs(1)).Comment, ...
             sFiles(iDataCovs(1)).FileName, sFiles(iDataCovs(1)).Id, iStudy, ...
             sFiles(iDataCovs(1)).NumChildren, sFiles(iDataCovs(1)).LastModified);
     end

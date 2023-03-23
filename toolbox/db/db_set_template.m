@@ -37,11 +37,12 @@ if (nargin < 3) || isempty(isInteractive)
     isInteractive = 1;
 end
 % Get default subject directory
-sSubject = bst_get('Subject', iSubject);
+sSubject = db_get('Subject', iSubject);
 ProtocolInfo = bst_get('ProtocolInfo');
 targetDir = bst_fullfile(ProtocolInfo.SUBJECTS, bst_fileparts(sSubject.FileName));
+sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'Id');
 % Ask for confirmation if existing anatomy
-if isInteractive && (~isempty(sSubject.Anatomy) || ~isempty(sSubject.Surface))
+if isInteractive && ~isempty(sAnatFiles)
     if ~java_dialog('confirm', ['Warning: There is already an anatomy defined for this subject.' 10 10 ...
         'Are you sure you want to delete the previous MRI and surfaces ?' 10 10], 'Use default anatomy');
         return;
@@ -173,8 +174,6 @@ end
 
 % Reload default subject 
 db_reload_subjects(iSubject);
-% Get subject again
-sSubject = bst_get('Subject', iSubject);
 % Close process bar
 bst_progress('stop');
 % Delete unzipped template folder
@@ -183,9 +182,13 @@ if isDeleteDir
 end
 
 %% ===== CHECK FIDUCIALS =====
-if isInteractive && ~isempty(sSubject.Anatomy)
-    % DEFAULT ANAT: Check if the positions of the fiducials have been validated
-     figure_mri('FiducialsValidation', sSubject.Anatomy(1).FileName);
+if isInteractive
+    % Get MRI files for Subject
+    sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'FileName', 'volume', 'Image');
+    if ~isempty(sAnatFiles)
+        % DEFAULT ANAT: Check if the positions of the fiducials have been validated
+        figure_mri('FiducialsValidation', sAnatFiles(1).FileName);
+    end
 end
 
 

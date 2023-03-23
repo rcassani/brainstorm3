@@ -73,18 +73,16 @@ end
 % Find file in database
 switch file_gettype(TimefreqFile)
     case 'timefreq'
-        [sStudy, iStudy, iTf] = bst_get('TimefreqFile', TimefreqFile);
-        if isempty(sStudy)
+        sFuncFile = db_get('FunctionalFile', TimefreqFile);
+        if isempty(sFuncFile)
             error('File is not registered in database.');
         end
-        sTimefreq = sStudy.Timefreq(iTf);
         isStat = 0;
     case 'ptimefreq'
-        [sStudy, iStudy, iStat] = bst_get('StatFile', TimefreqFile);
-        if isempty(sStudy)
+        sFuncFile = db_get('FunctionalFile', TimefreqFile);
+        if isempty(sFuncFile)
             error('File is not registered in database.');
         end
-        sTimefreq = sStudy.Stat(iStat);
         isStat = 1;
     otherwise
         error('File type not supported.');
@@ -166,7 +164,7 @@ if isempty(hFig)
     FigureId.SubType  = DisplayMode;
     FigureId.Modality = Modality;
     % Create figure
-    [hFig, iFig, isNewFig] = bst_figures('CreateFigure', iDS, FigureId, CreateMode, sTimefreq.FileName);   
+    [hFig, iFig, isNewFig] = bst_figures('CreateFigure', iDS, FigureId, CreateMode, sFuncFile.FileName);
     % If figure was not created: Display an error message and return
     if isempty(hFig)
         bst_error('Cannot create figure', 'View connectivity matrix', 0);
@@ -184,12 +182,15 @@ end
 if plotFibers
     bst_progress('start', 'View connectivity map', 'Loading fibers...');
     % Get necessary surface files
-    sSubject = bst_get('Subject', sStudy.BrainStormSubject);
-    try
-        surfaceFile = sSubject.Surface(sSubject.iCortex).FileName;
-        fibersFile = sSubject.Surface(sSubject.iFibers).FileName;
-        assert(~isempty(surfaceFile) && ~isempty(fibersFile));
-    catch
+    sSubject = db_get('SubjectFromFunctionalFile', sFuncFile.FileName, 'Id');
+    % Get non-raw Subject
+    sSubject = db_get('Subject', sSubject.Id);
+    sAnatFileSurf = db_get('AnatomyFile', sSubject.iCortex, 'FileName');
+    sAnatFileFibr = db_get('AnatomyFile', sSubject.iFibers, 'FileName');
+    if isempty(sAnatFileSurf) || isempty(sAnatFileFibr)
+        surfaceFile = sAnatFileSurf.FileName;
+        fibersFile  = sAnatFileFibr.FileName;
+    else
         bst_error('Cannot display connectivity results on fibers without fibers and cortex files.');
         return;
     end
@@ -229,8 +230,8 @@ setappdata(hFig, 'isStaticFreq', isStaticFreq);
 % Get figure data
 TfInfo = getappdata(hFig, 'Timefreq');
 % Create time-freq information structure
-TfInfo.FileName    = sTimefreq.FileName;
-TfInfo.Comment     = sTimefreq.Comment;
+TfInfo.FileName    = sFuncFile.FileName;
+TfInfo.Comment     = sFuncFile.Comment;
 TfInfo.DisplayMode = DisplayMode;
 TfInfo.InputTarget = [];
 TfInfo.RowName     = [];
