@@ -444,7 +444,8 @@ switch (lower(action))
                     DataFile = sTimeFreq.ExtraStr1; % .DataFile;
                 end
                 % Get subject 
-                sSubject = db_get('SubjectFromStudy', iStudy);
+                sSubject = db_get('SubjectFromStudy', iStudy, 'Id');
+                sSubject = db_get('Subject', sSubject.Id);
                 switch (DataType)
                     % Results: display on cortex or MRI
                     case 'results'
@@ -838,7 +839,8 @@ switch (lower(action))
                 % Get study index
                 iStudy = bstNodes(1).getStudyIndex();
                 % Get subject structure
-                sSubject = db_get('SubjectFromStudy', iStudy);
+                sSubject = db_get('SubjectFromStudy', iStudy, 'Id');
+                sSubject = db_get('Subject', sSubject.Id);
                 % Get avaible modalities for this data file
                 [AllMod, DisplayMod] = db_get('ChannelModalities', filenameRelative);
                 Device = bst_get('ChannelDevice', filenameRelative);
@@ -1342,7 +1344,8 @@ switch (lower(action))
                 iStudy = bstNodes(1).getStudyIndex();
                 iData = bstNodes(1).getItemIndex();
                 sFuncFile = db_get('FunctionalFile', iData);
-                sSubject = db_get('SubjectFromStudy', iStudy);
+                sSubject = db_get('SubjectFromStudy', iStudy, 'Id');
+                sSubject = db_get('Subject', sSubject.Id);
                 % Data type
                 DataType = sFuncFile.SubType;
                 isStat = ~strcmpi(DataType, 'recordings') && ~strcmpi(DataType, 'raw');
@@ -1539,7 +1542,8 @@ switch (lower(action))
                 % Get protocol description
                 iStudy = bstNodes(1).getStudyIndex();
                 % Get associated subject and surfaces, if it exists
-                sSubject = db_get('SubjectFromStudy', iStudy);
+                sSubject = db_get('SubjectFromStudy', iStudy, 'Id');
+                sSubject = db_get('Subject', sSubject.Id);
                 % Get avaible modalities for this data file
                 [AllMod, DisplayMod] = db_get('ChannelModalities', filenameRelative);
                 % One data file selected only
@@ -1687,7 +1691,8 @@ switch (lower(action))
                 iStudy = bstNodes(1).getStudyIndex();
                 iResult = bstNodes(1).getItemIndex();
                 % Get associated subject
-                sSubject = db_get('SubjectFromStudy', iStudy);
+                sSubject = db_get('SubjectFromStudy', iStudy, 'Id');
+                sSubject = db_get('Subject', sSubject.Id);
                 % FOR FIRST NODE: Get associated recordings (DataFile)
                 sResult = db_get('FunctionalFile', iResult);
                 DataFile = sResult.ExtraStr1; % DataFile;
@@ -1794,7 +1799,8 @@ switch (lower(action))
                     % Get study
                     iStudy = bstNodes(1).getStudyIndex();
                     % Get associated subject
-                    sSubject = db_get('SubjectFromStudy', iStudy);
+                    sSubject = db_get('SubjectFromStudy', iStudy, 'Id');
+                    sSubject = db_get('Subject', sSubject.Id);
                     isVolumeGrid = ~isempty(strfind(filenameRelative, '_volume_'));
 
                     % === MENU: CORTICAL ACTIVATIONS ===
@@ -1854,7 +1860,8 @@ switch (lower(action))
                 % Get study description
                 iStudy    = bstNodes(1).getStudyIndex();
                 iTimefreq = bstNodes(1).getItemIndex();
-                sSubject = db_get('SubjectFromStudy', iStudy);
+                sSubject = db_get('SubjectFromStudy', iStudy, 'Id');
+                sSubject = db_get('Subject', sSubject.Id);
                 sTimefreq = db_get('FunctionalFile', iTimefreq);
                 DisplayMod= {};
                 % Get data type
@@ -2172,7 +2179,8 @@ switch (lower(action))
                 % Get study description
                 iStudy = bstNodes(1).getStudyIndex();
                 iTimefreq = bstNodes(1).getItemIndex();
-                sSubject = db_get('SubjectFromStudy', iStudy);
+                sSubject = db_get('SubjectFromStudy', iStudy, 'Id');
+                sSubject = db_get('Subject', sSubject.Id);
                 sTimefreq = db_get('FunctionalFile', iTimefreq);
                 % Get data type
                 if strcmpi(nodeType, 'pspectrum')
@@ -3384,7 +3392,8 @@ end
 %% ===== DISPLAY MEG HELMET =====
 function [hFig, iDS, iFig] = DisplayHelmet(iStudy, ChannelFile)
     % Get subject
-    sSubject = db_get('SubjectFromStudy', iStudy);
+    sSubject = db_get('SubjectFromStudy', iStudy, 'Id');
+    sSubject = db_get('Subject', sSubject.Id);
     if isempty(sSubject)
         return
     end

@@ -21,8 +21,8 @@ function varargout = db_get(varargin)
 %    - db_get('AllSubjects', Fields)                        : Get all Subjects in current protocol, excluding @default_subject
 %    - db_get('AllSubjects', Fields, '@default_subject')    : Get all Subjects in current protocol, including @default_subject
 %    - db_get('SubjectCount')                               : Get number of subjects in current protocol, exclude @default_subject
-%    - db_get('SubjectFromStudy', StudyID,       SubjectFields, StudyFields) : Get Subject and Study for StudyID
-%    - db_get('SubjectFromStudy', StudyFileName, SubjectFields, StudyFields) : Get Subject and Study for StudyFileName
+%    - db_get('SubjectFromStudy', StudyID,       SubjectFields, StudyFields) : Get raw Subject and Study for StudyID
+%    - db_get('SubjectFromStudy', StudyFileName, SubjectFields, StudyFields) : Get raw Subject and Study for StudyFileName
 %    - db_get('SubjectFromFunctionalFile', FileId, SubjectFields, StudyFields, FunctionalFileFields)   : Find Subject for FunctionalFile with FileID
 %    - db_get('SubjectFromFunctionalFile', FileName, SubjectFields, StudyFields, FunctionalFileFields) : Find Subject for FunctionalFile with FileName
 %    - db_get('SubjectFromAnatomyFile', FileId, SubjectFields, AnatomyFileFields)   : Find Subject for AnatomyFile with FileID
@@ -602,9 +602,10 @@ switch contextName
         varargout{1} = db_get(sqlConn, 'FunctionalFile', condQuery, fields);
 
 
-%% ==== SUBJECT FROM STUDY ====
+%% ==== (RAW) SUBJECT FROM STUDY ====
     % [sSubject, sStudy] = db_get('SubjectFromStudy', StudyID,       SubjectFields, StudyFields)
     %                    = db_get('SubjectFromStudy', StudyFileName, SubjectFields, StudyFields)
+    %TODORC SQLite JOIN is used, thus it returns the raw Subject. Depending of it's use we may change it to get sSubject as db_get('Subject')
     case 'SubjectFromStudy'
         subjectFields = '*';
         studyFields   = '*';
