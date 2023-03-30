@@ -610,6 +610,7 @@ function CreateSubjectNode(nodeSubject, isAnatomyView) %#ok<DEFNU>
     else
         iSubject = nodeSubject.getItemIndex();
     end
+    % Get raw subject
     sSubject = db_get('Subject', iSubject, '*', 'raw');
     if isempty(sSubject)
         return;
@@ -697,7 +698,7 @@ function UpdateNode(category, indices, isExpandTrials)
             % Get Subject information
             for i = 1:length(indices)
                 iSubject = indices(i);
-                sSubject = db_get('Subject', iSubject);
+                sSubject = db_get('Subject', iSubject, '*', 'raw');
                 % Exploration mode
                 switch bst_get('Layout', 'ExplorationMode')
                     case 'Subjects'

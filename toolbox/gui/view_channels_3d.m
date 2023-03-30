@@ -44,7 +44,7 @@ isShowCoils = ismember(Modality, {'Vectorview306', 'CTF', '4D', 'KIT', 'KRISS', 
 % === DISPLAY SURFACE ===
 % Get Subject Id
 sSubject = db_get('SubjectFromFunctionalFile', FileNames{1}, 'Id');
-% Get non-raw subject
+% Get subject
 sSubject = db_get('Subject', sSubject.Id);
 % View surface if available
 if ~isempty(sSubject)

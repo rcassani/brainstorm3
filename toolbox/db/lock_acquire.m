@@ -57,9 +57,9 @@ end
 LockName = varargin{1};
 SubjectId = varargin{2};
 
-% Get subject ID
+% Get subject ID from FileName or Name
 if ischar(SubjectId)
-    sSubject = db_get(sqlConn, 'Subject', struct('Name', SubjectId), 'Id');
+    sSubject = db_get(sqlConn, 'Subject', SubjectId, 'Id');
     SubjectId = sSubject.Id;
 end
 

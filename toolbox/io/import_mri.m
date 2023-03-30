@@ -67,7 +67,7 @@ if (iSubject == 0)
     iSubject = sSubject.Id;
 % Normal subject 
 else
-    sSubject = db_get('Subject', iSubject);
+    sSubject = db_get('Subject', iSubject, '*', 'raw');
 end
 % Current anatomy files
 sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, '*', 'volume');

@@ -355,7 +355,7 @@ switch (lower(action))
                     view_pac(filenameRelative, [], 'DynamicPAC');
                     return;
                 end
-                % Get non-raw subject
+                % Get subject
                 sStudy = db_get('Study', iStudy, 'Subject');
                 sSubject = db_get('Subject', sStudy.Subject);
                 switch DataType
@@ -2670,9 +2670,7 @@ end % END SWITCH( ACTION )
             end
         % If more than one subject: just check if the subjects are using default anatomy
         else
-            for iSubj = 1:length(SubjectIds)
-                sSubjects = db_get('Subject', SubjectIds);
-            end
+            sSubjects = db_get('Subject', SubjectIds);
             UseDefaultAnat = any([sSubjects.UseDefaultAnat]);
         end
 

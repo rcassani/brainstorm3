@@ -269,7 +269,7 @@ function [sSurf, iSurf] = LoadSurface(varargin)
         % Get Subject (from either iSubject or MriFile)
         [sItem, table] = db_get('AnyFile', iSubject);
         if strcmpi(table, 'Subject')
-            sSubject = sItem;
+            sSubject = db_get('Subject', sItem.Id);
         elseif strcmpi(table, 'AnatomyFile')
             sSubject = db_get('Subject', sItem.Subject);
         end

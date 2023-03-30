@@ -313,7 +313,7 @@ if UseMontage
         end
     end
 end
-% Get no-raw subject
+% Get subject
 sSubject = db_get('Subject', GlobalData.DataSet(iDS).SubjectFile);
 % Create topography information structure
 TopoInfo = db_template('TopoInfo');

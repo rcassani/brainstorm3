@@ -34,7 +34,7 @@ if (nargin < 2) || isempty(ViewMode)
 end
 % Get SubjectId for DipoleFile
 sSubject = db_get('SubjectFromFunctionalFile', DipolesFile, 'Id');
-% Get default Anatomy and Cortex fro Subject
+% Get default Anatomy and Cortex for Subject
 sSubject = db_get('Subject', sSubject.Id, {'iAnatomy', 'iCortex'});
 if isempty(sSubject)
     error('Subject is not registered in database.');
