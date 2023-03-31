@@ -1061,9 +1061,10 @@ switch contextName
         [varargout{1}, varargout{2}, varargout{3}] = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
 
 
-%% ==== SUBJECT FROM ANATOMY FILE ====
+%% ==== (RAW) SUBJECT FROM ANATOMY FILE ====
     % [sSubject, sAnatomyFile] = db_get('SubjectFromAnatomyFile', FileId,   SubjectFields, AnatomyFileFields)
     %                          = db_get('SubjectFromAnatomyFile', FileName, SubjectFields, AnatomyFileFields)
+    %TODORC SQLite JOIN is used, thus it returns the raw Subject Depending of it's use we may change it to get sSubject as db_get('Subject')
     case 'SubjectFromAnatomyFile'
         subjectFields = '*';
         anatomyFileFields  = '*';
