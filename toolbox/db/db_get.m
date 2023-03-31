@@ -1011,6 +1011,7 @@ switch contextName
 %% ==== SUBJECT FROM FUNCTIONAL FILE ====              
     % [sSubject, sStudy, sFunctionalFile] = db_get('SubjectFromFunctionalFile', FileId,   SubjectFields, StudyFields, FunctionalFileFields)
     %                                     = db_get('SubjectFromFunctionalFile', FileName, SubjectFields, StudyFields, FunctionalFileFields)
+    %TODORC SQLite JOIN is used, thus it returns the raw Subject Depending of it's use we may change it to get sSubject as db_get('Subject')
     case 'SubjectFromFunctionalFile'
         subjectFields = '*';
         studyFields = '*';
