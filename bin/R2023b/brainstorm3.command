@@ -7,14 +7,15 @@
 # in the file ~/.brainstorm/MATLABROOTXX.txt.
 # Else, MATLABROOT is read from this file
 #
-# AUTHOR: Francois Tadel, 2011-2022
+# AUTHORS: Francois Tadel, 2011-2022
+#          Francois Tadel, 2023
 
 # Configuration
-VER_NAME="2022b"
-VER_NUMBER="9.13"
-VER_DIR="913"
+VER_NAME="2023b"
+VER_NUMBER="2302"
+VER_DIR="R2023b"
 MDIR="$HOME/.brainstorm"
-MFILE="$MDIR/MATLABROOT$VER_DIR.txt"
+MFILE="$MDIR/MATLABROOT$VER_NUMBER.txt"
 
 #########################################################################
 # Detect system type
@@ -53,8 +54,8 @@ if [ "$1" ]; then
 elif [ -f $MFILE ]; then
     MATLABROOT=$(<$MFILE)
 # MacOS: Try the default installation folders for Matlab or the MCR
-elif [ $SYST == "maci64" ] && [ -d "/Applications/MATLAB/MATLAB_Runtime/v$VER_DIR" ]; then
-    MATLABROOT="/Applications/MATLAB/MATLAB_Runtime/v$VER_DIR"
+elif [ $SYST == "maci64" ] && [ -d "/Applications/MATLAB/MATLAB_Runtime/$VER_DIR" ]; then
+    MATLABROOT="/Applications/MATLAB/MATLAB_Runtime/$VER_DIR"
     echo "MATLAB Runtime library was found in folder:"
     echo "$MATLABROOT"
 # Run the java file selector
@@ -78,12 +79,12 @@ if [ -z "$MATLABROOT" ]; then
     echo "run executables compiled with Matlab $VER_NAME."
     echo " "
     echo "Examples:"
-    echo "    Linux:  /usr/local/MATLAB_Runtime/v$VER_DIR"
+    echo "    Linux:  /usr/local/MATLAB/MATLAB_Runtime/$VER_DIR"
     echo "    Linux:  $HOME/MATLAB_Runtime_$VER_NAME"
-    echo "    MacOSX: /Applications/MATLAB/MATLAB_Runtime/v$VER_DIR"
+    echo "    MacOSX: /Applications/MATLAB/MATLAB_Runtime/$VER_DIR"
     echo " "
     echo "MATLABROOT has to be specified only at the first call,"
-    echo "then it is saved in the file ~/.brainstorm/MATLABROOT$VER_DIR.txt"
+    echo "then it is saved in the file ~/.brainstorm/MATLABROOT$VER_NUMBER.txt"
     echo " "
     exit 1
 # If folder not a valid Matlab root path
