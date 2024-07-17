@@ -26,80 +26,78 @@ tables = repmat(db_template('sqltable'), 0);
 
 % Protocol table
 table = generateTable('Protocol');
-table.Name = 'Protocol';
 table.PrimaryKey = 'Name';
-tables(end + 1) = table;
+tables(end + 1)  = table;
 
 % Subject table
 table = generateTable('Subject');
 table.PrimaryKey = 'Id';
-editField('Id', 'AutoIncrement');
+editField('Id',       'AutoIncrement');
 editField('FileName', 'Unique');
-editField('Name', 'Unique');
+editField('Name',     'Unique');
 tables(end + 1) = table;
 
 % Study table
 table = generateTable('Study');
-table.Name = 'Study';
 table.PrimaryKey = 'Id';
-editField('Id', 'AutoIncrement');
-editField('Subject', 'ForeignKey', {'Subject', 'Id'});
+editField('Id',       'AutoIncrement');
+editField('Subject',  'ForeignKey', {'Subject', 'Id'});
 editField('FileName', 'Unique');
 tables(end + 1) = table;
 
-% Functional File table
+% FunctionalFile table
 table = generateTable('FunctionalFile');
 table.PrimaryKey = 'Id';
-editField('Id', 'AutoIncrement');
-editField('Parent', 'ForeignKey', {'FunctionalFile', 'Id'});
-editField('Study', 'ForeignKey', {'Study', 'Id'});
+editField('Id',       'AutoIncrement');
+editField('Study',    'ForeignKey', {'Study', 'Id'});
+editField('Parent',   'ForeignKey', {'FunctionalFile', 'Id'});
 editField('FileName', 'Unique');
 tables(end + 1) = table;
 
-% Anatomy File table
+% AnatomyFile table
 table = generateTable('AnatomyFile');
 table.PrimaryKey = 'Id';
-editField('Id', 'AutoIncrement');
-editField('Subject', 'ForeignKey', {'Subject', 'Id'});
+editField('Id',       'AutoIncrement');
+editField('Subject',  'ForeignKey', {'Subject', 'Id'});
 editField('FileName', 'Unique');
 tables(end + 1) = table;
 
-% Locks table
+% Lock table
 table = generateTable('Lock');
 table.PrimaryKey = 'Id';
 editField('Id', 'AutoIncrement');
 tables(end + 1) = table;
 
 function editField(fieldName, attribute, value)
+    % Set attribute for field in table
     fields = {table.Fields.Name};
     iField = find(strcmpi(fields, fieldName));
     if isempty(iField)
         error(['Field ' fieldName ' not found.']);
     end
-    
+    % Default, set attribute
     if nargin < 3
         value = 1;
     end
-    
     table.Fields(iField).(attribute) = value;    
 end
 end
 
 % Generate a table SQL structure from its template
 function table = generateTable(dbTemplate)
-    table = db_template('sqltable');
+    table      = db_template('sqltable');
     table.Name = dbTemplate;
-    sTypes   = db_template(dbTemplate, 'fields');
-    sValues  = db_template(dbTemplate, 'values');
-    sNotNull = db_template(dbTemplate, 'notnull');
+    sTypes     = db_template(dbTemplate, 'fields');
+    sValues    = db_template(dbTemplate, 'values');
+    sNotNull   = db_template(dbTemplate, 'notnull');
     fields = fieldnames(sTypes);
-    
+    % Add necessary fields in table
     iNext = 1;
     for iField = 1:length(fields)
-        field = db_template('sqlfield');
-        field.Name = fields{iField};
-        field.Type = sTypes.(fields{iField});
-        field.NotNull = sNotNull.(fields{iField});
+        field              = db_template('sqlfield');
+        field.Name         = fields{iField};
+        field.Type         = sTypes.(fields{iField});
+        field.NotNull      = sNotNull.(fields{iField});
         field.DefaultValue = sValues.(fields{iField});
         if ~strcmpi(field.Type, 'skip')
             table.Fields(iNext) = field;

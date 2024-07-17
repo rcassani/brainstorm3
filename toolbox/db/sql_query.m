@@ -187,7 +187,7 @@ end
 switch action
 
 %% ==== EXIST ====
-% bool = sql_query('EXIST' , Table, Condition, AddQuery)
+% bool = sql_query('EXIST', Table, Condition, AddQuery)
     case {'exist'}
     % Arguments
     condition = args{2};
@@ -244,7 +244,7 @@ switch action
                 error(['To use ' upper(action) ' and JOIN, indicate fields as "TableName.FieldName"']);
             end
         end
-        fieldsQry = str_join(fields, ', ');
+        fieldsQry = strjoin(fields, ', ');
         % String for condition
         condQry = prepareCondQry(condition);
         % Arrange query
@@ -320,8 +320,8 @@ switch action
         data     = args{2};
         addQuery = args{3};
         % Build prepared statement
-        fieldList  = str_join(fieldnames(data), ', ');
-        valueList  = str_join(repmat({'?'}, length(fieldnames(data)), 1), ', ');
+        fieldList  = strjoin(fieldnames(data), ', ');
+        valueList  = strjoin(repmat({'?'}, length(fieldnames(data)), 1), ', ');
         % Arrange query
         qry = ['INSERT INTO ' table '(' fieldList ') VALUES(' valueList ') ' addQuery];
         pstmt = sqlConn.prepareStatement(qry, java.sql.Statement.RETURN_GENERATED_KEYS);
@@ -558,7 +558,7 @@ function query = toString(query, structures)
     % Sanity check: number of '?' must be equal to number of values
     qMarks = regexp(query, '[\?]{1,}?');
     if length(qMarks) ~= length(values)
-        warning('Query string is will not be printed')
+        warning('Query string will not be printed')
         return
     end
     % Replace values in query
@@ -574,17 +574,6 @@ function query = toString(query, structures)
         qMarks = regexp(query, '[\?]{1,}?');
         % Replaces fist instance
         query = [query(1 : qMarks(1)-1), values{iQ}, query(qMarks(1)+1 : end)];
-    end
-end
-
-%% Concatenate strings using delimiter
-function outStr = str_join(cellStr, delimiter)
-    outStr = '';
-    for iCell = 1:length(cellStr)
-        if iCell > 1
-            outStr = [outStr delimiter];
-        end
-        outStr = [outStr cellStr{iCell}];
     end
 end
 

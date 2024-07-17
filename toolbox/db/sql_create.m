@@ -46,27 +46,23 @@ while ~isempty(tablesLeft)
     iTable = tablesLeft(1);
     tablesLeft(1) = [];
     foundConflict = 0;
-    
     % Find foreign keys
     for iField = 1:length(tables(iTable).Fields)
         if ~isempty(tables(iTable).Fields(iField).ForeignKey)
             % Make sure table of foreign key already exists
             foreignTable = tables(iTable).Fields(iField).ForeignKey{1};
-            if ~strcmp(tables(iTable).Name, foreignTable) && ...
-                    ~ismember(foreignTable, {tables(iTables).Name})
+            if ~strcmp(tables(iTable).Name, foreignTable) && ~ismember(foreignTable, {tables(iTables).Name})
                 foundConflict = 1;
                 break;
             end
         end
     end
-    
     % If we have a conflict, send table to back of the queue
     if foundConflict
         tablesLeft(end + 1) = iTable;
     else
         iTables(end + 1) = iTable;
     end
-    
     % Track iteration to avoid infinite loops
     i = i + 1;
     if i > 1000
@@ -78,7 +74,6 @@ tables = tables(iTables);
 switch (dbInfo.Rdbms)
     case 'sqlite'
         % Generate SQLite CREATE TABLE query
-        sqlQry = '';
         for iTable = 1:length(tables)
             tblQry = ['CREATE TABLE IF NOT EXISTS "' tables(iTable).Name '" ('];
             foreignQry = '';
@@ -87,7 +82,7 @@ switch (dbInfo.Rdbms)
                 if iField > 1
                     tblQry = [tblQry ', '];
                 end
-                % Figure out the field type
+                % Field type
                 switch lower(tables(iTable).Fields(iField).Type)
                     case {'str', 'text'}
                         fieldType = 'TEXT';
@@ -99,14 +94,16 @@ switch (dbInfo.Rdbms)
                         error(['Unsupported field type: ' tables(iTable).Fields(iField).Type]);
                 end
                 tblQry = [tblQry '"' tables(iTable).Fields(iField).Name '" ' fieldType];
-                
+                % Identify Primary key
                 if strcmpi(tables(iTable).PrimaryKey, tables(iTable).Fields(iField).Name)
                     tblQry = [tblQry ' PRIMARY KEY'];
                     foundPrimaryKey = 1;
                 end
+                % Set Autoincrement
                 if tables(iTable).Fields(iField).AutoIncrement
                     tblQry = [tblQry ' AUTOINCREMENT'];
                 end
+                % Set default value
                 if ~isempty(tables(iTable).Fields(iField).DefaultValue)
                     if isnumeric(tables(iTable).Fields(iField).DefaultValue)
                         tblQry = [tblQry ' DEFAULT ' num2str(tables(iTable).Fields(iField).DefaultValue)];
@@ -114,12 +111,17 @@ switch (dbInfo.Rdbms)
                         tblQry = [tblQry ' DEFAULT "' tables(iTable).Fields(iField).DefaultValue '"'];
                     end
                 end
+                % Indicate NOT NULL constraint
                 if tables(iTable).Fields(iField).NotNull
                     tblQry = [tblQry ' NOT NULL'];
                 end
+                % Indicate UNIQUE constraint
                 if tables(iTable).Fields(iField).Unique
                     tblQry = [tblQry ' UNIQUE'];
                 end
+                % Foreign key Actions
+                %  ON UPDATE RESTRICT: Parent key cannot be modified if it is being mapped to Child keys
+                %  ON DELETE CASCADE:  When Parent key is deleted, deletion is propagated to mapped to Child keys
                 if ~isempty(tables(iTable).Fields(iField).ForeignKey)
                     foreignQry = [foreignQry ', FOREIGN KEY ("' tables(iTable).Fields(iField).Name '")' ...
                         ' REFERENCES "' tables(iTable).Fields(iField).ForeignKey{1} '"' ...
@@ -127,13 +129,11 @@ switch (dbInfo.Rdbms)
                 end
                 
             end
-            
+            % Table must contain Primary key
             if ~foundPrimaryKey && ~isempty(tables(iTable).PrimaryKey)
                 error(['Could not find primary key of table ' tables(iTable).Name]);
             end
-            
             tblQry = [tblQry foreignQry ');'];
-            
             % Execute CREATE query using JDBC
             stmt = sqlConnection.createStatement();
             stmt.execute(tblQry);

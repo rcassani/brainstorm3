@@ -40,10 +40,10 @@ switch (dbInfo.Rdbms)
         props = java.util.Properties();
         sqlConn = sqliteDriver.connect(['jdbc:sqlite:' dbInfo.Location], props);
         
-        % Set some SQLite properties to speed up remote queries and allow foreign key constraints
+        % Set some SQLite properties to speed up remote queries
         pragmas = {'PRAGMA synchronous = OFF', ...
                    'PRAGMA temp_store = MEMORY', ...
-                   'PRAGMA foreign_keys = ON'};
+                   'PRAGMA foreign_keys = ON'};       % ON = Use foreign key constraints
         for pragma = pragmas
             statement = sqlConn.createStatement();
             statement.execute(pragma);
