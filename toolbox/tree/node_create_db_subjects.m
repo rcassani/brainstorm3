@@ -2,8 +2,6 @@ function [bstDefaultNode, nodeSubjectsDB, numTotalElems] = node_create_db_subjec
 % NODE_CREATE_DB_SUBJECTS: Create a tree to represent the subjects registered in current protocol.
 % Populate a tree from its root node.
 %
-% USAGE:  node_create_db_subjects(nodeRoot)
-%
 % INPUT: 
 %    - nodeRoot       : BstNode Java object (tree root)
 %    - iSearch        : ID of the active DB search, or empty/0 if none

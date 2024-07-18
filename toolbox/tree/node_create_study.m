@@ -234,7 +234,8 @@ for i = 1:length(iTimeFreqs)
     iTimeFreq = iTimeFreqs(i);
     
     % TF or PSD node
-    if ~isempty(strfind(sFiles(iTimeFreq).FileName, '_psd')) || ~isempty(strfind(sFiles(iTimeFreq).FileName, '_fft'))
+    [fPath, fBase] = bst_fileparts(sFiles(iTimeFreq).FileName);
+    if ~isempty(strfind(fBase, '_psd')) || ~isempty(strfind(fBase, '_fft'))
         nodeType = 'spectrum';
     else
         nodeType = 'timefreq';

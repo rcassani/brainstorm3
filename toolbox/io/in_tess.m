@@ -88,7 +88,7 @@ elseif strcmpi(FileFormat, 'ALL')
         case '.mat'
             FileFormat = 'BST';
         case '.msh'
-            FileFormat = 'SIMNIBS';
+            FileFormat = 'SIMNIBS3';
         case '.nwb'
             FileFormat = 'NWB';
         case {'.pial', '.white', '.inflated', '.nofix', '.orig', '.smoothwm', '.sphere', '.reg', '.surf'}
@@ -155,7 +155,7 @@ switch (FileFormat)
         TessMat = in_tess_gii(TessFile);
         % Process all the surfaces
         for iTess = 1:length(TessMat)
-            % Convert from MNI to MRI coordinates
+            % Convert from WORLD to MRI coordinates
             if ~isempty(sMri)
                 TessMat(iTess).Vertices = cs_convert(sMri, 'world', 'mri', TessMat(iTess).Vertices);
                 if isempty(TessMat(iTess).Vertices)
@@ -178,6 +178,10 @@ switch (FileFormat)
         TessMat.Faces = TessMat.Faces(:,[2 1 3]);
     case 'OFF'
         TessMat = in_tess_off(TessFile);
+        % Vertices: convert to meters
+        TessMat.Vertices = TessMat.Vertices ./ 1000;
+        % Swap faces
+        TessMat.Faces    = TessMat.Faces(:,[2 1 3]);
     case 'TRI'
         TessMat = in_tess_tri(TessFile);
     case 'DSGL'
@@ -191,8 +195,8 @@ switch (FileFormat)
         TessMat = in_tess_curry(TessFile);
         TessMat.Vertices = TessMat.Vertices / 1000;
 
-    case 'SIMNIBS'
-        TessMat = in_tess_simnibs(TessFile);
+    case {'SIMNIBS', 'SIMNIBS3', 'SIMNIBS4'}
+        TessMat = in_tess_simnibs(TessFile, FileFormat);
         % World/voxel => SCS coordinates
         if ~isempty(sMri)
             TessMat.Vertices = TessMat.Vertices+0.5; %we compensate for half a pixel mismatch in x,y and z between simnibs and bst.

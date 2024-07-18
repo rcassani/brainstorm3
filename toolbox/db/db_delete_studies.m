@@ -1,10 +1,13 @@
-function db_delete_studies( iStudies )
+function errFolders = db_delete_studies( iStudies )
 % DB_DELETE_STUDIES: Delete some studies from the brainstorm database.
 %
-% USAGE:  db_delete_studies( iStudies )
+% USAGE:  errFolders = db_delete_studies( iStudies )
 %
 % INPUT:
 %    - iStudies : indices of the studies to delete
+% 
+% OUTPUT:
+%    - errFolders : Cell-array with full paths to folders that could not be deleted
 
 % @=============================================================================
 % This function is part of the Brainstorm software:
@@ -24,11 +27,12 @@ function db_delete_studies( iStudies )
 % For more information type "brainstorm license" at command prompt.
 % =============================================================================@
 %
-% Authors: Francois Tadel, 2009-2014
+% Authors: Francois Tadel, 2009-2022
 %          Raymundo Cassani, 2022
 
 sqlConn = sql_connect();
 ProtocolInfo = bst_get('ProtocolInfo');
+errFolders = {};
 save_db = 0;
 
 % For each study
@@ -47,6 +51,8 @@ for iStudy = iStudies
         % Delete from DB, Study and its FunctionalFiles through cascade
         db_set(sqlConn, 'Study', 'Delete', iStudy);
         save_db = 1;
+    else
+        errFolders{end+1} = dirStudy;
     end
 %     % Try to remove all the parents dirs until STUDIES dir, if they are empty
 %     parentDir = bst_fileparts(bst_fileparts(ProtocolStudies.Study(iStudy).FileName), 1);
@@ -68,7 +74,3 @@ sql_close(sqlConn);
 if save_db
     db_save();
 end
-
-
-
-

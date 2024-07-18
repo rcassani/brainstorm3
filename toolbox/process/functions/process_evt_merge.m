@@ -34,8 +34,8 @@ function sProcess = GetDescription()
     sProcess.Index       = 54;
     sProcess.Description = 'https://neuroimage.usc.edu/brainstorm/Tutorials/EventMarkers#Other_menus';
     % Definition of the input accepted by this process
-    sProcess.InputTypes  = {'data', 'raw'};
-    sProcess.OutputTypes = {'data', 'raw'};
+    sProcess.InputTypes  = {'data', 'raw', 'matrix'};
+    sProcess.OutputTypes = {'data', 'raw', 'matrix'};
     sProcess.nInputs     = 1;
     sProcess.nMinFiles   = 1;
     % Explanations
@@ -91,26 +91,27 @@ function OutputFiles = Run(sProcess, sInputs)
         isRaw = strcmpi(sInputs(iFile).FileType, 'raw');
         if isRaw
             DataMat = in_bst_data(sInputs(iFile).FileName, 'F');
-            sFile = DataMat.F;
+            sEvents = DataMat.F.events;
         else
-            sFile = in_fopen(sInputs(iFile).FileName, 'BST-DATA');
+            DataMat = in_bst_data(sInputs(iFile).FileName, 'Events');
+            sEvents = DataMat.Events;
         end
         % If no markers are present in this file
-        if isempty(sFile.events)
+        if isempty(sEvents)
             bst_report('Error', sProcess, sInputs(iFile), 'This file does not contain any event. Skipping File...');
             continue;
         end
         % Call the renaming function
-        [sFile.events, isModified] = Compute(sInputs(iFile), sFile.events, EvtNames, NewName, isDelete);
+        [sEvents, isModified] = Compute(sInputs(iFile), sEvents, EvtNames, NewName, isDelete);
 
         % ===== SAVE RESULT =====
         % Only save changes if something was change
         if isModified
             % Report changes in .mat structure
             if isRaw
-                DataMat.F = sFile;
+                DataMat.F.events = sEvents;
             else
-                DataMat.Events = sFile.events;
+                DataMat.Events = sEvents;
             end
             % Save file definition
             bst_save(file_fullpath(sInputs(iFile).FileName), DataMat, 'v6', 1);
@@ -123,6 +124,9 @@ end
 
 %% ===== MERGE EVENTS =====
 function [events, isModified] = Compute(sInput, events, EvtNames, NewName, isDelete)
+    if isempty(sInput)
+        sInput = '';
+    end
     % No modification
     isModified = 0;
 
@@ -148,26 +152,80 @@ function [events, isModified] = Compute(sInput, events, EvtNames, NewName, isDel
         bst_report('Error', 'process_evt_merge', sInput, 'You must enter at least one event name to copy.');
         return;
     end
+    % Make sure selected events are all of same type
+    try
+        [events(iEvents).times];
+    catch
+        bst_report('Error', 'process_evt_merge', sInput, 'You cannot merge simple and extended events together.');
+        return;
+    end
 
     % Inialize new event group
     newEvent = events(iEvents(1));
     newEvent.label      = NewName;
     newEvent.times      = [events(iEvents).times];
     newEvent.epochs     = [events(iEvents).epochs];
-    newEvent.channels   = [events(iEvents).channels];
-    newEvent.notes      = [events(iEvents).notes];
-    % Reaction time: only if all the events have reaction time set
-    if all(~cellfun(@isempty, {events(iEvents).reactTimes}))
-        newEvent.reactTimes = [events(iEvents).reactTimes];
+    % Reaction time, channels, notes: only if all the events have them
+    if all(cellfun(@isempty, {events(iEvents).channels}))
+        newEvent.channels = [];
     else
-        newEvent.reactTimes = [];
+        % Expand empty channels if needed
+        for ie = 1 : length(iEvents)
+            if isempty(events(iEvents(ie)).channels)
+                events(iEvents(ie)).channels = cell(1, size(events(iEvents(ie)).times, 2));
+            end
+        end
+        newEvent.channels = [events(iEvents).channels];
     end
-    % Sort by samples indices, and remove redundant values
-    [tmp__, iSort] = unique(bst_round(newEvent.times(1,:), 9));
+    if all(cellfun(@isempty, {events(iEvents).notes}))
+        newEvent.notes = [];
+    else
+        % Expand empty notes if needed
+        for ie = 1 : length(iEvents)
+            if isempty(events(iEvents(ie)).notes)
+                events(iEvents(ie)).notes = cell(1, size(events(iEvents(ie)).notes, 2));
+            end
+        end
+        newEvent.notes = [events(iEvents).notes];
+    end
+    if all(cellfun(@isempty, {events(iEvents).reactTimes}))
+        newEvent.reactTimes = [];
+    else
+        % Expand empty reactTimes if needed
+        for ie = 1 : length(iEvents)
+            if isempty(events(iEvents(ie)).reactTimes)
+                events(iEvents(ie)).reactTimes = zeros(1, size(events(iEvents(ie)).reactTimes, 2));
+            end
+        end
+        newEvent.reactTimes = [events(iEvents).reactTimes];
+    end
+    % Find duplicated events
+    iRemoveDuplicate = [];
+    [~, ics, ias] = unique(bst_round(newEvent.times', 9), 'rows', 'stable');
+    % Check if duplicated times are really duplicated events
+    for ix = 1 : length(ics)
+        ids = find(ias == ix);
+        for iy = 2 : length(ids)
+            id = ids(iy);
+            if (isempty(newEvent.channels)   || isequal(newEvent.channels{ids(1)}, newEvent.channels{id})) && ...
+               (isempty(newEvent.notes)      || isequal(newEvent.notes{ids(1)}, newEvent.notes{id})) && ...
+               (isempty(newEvent.reactTimes) || isequal(newEvent.reactTimes(ids(1)), newEvent(id).reactTimes))
+               iRemoveDuplicate = [iRemoveDuplicate, id];
+            end
+        end
+    end
+    % Sort by samples indices
+    [~, iSort] = sort(bst_round(newEvent.times(1,:), 9));
+    % Remove indices of duplicated events
+    iSort = iSort(~ismember(iSort, iRemoveDuplicate));
     newEvent.times    = newEvent.times(:,iSort);
     newEvent.epochs   = newEvent.epochs(iSort);
-    newEvent.channels = newEvent.channels(iSort);
-    newEvent.notes    = newEvent.notes(iSort);
+    if ~isempty(newEvent.channels)
+        newEvent.channels = newEvent.channels(iSort);
+    end
+    if ~isempty(newEvent.notes)
+        newEvent.notes = newEvent.notes(iSort);
+    end
     if ~isempty(newEvent.reactTimes)
         newEvent.reactTimes = newEvent.reactTimes(iSort);
     end

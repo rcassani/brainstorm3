@@ -67,7 +67,8 @@ function [ varargout ] = bst_memory( varargin )
 % For more information type "brainstorm license" at command prompt.
 % =============================================================================@
 %
-% Authors: Francois Tadel, 2008-2020; Martin Cousineau, 2019
+% Authors: Francois Tadel, 2008-2023
+%          Martin Cousineau, 2019
 
 eval(macro_method);
 end
@@ -564,6 +565,7 @@ function LoadChannelFile(iDS, ChannelFile)
         % Save in DataSet structure
         GlobalData.DataSet(iDS).ChannelFile     = file_win2unix(ChannelFile);
         GlobalData.DataSet(iDS).Channel         = ChannelMat.Channel;
+        GlobalData.DataSet(iDS).Clusters        = ChannelMat.Clusters;
         GlobalData.DataSet(iDS).IntraElectrodes = ChannelMat.IntraElectrodes;
         GlobalData.DataSet(iDS).MegRefCoef      = ChannelMat.MegRefCoef;
         GlobalData.DataSet(iDS).Projector       = ChannelMat.Projector;
@@ -590,8 +592,9 @@ function LoadChannelFile(iDS, ChannelFile)
             GlobalData.DataSet(iDS).Channel(i).Loc  = [0;0;0];
             GlobalData.DataSet(iDS).Channel(i).Type = 'EEG';
         end
-        GlobalData.DataSet(iDS).MegRefCoef      = []; 
-        GlobalData.DataSet(iDS).Projector       = []; 
+        GlobalData.DataSet(iDS).MegRefCoef      = [];
+        GlobalData.DataSet(iDS).Projector       = [];
+        GlobalData.DataSet(iDS).Clusters        = [];
         GlobalData.DataSet(iDS).IntraElectrodes = [];
     end
 end
@@ -684,6 +687,18 @@ function [iDS, ChannelFile] = LoadDataFile(DataFile, isReloadForced, isTimeCheck
                 isRetry = 0;
             end
         end
+
+        % Check version of Nicolet object (after change introduced on 5-Sep-2022)
+        NICOLET_VER = 2;
+        if strcmpi(sFile.format, 'EEG-NICOLET') && (~isfield(sFile.header, 'objversion') || isempty(sFile.header.objversion) || (sFile.header.objversion < NICOLET_VER))
+            disp(['BST> Updating outdated NicoletFile object: ', DataFile]);
+            % Update NicoletFile object
+            sFile.header.obj = NicoletFile(sFile.filename);
+            sFile.header.objversion = NICOLET_VER;
+            % Save modifications in file
+            DataMat.F = sFile;
+            bst_save(file_fullpath(DataFile), DataMat, 'v6', 1);
+        end
     else
         MeasuresMat = in_bst_data(DataFile, 'Time', 'ChannelFlag', 'ColormapType', 'Events', 'DisplayUnits');
         Time = MeasuresMat.Time;
@@ -745,10 +760,12 @@ function [iDS, ChannelFile] = LoadDataFile(DataFile, isReloadForced, isTimeCheck
     if ~isempty(iDS) && ~isReloadForced
         if ~isempty(sSubject.FileName) && ~file_compare(sSubject.FileName, GlobalData.DataSet(iDS).SubjectFile)
             iDS = [];
+        % Check time window
+        elseif ~isStatic && (GlobalData.DataSet(iDS).Measures.NumberOfSamples > 2) && (Measures.NumberOfSamples > 2) && (GlobalData.DataSet(iDS).Measures.NumberOfSamples ~= Measures.NumberOfSamples)
+            error('Time definition is incompatible with previously loaded data.');
         else
             GlobalData.DataSet(iDS).Measures.DataType    = Measures.DataType;
             GlobalData.DataSet(iDS).Measures.ChannelFlag = Measures.ChannelFlag;
-            % GlobalData.DataSet(iDS).Measures.sFile       = Measures.sFile;
             if ~isempty(Measures.sFile) && isempty(GlobalData.DataSet(iDS).Measures.sFile)
                 GlobalData.DataSet(iDS).Measures.sFile = Measures.sFile;
             end
@@ -1143,7 +1160,7 @@ function [iDS, iResult] = LoadResultsFile(ResultsFile, isTimeCheck)
     SamplingRate = [];
     if any(strcmpi('ImageGridAmp', {File_whos.name}))
         % Load results .Mat
-        ResultsMat = in_bst_results(ResultsFullFile, 0, 'Comment', 'Time', 'ChannelFlag', 'SurfaceFile', 'HeadModelType', 'ColormapType', 'DisplayUnits', 'GoodChannel', 'Atlas');
+        ResultsMat = in_bst_results(ResultsFullFile, 0, 'Comment', 'Time', 'ChannelFlag', 'SurfaceFile', 'HeadModelType', 'ColormapType', 'DisplayUnits', 'GoodChannel', 'Atlas', 'Function');
         % Raw file: Use only the loaded time window
         if ~isempty(DataFile) && strcmpi(GlobalData.DataSet(iDS).Measures.DataType, 'raw') && ~isempty(strfind(ResultsFullFile, '_KERNEL_'))
             Time = GlobalData.DataSet(iDS).Measures.Time;
@@ -1228,7 +1245,11 @@ function [iDS, iResult] = LoadResultsFile(ResultsFile, isTimeCheck)
     else
         Results.GoodChannel = ResultsMat.GoodChannel;
     end
-    
+    % If Results structure has Function field
+    if isfield(ResultsMat, 'Function')
+        Results.Function = ResultsMat.Function;
+    end
+
     % Store new Results structure in GlobalData
     iResult = length(GlobalData.DataSet(iDS).Results) + 1;
     GlobalData.DataSet(iDS).Results(iResult) = Results;
@@ -1562,6 +1583,11 @@ function [iDS, iTimefreq, iResults] = LoadTimefreqFile(TimefreqFile, isTimeCheck
     ChannelFile = [];
 
     % ===== GET ALL INFORMATION =====
+    % If the input data is derivated dataset
+    LoadedFile = TimefreqFile;
+    if any(TimefreqFile == '$')
+        TimefreqFile = TimefreqFile(1:find(TimefreqFile == '$',1)-1);
+    end
     % Get file information
     [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', TimefreqFile, 'FileName', {'FileName', 'iChannel'}, {'FileName', 'Type', 'ExtraStr1'});
     sChannel = db_get('FunctionalFile', sStudy.iChannel);
@@ -1603,9 +1629,9 @@ function [iDS, iTimefreq, iResults] = LoadTimefreqFile(TimefreqFile, isTimeCheck
     end
     % Load timefreq file
     if ~isempty(iDS)
-        iTimefreq = GetTimefreqInDataSet(iDS, TimefreqFile);
+        iTimefreq = GetTimefreqInDataSet(iDS, LoadedFile);
     else
-        [iDS, iTimefreq] = GetDataSetTimefreq(TimefreqFile);
+        [iDS, iTimefreq] = GetDataSetTimefreq(LoadedFile);
     end
     % If dataset for target file already exists, just return its index
     if ~isForceReload && ~isempty(iDS) && ~isempty(iTimefreq)
@@ -1835,19 +1861,19 @@ function [iDS, iTimefreq, iResults] = LoadTimefreqFile(TimefreqFile, isTimeCheck
         end
         % Copy list to all modalities
         GlobalData.DataSet(iDS).Timefreq(iTimefreq).AllModalities = Modality;
+        % PSD: dataset channel flag from parent data file
+        if strcmpi(Timefreq.Method, 'psd') && ~isempty(Timefreq.DataFile) && strcmpi(file_gettype(Timefreq.DataFile), 'data')
+            ParentMat = in_bst_data(Timefreq.DataFile, 'ChannelFlag');
+            if ~isempty(ParentMat) && ~isempty(ParentMat.ChannelFlag)
+                GlobalData.DataSet(iDS).Measures.ChannelFlag = ParentMat.ChannelFlag;
+            end
+        end
         % If only one modality: consider it as the "type" of the file
         if (length(Modality) == 1)
             GlobalData.DataSet(iDS).Timefreq(iTimefreq).Modality = Modality{1};
             % If the good/bad channels for the dataset are not defined yet
             if isempty(GlobalData.DataSet(iDS).Measures.ChannelFlag)
-                % PSD: Remove bad channels defined in parent data file
-                if strcmpi(Timefreq.Method, 'psd') && ~isempty(Timefreq.DataFile) && strcmpi(file_gettype(Timefreq.DataFile), 'data')
-                    ParentMat = in_bst_data(Timefreq.DataFile, 'ChannelFlag');
-                    if ~isempty(ParentMat) && ~isempty(ParentMat.ChannelFlag)
-                        GlobalData.DataSet(iDS).Measures.ChannelFlag = ParentMat.ChannelFlag;
-                    end
-                end
-                % Otherwise: Set all the channels as good by default
+                % Set all the channels as good by default
                 if isempty(GlobalData.DataSet(iDS).Measures.ChannelFlag)
                     GlobalData.DataSet(iDS).Measures.ChannelFlag = ones(length(GlobalData.DataSet(iDS).Channel), 1);
                 end
@@ -3210,8 +3236,6 @@ function isCancel = UnloadAll(varargin)
             % Get next surface
             panel_scout('SetCurrentSurface', CurrentSurface);
         end
-        % Unload clusters
-        panel_cluster('RemoveAllClusters');
     end
     % Empty the clipboard
     bst_set('Clipboard', []);
@@ -3261,6 +3285,7 @@ function isCancel = UnloadAll(varargin)
         GlobalData.Program.ProcessMenuCache = struct();
         % Clear some display options
         GlobalData.Preferences.TopoLayoutOptions.TimeWindow = [];
+        GlobalData.Preferences.TopoLayoutOptions.FreqWindow = [];
     end
     % Close all unecessary tabs when forced, or when no data left
     if isForced || isempty(GlobalData.DataSet)
@@ -3270,6 +3295,7 @@ function isCancel = UnloadAll(varargin)
         gui_hide('Stat');
         gui_hide('iEEG');
         gui_hide('Spikes');
+        gui_hide('Cluster');
     end
     if isNewProgress
         bst_progress('stop');
@@ -3535,6 +3561,7 @@ function SaveChannelFile(iDS)
     % Get modified fields
     ChannelMat.Channel         = GlobalData.DataSet(iDS).Channel;
     ChannelMat.IntraElectrodes = GlobalData.DataSet(iDS).IntraElectrodes;
+    ChannelMat.Clusters        = GlobalData.DataSet(iDS).Clusters;
     % History: Edit channel file
     ChannelMat = bst_history('add', ChannelMat, 'edit', 'Edited manually');
     % Save file

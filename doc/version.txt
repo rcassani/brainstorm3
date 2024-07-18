@@ -1,3 +1,2 @@
 % Brainstorm
-% v. 3.220824 (SQL-DB-DEMO)
-
+% v. 3.240715 (15-Jul-2024-SQLite)

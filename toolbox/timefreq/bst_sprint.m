@@ -4,7 +4,7 @@ function [TF, Messages, OPTIONS] = bst_sprint(F, sfreq, RowNames, OPTIONS)
 % REFERENCE: Please cite the preprint for the SPRiNT algorithm:
 %    Wilson, L. E., da Silva Castanheira, J., & Baillet, S. (2022). 
 %    Time-resolved parameterization of aperiodic and periodic brain 
-%    activity. bioRxiv, 2022.2001.2021.477243. 
+%    activity. eLife, 11, e77348. doi:10.7554/eLife.77348
 % Please consider citing the specparam algorithm as well.
 
 % @=============================================================================
@@ -282,8 +282,8 @@ ts(indGood:end) = [];
         SPRiNT = remove_outliers(SPRiNT,peak_function,opt);
     end
     for chan = 1:nChan
-        tp_exponent(chan,:) = [channel(chan).aperiodics(:).exponent];
-        tp_offset(chan,:) = [channel(chan).aperiodics(:).offset];
+        tp_exponent(chan,:) = [SPRiNT.channel(chan).aperiodics(:).exponent];
+        tp_offset(chan,:) = [SPRiNT.channel(chan).aperiodics(:).offset];
     end
     SPRiNT.topography.exponent = tp_exponent;
     SPRiNT.topography.offset = tp_offset;
@@ -357,10 +357,13 @@ function SPRiNT = remove_outliers(SPRiNT,peak_function,opt)
                 SPRiNT.channel(c).data(t).ap_fit = 10.^(ap_fit);
                 SPRiNT.channel(c).data(t).fooofed_spectrum = 10.^(ap_fit+peak_fit);
                 SPRiNT.channel(c).data(t).peak_fit = 10.^(peak_fit);
+                SPRiNT.channel(c).data(t).error = MSE;
+                SPRiNT.channel(c).data(t).r_squared = rsq_tmp(2);
                 SPRiNT.aperiodic_models(c,t,:) = SPRiNT.channel(c).data(t).ap_fit;
                 SPRiNT.SPRiNT_models(c,t,:) = SPRiNT.channel(c).data(t).fooofed_spectrum;
                 SPRiNT.peak_models(c,t,:) = SPRiNT.channel(c).data(t).peak_fit;
                 SPRiNT.channel(c).aperiodics(t).offset = ap_pars(1);
+                SPRiNT.channel(c).data(t).aperiodic_params = ap_pars;
                 if length(ap_pars)>2 % Legacy FOOOF alters order of parameters
                     SPRiNT.channel(c).aperiodics(t).exponent = ap_pars(3);
                     SPRiNT.channel(c).aperiodics(t).knee_frequency = ap_pars(2);
@@ -974,8 +977,8 @@ function peak_params = fit_peak_guess(guess, freqs, flat_spec, peak_type, guess_
     if hOT % Use OptimToolbox for fmincon
         options = optimset('Display', 'off', 'TolX', 1e-3, 'TolFun', 1e-5, ...
         'MaxFunEvals', 3000, 'MaxIter', 3000); % Tuned options
-        lb = [guess(:,1)-guess(:,3)*2,zeros(size(guess(:,2))),ones(size(guess(:,3)))*std_limits(1)];
-        ub = [guess(:,1)+guess(:,3)*2,inf(size(guess(:,2))),ones(size(guess(:,3)))*std_limits(2)];
+        lb = [max([ones(size(guess,1),1).*freqs(1) guess(:,1)-guess(:,3)*2],[],2),zeros(size(guess(:,2))),ones(size(guess(:,3)))*std_limits(1)];
+        ub = [min([ones(size(guess,1),1).*freqs(end) guess(:,1)+guess(:,3)*2],[],2),inf(size(guess(:,2))),ones(size(guess(:,3)))*std_limits(2)];
         peak_params = fmincon(@error_model_constr,guess,[],[],[],[], ...
             lb,ub,[],options,freqs,flat_spec, peak_type);
     else % Use basic simplex approach, fminsearch, with guess_weight

@@ -158,7 +158,7 @@ function OutputFiles = Run(sProcess, sInputs) %#ok<DEFNU>
     
     % ===== GET/CREATE SUBJECT =====
     % Get subject 
-    sSubject = db_get('Subject', SubjectName, 'Id');
+    sSubject = db_get('Subject', SubjectName);
     % Create subject is it does not exist yet
     if isempty(sSubject)
         sSubject = db_add_subject(SubjectName);
@@ -167,8 +167,12 @@ function OutputFiles = Run(sProcess, sInputs) %#ok<DEFNU>
         return
         end
     end
-    iSubject = sSubject.Id;
-    
+    % The subject can't be using the default anatomy
+    if ~strcmp(sSubject.Name, bst_get('DirDefaultSubject')) && sSubject.UseDefaultAnat
+        bst_report('Error', sProcess, [], ['Subject "' SubjectName '" is using the default anatomy (read-only).']);
+        return
+    end
+
     % ===== IMPORT FILES =====
     % Import folder
     switch (FileFormat)

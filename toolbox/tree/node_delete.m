@@ -32,6 +32,7 @@ ProtocolInfo     = bst_get('ProtocolInfo');
 iModifiedStudies  = [];
 iModifiedSubjects = [];
 isTreeUpdateModel = 0;
+errStudies = {};
 % Get all nodes descriptions
 nodeType = cell(length(bstNodes), 1);
 iItem    = zeros(1, length(bstNodes));
@@ -83,7 +84,7 @@ switch (lower(nodeType{1}))
             iSubjects = iItem;
         end
         % Delete
-        db_delete_subjects(iSubjects);
+        errStudies = db_delete_subjects(iSubjects);
 
 
 %% ===== CONDITION =====
@@ -126,13 +127,16 @@ switch (lower(nodeType{1}))
             iStudies = setdiff([sStudies.Id], iStudyKeep);
             % Delete them
             if ~isempty(iStudies)
-                db_delete_studies(iStudies);
+                errSt = db_delete_studies(iStudies);
+                if ~isempty(errSt)
+                    errStudies = cat(2, errStudies, errSt);
+                end
             end
         end
         iModifiedStudies  = -1;
 
 %% ===== ANATOMY, VOLATLAS and SURFACES =====
-    case {'anatomy', 'volatlas', 'scalp', 'outerskull', 'innerskull', 'cortex', 'fibers', 'fem', 'other'}
+    case {'anatomy', 'volatlas', 'volct', 'scalp', 'outerskull', 'innerskull', 'cortex', 'fibers', 'fem', 'other'}
         bst_progress('start', 'Delete nodes', 'Deleting surfaces...');
         % Full file names
         FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.SUBJECTS,f), FileName', 'UniformOutput',0);
@@ -437,10 +441,15 @@ end
 db_save();
 bst_progress('stop');
 
-return
+% ===== DISPLAY ERRORS =====
+% If not all the studies were deleted
+if ~isempty(errStudies) && isUserConfirm
+    errMsg = [...
+        'The following folders could not be deleted: ' 10 ...
+        sprintf(' - %s\n', errStudies{:}), 10 ...
+        'To fix this problem, try the following:' 10 ...
+        ' - Close Matlab,' 10 ...
+        ' - Delete these folders manually,' 10 ...
+        ' - Restart Brainstorm and reload the protocol.'];
+    bst_error(errMsg, 'Delete folders', 0);
 end
-
-
-
-
-

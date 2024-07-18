@@ -281,8 +281,8 @@ function sFile = CreateEvents(sFile, EvtName, Events)
     sFile.events(iEvt).times      = Events;
     sFile.events(iEvt).epochs     = ones(1, size(sFile.events(iEvt).times,2));
     sFile.events(iEvt).reactTimes = [];
-    sFile.events(iEvt).channels   = cell(1, size(sFile.events(iEvt).times, 2));
-    sFile.events(iEvt).notes      = cell(1, size(sFile.events(iEvt).times, 2));
+    sFile.events(iEvt).channels   = [];
+    sFile.events(iEvt).notes      = [];
 end
 
 
@@ -323,9 +323,9 @@ function [Locations, HeadSamplePeriod, FitErrors] = LoadHLU(sInput, SamplesBound
     
     nSamples = SamplesBounds(2) - SamplesBounds(1) + 1;
     
-    iHLU = find(strcmp({ChannelMat.Channel.Type}, 'HLU'));
+    iHLU = find(strcmpi({ChannelMat.Channel.Type}, 'HLU'));
     [Unused, iSortHlu] = sort({ChannelMat.Channel(iHLU).Name});
-    iFitErr = find(strcmp({ChannelMat.Channel.Type}, 'FitErr'));
+    iFitErr = find(strcmpi({ChannelMat.Channel.Type}, 'FitErr'));
     [Unused, iSortFitErr] = sort({ChannelMat.Channel(iFitErr).Name});
     nChannels = numel(iHLU);
     if nChannels == 0

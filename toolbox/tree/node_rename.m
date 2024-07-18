@@ -77,7 +77,7 @@ switch lower(nodeType)
         
         
 %% ===== ANATOMY, VOLATLAS, AND SURFACES (Comment) =====
-    case {'anatomy', 'volatlas', 'scalp', 'outerskull', 'innerskull', 'cortex', 'other', 'fibers', 'fem'}
+    case {'anatomy', 'volatlas', 'volct', 'scalp', 'outerskull', 'innerskull', 'cortex', 'other', 'fibers', 'fem'}
         iSubject = iItem;
         iSurface = iSubItem;
         % Get new comment

@@ -11,11 +11,13 @@ function [varargout] = bst_plugin(varargin)
 %               ReadmeFile = bst_plugin('GetReadmeFile',        PlugDesc)                    % Get full path to plugin readme file
 %                 LogoFile = bst_plugin('GetLogoFile',          PlugDesc)                    % Get full path to plugin logo file
 %                  Version = bst_plugin('CompareVersions',      v1, v2)                      % Compare two version strings
+%           [isOk, errMsg] = bst_plugin('AddUserDefDesc',       RegMethod, jsonLocation=[])  % Register user-defined plugin definition
+%           [isOk, errMsg] = bst_plugin('RemoveUserDefDesc'     PlugName)                    % Remove user-defined plugin definition
 % [isOk, errMsg, PlugDesc] = bst_plugin('Load',                 PlugName/PlugDesc, isVerbose=1)
 % [isOk, errMsg, PlugDesc] = bst_plugin('LoadInteractive',      PlugName/PlugDesc)
 % [isOk, errMsg, PlugDesc] = bst_plugin('Unload',               PlugName/PlugDesc, isVerbose=1)
 % [isOk, errMsg, PlugDesc] = bst_plugin('UnloadInteractive',    PlugName/PlugDesc)
-% [isOk, errMsg, PlugDesc] = bst_plugin('Install',              PlugName, isInteractive=0, minVersion=[])
+% [isOk, errMsg, PlugDesc] = bst_plugin('Install',              PlugName, isInteractive=0, minVersion=[]) % Install and Load a plugin and its dependencies
 % [isOk, errMsg, PlugDesc] = bst_plugin('InstallMultipleChoice',PlugNames, isInteractive=0)  % Install at least one of the input plugins
 % [isOk, errMsg, PlugDesc] = bst_plugin('InstallInteractive',   PlugName)
 %           [isOk, errMsg] = bst_plugin('Uninstall',            PlugName, isInteractive=0, isDependencies=1)
@@ -27,6 +29,7 @@ function [varargout] = bst_plugin(varargin)
 %                            bst_plugin('MenuCreate',           jMenu)
 %                            bst_plugin('MenuUpdate',           jMenu)
 %                            bst_plugin('LinkCatSpm',           Action)               % 0=Delete/1=Create/2=Check a symbolic link for CAT12 in SPM12 toolbox folder
+%                            bst_plugin('UpdateDescription',    PlugDesc, doDelete=0) % Update plugin description after load
 %
 %
 % PLUGIN DEFINITION
@@ -105,7 +108,7 @@ function [varargout] = bst_plugin(varargin)
 % For more information type "brainstorm license" at command prompt.
 % =============================================================================@
 %
-% Authors: Francois Tadel 2021-2022
+% Authors: Francois Tadel, 2021-2023
 
 eval(macro_method);
 end
@@ -114,8 +117,12 @@ end
 %% ===== GET SUPPORTED PLUGINS =====
 % USAGE:  PlugDesc = bst_plugin('GetSupported')                      % List all the plugins supported by Brainstorm
 %         PlugDesc = bst_plugin('GetSupported', PlugName/PlugDesc)   % Get only one specific supported plugin
-function PlugDesc = GetSupported(SelPlug)
+%         PlugDesc = bst_plugin('GetSupported', ..., UserDefVerbose) % Print info on user-defined plugins
+function PlugDesc = GetSupported(SelPlug, UserDefVerbose)
     % Parse inputs
+    if (nargin < 2) || isempty(UserDefVerbose)
+        UserDefVerbose = 0;
+    end
     if (nargin < 1) || isempty(SelPlug)
         SelPlug = [];
     end
@@ -124,6 +131,7 @@ function PlugDesc = GetSupported(SelPlug)
     % Get OS
     OsType = bst_get('OsType', 0);
     
+    % Add new curated plugins by 'CATEGORY:' and alphabetic order
     % ================================================================================================================
     % === ANATOMY: BRAIN2MESH ===
     PlugDesc(end+1)              = GetStruct('brain2mesh');
@@ -153,6 +161,19 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).UninstalledFcn = 'LinkCatSpm(0);';
     PlugDesc(end).LoadedFcn      = 'LinkCatSpm(2);';
     PlugDesc(end).ExtraMenus     = {'Online tutorial', 'web(''https://neuroimage.usc.edu/brainstorm/Tutorials/SegCAT12'', ''-browser'')'};
+
+    % === ANATOMY: CT2MRIREG ===
+    PlugDesc(end+1)              = GetStruct('ct2mrireg');
+    PlugDesc(end).Version        = 'github-master';
+    PlugDesc(end).Category       = 'Anatomy';
+    PlugDesc(end).AutoUpdate     = 1;
+    PlugDesc(end).URLzip         = 'https://github.com/ajoshiusc/USCCleveland/archive/master.zip';
+    PlugDesc(end).URLinfo        = 'https://github.com/ajoshiusc/USCCleveland/tree/master/ct2mrireg';
+    PlugDesc(end).TestFile       = 'ct2mrireg.m';
+    PlugDesc(end).ReadmeFile     = 'ct2mrireg/README.md';
+    PlugDesc(end).CompiledStatus = 2;
+    PlugDesc(end).LoadFolders    = {'ct2mrireg'};
+    PlugDesc(end).DeleteFiles    = {'fmri_analysis', 'for_clio', 'mixed_atlas', 'process_script', 'reg_prepost', 'visualize_channels', '.gitignore', 'README.md'};
     
     % === ANATOMY: ISO2MESH ===
     PlugDesc(end+1)              = GetStruct('iso2mesh');
@@ -168,14 +189,15 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).DeleteFiles    = {'doc', 'tools', '.git_filters', 'sample', ...
                                     'bin/cgalmesh.exe', 'bin/cgalmesh.mexglx', 'bin/cgalmesh.mexmaci', ...
                                     'bin/cgalpoly.exe', 'bin/cgalpoly.mexglx', 'bin/cgalpoly.mexmaci', 'bin/cgalpoly.mexa64', 'bin/cgalpoly.mexmaci64', 'bin/cgalpoly_x86-64.exe', ...   % Removing cgalpoly completely (not used)
-                                    'bin/cgalsimp2.exe', 'bin/cgalsimp2.mexglx', 'bin/cgalsimp2.mexmaci', 'bin/cgalsimp2.mexmac', ...
                                     'bin/cgalsurf.exe', 'bin/cgalsurf.mexglx', 'bin/cgalsurf.mexmaci', ...
                                     'bin/cork.exe', ...
                                     'bin/gtsrefine.mexglx', 'bin/gtsrefine.mexmaci', 'bin/gtsrefine.mexarmhf', 'bin/gtsrefine.exe', 'bin/gtsrefine.mexmaci64', ...  % Removing gtsrefine completely (not used)
                                     'bin/jmeshlib.exe', 'bin/jmeshlib.mexglx', 'bin/jmeshlib.mexmaci', 'bin/jmeshlib.mexmac', 'bin/jmeshlib.mexarmhf', ...
                                     'bin/meshfix.exe', 'bin/meshfix.mexglx', 'bin/meshfix.mexmaci', 'bin/meshfix.mexarmhf', ...
-                                    'bin/tetgen.exe', 'bin/tetgen.mexglx', 'bin/tetgen.mexmaci', 'bin/tetgen.mexmac', 'bin/tetgen.mexarmhf', 'bin/tetgen.mexa64', 'bin/tetgen.mexmaci64', 'bin/tetgen_x86-64.exe', ... % Removing older tetgen completely (not used)
-                                    'bin/tetgen1.5.exe', 'bin/tetgen1.5.mexglx'};
+                                    'bin/tetgen.mexglx', 'bin/tetgen.mexmac', 'bin/tetgen.mexarmhf', ...
+                                    'bin/tetgen1.5.mexglx'};
+    PlugDesc(end).DeleteFilesBin = {'bin/tetgen.exe', 'bin/tetgen.mexa64', 'bin/tetgen.mexmaci', 'bin/tetgen.mexmaci64', 'bin/tetgen_x86-64.exe', ...    % Removing older tetgen completely (very sparsely used)
+                                    'bin/tetgen1.5.exe'};
     
     % === ANATOMY: ROAST ===
     PlugDesc(end+1)              = GetStruct('roast');
@@ -190,6 +212,7 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).UnloadPlugs    = {'spm12', 'iso2mesh'};
     PlugDesc(end).LoadFolders    = {'lib/spm12', 'lib/iso2mesh', 'lib/cvx', 'lib/ncs2daprox', 'lib/NIFTI_20110921'};
 
+
     % === FORWARD: OPENMEEG ===
     PlugDesc(end+1)              = GetStruct('openmeeg');
     PlugDesc(end).Version        = '2.4.1';
@@ -201,6 +224,10 @@ function PlugDesc = GetSupported(SelPlug)
             PlugDesc(end).TestFile = 'libOpenMEEG.so';
         case 'mac64'
             PlugDesc(end).URLzip   = 'https://files.inria.fr/OpenMEEG/download/OpenMEEG-2.4.1-MacOSX.tar.gz';
+            PlugDesc(end).TestFile = 'libOpenMEEG.1.1.0.dylib';
+        case 'mac64arm'
+            PlugDesc(end).Version  = '2.5.8';
+            PlugDesc(end).URLzip   = ['https://github.com/openmeeg/openmeeg/releases/download/', PlugDesc(end).Version, '/OpenMEEG-', PlugDesc(end).Version, '-', 'macOS_M1.tar.gz'];
             PlugDesc(end).TestFile = 'libOpenMEEG.1.1.0.dylib';
         case 'win32'
             PlugDesc(end).URLzip   = 'https://files.inria.fr/OpenMEEG/download/release-2.2/OpenMEEG-2.2.0-win32-x86-cl-OpenMP-shared.tar.gz';
@@ -238,6 +265,7 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).AutoLoad       = 1;
     PlugDesc(end).CompiledStatus = 2;
     PlugDesc(end).LoadFolders    = {'*'};
+    PlugDesc(end).GetVersionFcn  = @be_versions;
     PlugDesc(end).DeleteFiles    = {'docs', '.github'};
     
     % === I/O: ADI-SDK ===      ADInstrument SDK for reading LabChart files
@@ -272,12 +300,11 @@ function PlugDesc = GetSupported(SelPlug)
 
     % === I/O: BLACKROCK ===
     PlugDesc(end+1)              = GetStruct('blackrock');
-    PlugDesc(end).Version        = '5.5.2.0';
+    PlugDesc(end).Version        = 'github-master';
     PlugDesc(end).Category       = 'I/O';
-    PlugDesc(end).URLzip         = 'https://github.com/BlackrockMicrosystems/NPMK/archive/refs/tags/5.5.2.0.zip';
+    PlugDesc(end).URLzip         = 'https://github.com/BlackrockMicrosystems/NPMK/archive/master.zip';
     PlugDesc(end).URLinfo        = 'https://github.com/BlackrockMicrosystems/NPMK/blob/master/NPMK/Users%20Guide.pdf';
     PlugDesc(end).TestFile       = 'openNSx.m';
-    PlugDesc(end).ReadmeFile     = 'Versions.txt';
     PlugDesc(end).CompiledStatus = 2;
     PlugDesc(end).LoadFolders    = {'*'};
     PlugDesc(end).DeleteFiles    = {'NPMK/installNPMK.m', 'NPMK/Users Guide.pdf', 'NPMK/Versions.txt', ...
@@ -287,6 +314,31 @@ function PlugDesc = GetSupported(SelPlug)
                                     'NPMK/Other tools/periEventPlot.asv', 'NPMK/Other tools/periEventPlot.m', 'NPMK/Other tools/playSound.m', ...
                                     'NPMK/Dependent Functions/.svn', 'NPMK/Dependent Functions/.DS_Store', 'NPMK/Dependent Functions/bnsx.dat', 'NPMK/Dependent Functions/syncPatternDetectNEV.m', ...
                                     'NPMK/Dependent Functions/syncPatternDetectNSx.m', 'NPMK/Dependent Functions/syncPatternFinderNSx.m'};
+
+    % === I/O: EASYH5 ===
+    PlugDesc(end+1)              = GetStruct('easyh5');
+    PlugDesc(end).Version        = 'github-master';
+    PlugDesc(end).Category       = 'I/O';
+    PlugDesc(end).URLzip         = 'https://github.com/NeuroJSON/easyh5/archive/master.zip';
+    PlugDesc(end).URLinfo        = 'https://github.com/NeuroJSON/easyh5';
+    PlugDesc(end).TestFile       = 'loadh5.m';
+    PlugDesc(end).CompiledStatus = 2;
+    PlugDesc(end).LoadFolders    = {'*'};
+    PlugDesc(end).DeleteFiles    = {'examples'};
+    PlugDesc(end).ReadmeFile     = 'README.md';
+
+    % === I/O: JSNIRF ===
+    PlugDesc(end+1)              = GetStruct('jsnirfy');
+    PlugDesc(end).Version        = 'github-master';
+    PlugDesc(end).Category       = 'I/O';
+    PlugDesc(end).URLzip         = 'https://github.com/NeuroJSON/jsnirfy/archive/master.zip';
+    PlugDesc(end).URLinfo        = 'https://github.com/NeuroJSON/jsnirfy';
+    PlugDesc(end).TestFile       = 'loadsnirf.m';
+    PlugDesc(end).CompiledStatus = 2;
+    PlugDesc(end).LoadFolders    = {'*'};
+    PlugDesc(end).DeleteFiles    = {'loadjsnirf.m', 'savejsnirf.m'};
+    PlugDesc(end).ReadmeFile     = 'README.md';
+    PlugDesc(end).RequiredPlugs  = {'easyh5'};
 
     % === I/O: MFF ===
     PlugDesc(end+1)              = GetStruct('mff');
@@ -299,7 +351,6 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).ReadmeFile     = 'README.md';
     PlugDesc(end).MinMatlabVer   = 803;   % 2014a
     PlugDesc(end).CompiledStatus = 0;
-    PlugDesc(end).GetVersionFcn  = @eegplugin_mffmatlabio;
     PlugDesc(end).LoadedFcn      = @Configure;
     % Stable version: http://neuroimage.usc.edu/bst/getupdate.php?d='mffmatlabio-3.5.zip'
     
@@ -317,6 +368,17 @@ function PlugDesc = GetSupported(SelPlug)
                                     'f=fopen(''private' filesep 'eeg_emptyset.m'',''wt''); fprintf(f,''function EEG=eeg_emptyset()\nEEG=struct();''); fclose(f);' ...
                                     'f=fopen(''private' filesep 'eeg_checkset.m'',''wt''); fprintf(f,''function EEG=eeg_checkset(EEG)''); fclose(f);' ...
                                     'cd(d);'];
+
+    % === I/O: npy-matlab ===
+    PlugDesc(end+1)              = GetStruct('npy-matlab');
+    PlugDesc(end).Version        = 'github-master';
+    PlugDesc(end).Category       = 'I/O';
+    PlugDesc(end).URLzip         = 'https://github.com/kwikteam/npy-matlab/archive/refs/heads/master.zip';
+    PlugDesc(end).URLinfo        = 'https://github.com/kwikteam/npy-matlab';
+    PlugDesc(end).TestFile       = 'constructNPYheader.m';
+    PlugDesc(end).LoadFolders    = {'*'};
+    PlugDesc(end).ReadmeFile     = 'README.md';
+    PlugDesc(end).CompiledStatus = 0;
 
     % === I/O: NWB ===
     PlugDesc(end+1)              = GetStruct('nwb');
@@ -343,6 +405,9 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).DownloadedFcn  = ['d = fullfile(PlugDesc.Path, ''OmniPlex and MAP Offline SDK Bundle'');' ...
                                     'unzip(fullfile(d, ''Matlab Offline Files SDK.zip''), PlugDesc.Path);' ...
                                     'file_delete(d,1,3);'];
+    PlugDesc(end).InstalledFcn   = ['if (exist(''mexPlex'', ''file'') ~= 3), d = pwd;'  ...
+                                    'cd(fullfile(fileparts(which(''plx_info'')), ''mexPlex''));', ...
+                                    'build_and_verify_mexPlex; cd(d); end'];
 
     % === I/O: PLOTLY ===
     PlugDesc(end+1)              = GetStruct('plotly');
@@ -366,6 +431,17 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).CompiledStatus = 0;
     PlugDesc(end).LoadFolders    = {'*'};
     
+    % === I/O: XDF ===
+    PlugDesc(end+1)              = GetStruct('xdf');
+    PlugDesc(end).Version        = 'github-master';
+    PlugDesc(end).Category       = 'I/O';
+    PlugDesc(end).AutoUpdate     = 0;
+    PlugDesc(end).URLzip         = 'https://github.com/xdf-modules/xdf-Matlab/archive/refs/heads/master.zip';
+    PlugDesc(end).URLinfo        = 'https://github.com/xdf-modules/xdf-Matlab';
+    PlugDesc(end).TestFile       = 'load_xdf.m';
+    PlugDesc(end).ReadmeFile     = 'readme.md';
+    PlugDesc(end).CompiledStatus = 2;
+
     % === SIMULATION: SIMMEEG ===
     PlugDesc(end+1)              = GetStruct('simmeeg');
     PlugDesc(end).Version        = 'github-master';
@@ -378,6 +454,17 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).CompiledStatus = 0;
     PlugDesc(end).RequiredPlugs  = {'fieldtrip', '20200911'};
     
+
+    % === STATISTICS: FASTICA ===
+    PlugDesc(end+1)              = GetStruct('fastica');
+    PlugDesc(end).Version        = '2.5';
+    PlugDesc(end).Category       = 'Statistics';
+    PlugDesc(end).URLzip         = 'https://research.ics.aalto.fi/ica/fastica/code/FastICA_2.5.zip';
+    PlugDesc(end).URLinfo        = 'https://research.ics.aalto.fi/ica/fastica/';
+    PlugDesc(end).TestFile       = 'fastica.m';
+    PlugDesc(end).ReadmeFile     = 'Contents.m';
+    PlugDesc(end).CompiledStatus = 2;
+
     % === STATISTICS: LIBSVM ===
     PlugDesc(end+1)              = GetStruct('libsvm');
     PlugDesc(end).Version        = 'github-master';
@@ -390,6 +477,17 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).CompiledStatus = 2;
     PlugDesc(end).LoadFolders    = {'*'};
     PlugDesc(end).InstalledFcn   = 'd=pwd; cd(fileparts(which(''make''))); make; cd(d);';
+
+    % === STATISTICS: PICARD ===
+    PlugDesc(end+1)              = GetStruct('picard');
+    PlugDesc(end).Version        = 'github-master';
+    PlugDesc(end).Category       = 'Statistics';
+    PlugDesc(end).URLzip         = 'https://github.com/pierreablin/picard/archive/refs/heads/master.zip';
+    PlugDesc(end).URLinfo        = 'https://github.com/pierreablin/picard';
+    PlugDesc(end).TestFile       = 'picard.m';
+    PlugDesc(end).ReadmeFile     = 'README.rst';
+    PlugDesc(end).CompiledStatus = 2;
+    PlugDesc(end).LoadFolders    = {'matlab_octave'};
 
     % === ELECTROPHYSIOLOGY: DERIVELFP ===
     PlugDesc(end+1)              = GetStruct('derivelfp');
@@ -416,7 +514,7 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).CompiledStatus = 0;
     PlugDesc(end).LoadFolders    = {'*'};
     PlugDesc(end).RequiredPlugs  = {'kilosort-wrapper'; 'phy'; 'npy-matlab'};
-    PlugDesc(end).InstalledFcn   = 'process_spikesorting_kilosort(''copyKilosortConfig'', bst_fullfile(bst_get(''UserPluginsDir''), ''kilosort'', ''Kilosort-master'', ''configFiles'', ''StandardConfig_MOVEME.m''), bst_fullfile(bst_get(''UserPluginsDir''), ''kilosort'', ''Kilosort-master'', ''KilosortStandardConfig.m''));';
+    PlugDesc(end).InstalledFcn   = 'process_spikesorting_kilosort(''copyKilosortConfig'', bst_fullfile(bst_get(''UserPluginsDir''), ''kilosort'', ''KiloSort-master'', ''configFiles'', ''StandardConfig_MOVEME.m''), bst_fullfile(bst_get(''UserPluginsDir''), ''kilosort'', ''KiloSort-master'', ''KilosortStandardConfig.m''));';
 
     
     % === ELECTROPHYSIOLOGY: Kilosort Wrapper ===
@@ -441,17 +539,6 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).CompiledStatus = 0;
     PlugDesc(end).RequiredPlugs  = {'npy-matlab'};
     
-    % === ELECTROPHYSIOLOGY: npy-matlab ===
-    PlugDesc(end+1)              = GetStruct('npy-matlab');
-    PlugDesc(end).Version        = 'github-master';
-    PlugDesc(end).Category       = 'e-phys';
-    PlugDesc(end).URLzip         = 'https://github.com/kwikteam/npy-matlab/archive/refs/heads/master.zip';
-    PlugDesc(end).URLinfo        = 'https://github.com/kwikteam/npy-matlab';
-    PlugDesc(end).TestFile       = 'constructNPYheader.m';
-    PlugDesc(end).LoadFolders    = {'*'};
-    PlugDesc(end).ReadmeFile     = 'README.md';
-    PlugDesc(end).CompiledStatus = 0;
-    
     % === ELECTROPHYSIOLOGY: ultramegasort2000 ===
     PlugDesc(end+1)              = GetStruct('ultramegasort2000');
     PlugDesc(end).Version        = 'github-master';
@@ -474,7 +561,7 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).ReadmeFile     = 'README.md';
     PlugDesc(end).CompiledStatus = 0;
 
-    % === NIRSTORM ===
+    % === fNIRS: NIRSTORM ===
     PlugDesc(end+1)              = GetStruct('nirstorm');
     PlugDesc(end).Version        = 'github-master';
     PlugDesc(end).Category       = 'fNIRS';
@@ -491,7 +578,7 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).MinMatlabVer   = 803;   % 2014a
     PlugDesc(end).DeleteFiles    = {'scripts', 'test', 'run_tests.m', 'test_suite_bak.m', '.gitignore'};
     
-    % === MCXLAB CUDA ===
+    % === fNIRS: MCXLAB CUDA ===
     PlugDesc(end+1)              = GetStruct('mcxlab-cuda');
     PlugDesc(end).Version        = '2021.12.04';
     PlugDesc(end).Category       = 'fNIRS';
@@ -503,7 +590,7 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).LoadFolders    = {'*'};
     PlugDesc(end).UnloadPlugs    = {'mcxlab-cl'};
 
-    % === MCXLAB CL ===
+    % === fNIRS: MCXLAB CL ===
     PlugDesc(end+1)              = GetStruct('mcxlab-cl');
     PlugDesc(end).Version        = '2020';
     PlugDesc(end).Category       = 'fNIRS';
@@ -515,7 +602,7 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).LoadFolders    = {'*'};
     PlugDesc(end).UnloadPlugs    = {'mcxlab-cuda'};
 
-    % === MIA ===
+    % === sEEG: MIA ===
     PlugDesc(end+1)              = GetStruct('mia');
     PlugDesc(end).Version        = 'github-master';
     PlugDesc(end).Category       = 'sEEG';
@@ -534,7 +621,7 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end+1)              = GetStruct('fieldtrip');
     PlugDesc(end).Version        = 'latest';
     PlugDesc(end).AutoUpdate     = 0;
-    PlugDesc(end).URLzip         = 'https://download.fieldtriptoolbox.org/fieldtrip-lite-20220228.zip';
+    PlugDesc(end).URLzip         = 'https://download.fieldtriptoolbox.org/fieldtrip-lite-20240405.zip';
     PlugDesc(end).URLinfo        = 'http://www.fieldtriptoolbox.org';
     PlugDesc(end).TestFile       = 'ft_defaults.m';
     PlugDesc(end).ReadmeFile     = 'README';
@@ -553,7 +640,14 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end+1)              = GetStruct('spm12');
     PlugDesc(end).Version        = 'latest';
     PlugDesc(end).AutoUpdate     = 0;
-    PlugDesc(end).URLzip         = 'https://www.fil.ion.ucl.ac.uk/spm/download/restricted/eldorado/spm12.zip';
+    switch(OsType)
+        case  'mac64arm'
+            PlugDesc(end).URLzip         = 'https://github.com/spm/spm12/archive/refs/heads/maint.zip';
+            PlugDesc(end).Version        = 'github-maint';
+        otherwise
+            PlugDesc(end).Version        = 'latest';
+            PlugDesc(end).URLzip         = 'https://www.fil.ion.ucl.ac.uk/spm/download/restricted/eldorado/spm12.zip';
+    end
     PlugDesc(end).URLinfo        = 'https://www.fil.ion.ucl.ac.uk/spm/';
     PlugDesc(end).TestFile       = 'spm.m';
     PlugDesc(end).ReadmeFile     = 'README.md';
@@ -562,6 +656,43 @@ function PlugDesc = GetSupported(SelPlug)
     PlugDesc(end).LoadFolders    = {'matlabbatch'};
     PlugDesc(end).GetVersionFcn  = 'bst_getoutvar(2, @spm, ''Ver'')';
     PlugDesc(end).LoadedFcn      = 'spm(''defaults'',''EEG'');';
+
+    % === USER DEFINED PLUGINS ===
+    plugJsonFiles    = dir(fullfile(bst_get('UserPluginsDir'), 'plugin_*.json'));
+    badJsonFiles     = {};
+    plugUserDefNames = {};
+    for ix = 1:length(plugJsonFiles)
+        plugJsonText = fileread(fullfile(plugJsonFiles(ix).folder, plugJsonFiles(ix).name));
+        try
+            PlugUserDesc = bst_jsondecode(plugJsonText);
+        catch
+            badJsonFiles{end+1} = plugJsonFiles(ix).name;
+            continue
+        end
+        % Reshape fields "ExtraMenus"
+        if isfield(PlugUserDesc, 'ExtraMenus') && ~isempty(PlugUserDesc.ExtraMenus) && iscell(PlugUserDesc.ExtraMenus{1})
+            PlugUserDesc.ExtraMenus = cat(2, PlugUserDesc.ExtraMenus{:})';
+        end
+        % Reshape fields "RequiredPlugs"
+        if isfield(PlugUserDesc, 'RequiredPlugs') && ~isempty(PlugUserDesc.RequiredPlugs) && iscell(PlugUserDesc.RequiredPlugs{1})
+            PlugUserDesc.RequiredPlugs = cat(2, PlugUserDesc.RequiredPlugs{:})';
+        end
+        % Check for uniqueness for user-defined plugin
+        if ~ismember(PlugUserDesc.Name, {PlugDesc.Name})
+            plugUserDefNames{end+1} = PlugUserDesc.Name;
+            PlugDesc(end+1) = struct_copy_fields(GetStruct(PlugUserDesc.Name), PlugUserDesc);
+        end
+    end
+    % Print info on user-defined plugins
+    if UserDefVerbose
+        if ~isempty(plugUserDefNames)
+            fprintf(['BST> User-defined plugins... ' strjoin(plugUserDefNames, ' ') '\n']);
+        end
+        for iBad = 1 : length(badJsonFiles)
+            fprintf(['BST> User-defined plugins, error reading .json file... ' badJsonFiles{iBad} '\n']);
+        end
+    end
+
     % ================================================================================================================
     
     % Select only one plugin
@@ -587,6 +718,142 @@ end
 function s = GetStruct(PlugName)
     s = db_template('PlugDesc');
     s.Name = PlugName;
+end
+
+
+%% ===== ADD USER DEFINED PLUGIN DESCRIPTION =====
+function [isOk, errMsg] = AddUserDefDesc(RegMethod, jsonLocation)
+    isOk    = 1; 
+    errMsg     = '';
+    isInteractive = strcmp(RegMethod, 'manual') || nargin < 2 || isempty(jsonLocation);
+
+    % Get json file location from user
+    if ismember(RegMethod, {'file', 'url'}) && isInteractive
+        if strcmp(RegMethod, 'file')
+            jsonLocation = java_getfile('open', 'Plugin description JSON file...', '', 'single', 'files', {{'.json'}, 'Brainstorm plugin description (*.json)', 'JSON'}, 1);
+        elseif strcmp(RegMethod, 'url')
+            jsonLocation = java_dialog('input', 'Enter the URL the plugin description file (.json)', 'Plugin description JSON file...', [], '');
+        end
+        if isempty(jsonLocation)
+            return
+        end
+        res = java_dialog('question', ['Warning: This plugin has not been verified.' 10 ...
+                                       'Malicious plugins can alter your database, proceed with caution and only install plugins from trusted sources.' 10 ...
+                                       'If any unusual behavior occurs after installation, start by uninstalling the plugins.' 10 ...
+                                       'Are you sure you want to proceed?'], ...
+                          'Warning', [], {'yes', 'no'});
+        if strcmp(res, 'no')
+            return
+        end
+    end
+
+    % Get plugin description
+    switch RegMethod
+        case 'file'
+            jsonText = fileread(jsonLocation);
+            try
+                PlugDesc = bst_jsondecode(jsonText);
+            catch
+                errMsg = sprintf(['Could not parse JSON file:' 10 '%s'], jsonLocation);
+            end
+
+        case 'url'
+            % Handle GitHub links, convert the link to load the raw content
+            if strcmp(jsonLocation(1:4),'http') && strcmp(jsonLocation(end-4:end),'.json')
+                if ~isempty(regexp(jsonLocation, '^http[s]*://github.com', 'once'))
+                    jsonLocation = strrep(jsonLocation, 'github.com','raw.githubusercontent.com');
+                    jsonLocation = strrep(jsonLocation, 'blob/', '');
+                end
+            end
+            jsonText = bst_webread(jsonLocation);
+            try
+                PlugDesc = bst_jsondecode(jsonText);
+            catch
+                errMsg = sprintf(['Could not parse JSON file at:' 10 '%s'], jsonLocation);
+            end
+
+        case 'manual'
+            % Get info for user-defined plugin description from user
+            res = java_dialog('input', { ['<HTML>Provide the <B>mandatory</B> fields for a user defined Brainstorm plugin<BR>' ...
+                                          'See this page for further details:<BR>' ...
+                                          '<FONT COLOR="#0000FF">https://neuroimage.usc.edu/brainstorm/Tutorials/Plugins</FONT>' ...
+                                          '<BR><BR>' ...
+                                          'Plugin name<BR>' ...
+                                          '<I><FONT color="#707070">EXAMPLE: bst-users</FONT></I>'], ...
+                                         ['<HTML>Version<BR>' ...
+                                          '<I><FONT color="#707070">EXAMPLE: github-main or 3.1.4</FONT></I>'], ...
+                                         ['<HTML>URL for zip<BR>' ...
+                                          '<I><FONT color="#707070">EXAMPLE: https://github.com/brainstorm-tools/bst-users/archive/refs/heads/master.zip</FONT></I>'], ...
+                                         ['<HTML>URL for information<BR>' ...
+                                          '<I><FONT color="#707070">EXAMPLE: https://github.com/brainstorm-tools/bst-users</FONT></I>']}, ...
+                                       'User defined plugin', [], {'', '', '', ''});
+            if isempty(res) || any(cellfun(@isempty,res))
+                return
+            end
+            PlugDesc.Name    = lower(res{1});
+            PlugDesc.Version = res{2};
+            PlugDesc.URLzip  = res{3};
+            PlugDesc.URLinfo = res{4};
+    end
+    if ~isempty(errMsg)
+        bst_error(errMsg);
+        isOk = 0;
+        return;
+    end
+
+    % Validate retrieved plugin description
+    if length(PlugDesc) > 1
+        errMsg = 'JSON file should contain only one plugin description';
+    elseif ~all(ismember({'Name', 'Version', 'URLzip', 'URLinfo'}, fieldnames(PlugDesc)))
+        errMsg = 'Plugin description must contain the fields ''Name'', ''Version'', ''URLzip'' and ''URLinfo''';
+    else
+        PlugDesc.Name = lower(PlugDesc.Name);
+        PlugDescs = GetSupported();
+        if ismember(PlugDesc.Name, {PlugDescs.Name})
+            errMsg = sprintf('Plugin ''%s'' already exist in Brainstorm', PlugDesc.Name);
+        end
+    end
+    if ~isempty(errMsg)
+        bst_error(errMsg);
+        isOk = 0;
+        return;
+    end
+    % Override category
+    PlugDesc.Category = 'User defined';
+
+    % Write validated JSON file
+    pluginJsonFileOut = fullfile(bst_get('UserPluginsDir'), sprintf('plugin_%s.json', file_standardize(PlugDesc.Name)));
+    fid = fopen(pluginJsonFileOut, 'wt');
+    jsonText = bst_jsonencode(PlugDesc, 0);
+    fprintf(fid, jsonText);
+    fclose(fid);
+
+    fprintf(1, 'BST> Plugin ''%s'' was added to ''User defined'' plugins\n', PlugDesc.Name);
+end
+
+
+%% ===== REMOVE USER DEFINED PLUGIN DESCRIPTION =====
+function [isOk, errMsg] = RemoveUserDefDesc(PlugName)
+    isOk   = 1;
+    errMsg = '';
+    if nargin < 1 || isempty(PlugName)
+        PlugDescs = GetSupported();
+        PlugDescs = PlugDescs(ismember({PlugDescs.Category}, 'User defined'));
+        PlugName = java_dialog('combo', 'Indicate the name of the plugin to remove:', 'Remove plugin from ''User defined'' list', [], {PlugDescs.Name});
+    end
+    if isempty(PlugName)
+        return
+    end
+    PlugDesc = GetSupported(PlugName);
+    if ~isempty(PlugDesc.Path) || file_exist(bst_fullfile(bst_get('UserPluginsDir'), PlugDesc.Name))
+        [isOk, errMsg] = Uninstall(PlugDesc.Name, 0);
+    end
+    % Delete json file
+    if isOk
+       isOk = file_delete(fullfile(bst_get('UserPluginsDir'), sprintf('plugin_%s.json', file_standardize(PlugDesc.Name))), 1);
+    end
+
+    fprintf(1, 'BST> Plugin ''%s'' was removed from ''User defined'' plugins\n', PlugDesc.Name);
 end
 
 
@@ -697,6 +964,12 @@ function [Version, URLzip] = GetVersionOnline(PlugName, URLzip, isCache)
                 disp(['BST> Checking latest online version for ' PlugName '...']);
                 str = bst_webread('https://raw.githubusercontent.com/Nirstorm/nirstorm/master/bst_plugin/VERSION');
                 Version = strtrim(str(9:end));
+            case 'brainentropy'
+                bst_progress('text', ['Checking latest online version for ' PlugName '...']);
+                disp(['BST> Checking latest online version for ' PlugName '...']);
+                str = bst_webread('https://raw.githubusercontent.com/multifunkim/best-brainstorm/master/best/VERSION.txt');
+                str = strsplit(str,'\n');
+                Version = strtrim(str{1});
             otherwise
                 % If downloading from github: Get last GitHub commit SHA
                 if isGithubMaster(URLzip)
@@ -724,8 +997,11 @@ end
 %% ===== GET GITHUB COMMIT =====
 % Get SHA of the GitHub HEAD commit
 function sha = GetGithubCommit(URLzip)
+    zipUri = matlab.net.URI(URLzip);
+    % Primary branch name: master or main
+    [~, primaryBranch] = bst_fileparts(char(zipUri.Path(end)));
     % Default result
-    sha = 'github-master';
+    sha = ['github-', primaryBranch];
     % Only available after Matlab 2016b (because of matlab.net.http.RequestMessage)
     if (bst_get('MatlabVersion') < 901)
         return;
@@ -737,7 +1013,7 @@ function sha = GetGithubCommit(URLzip)
         gitUser = char(zipUri.Path(2));
         gitRepo = char(zipUri.Path(3));
         % Request last commit SHA with GitHub API
-        apiUri = matlab.net.URI(['https://api.github.com/repos/' gitUser '/' gitRepo '/commits/master']);
+        apiUri = matlab.net.URI(['https://api.github.com/repos/' gitUser '/' gitRepo '/commits/' primaryBranch]);
         request = matlab.net.http.RequestMessage;
         request = request.addFields(matlab.net.http.HeaderField('Accept', 'application/vnd.github.VERSION.sha'));
         r = send(request, apiUri);
@@ -1174,9 +1450,16 @@ function [isOk, errMsg, PlugDesc] = Install(PlugName, isInteractive, minVersion)
     if ~isempty(errMsg)
         return;
     end
+    % Check if plugin is supported on Apple silicon
+    OsType = bst_get('OsType', 0);
+    if strcmpi(OsType, 'mac64arm') && ismember(PlugName, PluginsNotSupportAppleSilicon())
+        errMsg = ['Plugin ', PlugName ' is not supported on Apple silicon yet.'];
+        PlugDesc = [];
+        return;
+    end
     % Check if there is a URL to download
     if isempty(PlugDesc.URLzip)
-        errMsg = ['No download URL for ', bst_get('OsType', 0), ': ', PlugName ''];
+        errMsg = ['No download URL for ', OsType, ': ', PlugName ''];
         return;
     end
     % Compiled version
@@ -1233,7 +1516,7 @@ function [isOk, errMsg, PlugDesc] = Install(PlugName, isInteractive, minVersion)
                     '<BR><BR>Brainstorm will now install these plugins.' 10 10], 'Plugin manager');
             end
             for iPlug = 1:length(installPlugs)
-                [isInstalled, errMsg] = Install(installPlugs{iPlug}, isInteractive, installPlugs{iPlug});
+                [isInstalled, errMsg] = Install(installPlugs{iPlug}, isInteractive, installVer{iPlug});
                 if ~isInstalled
                     errMsg = ['Error processing dependency: ' PlugDesc.RequiredPlugs{iPlug,1} 10 errMsg];
                     return;
@@ -1418,73 +1701,10 @@ function [isOk, errMsg, PlugDesc] = Install(PlugName, isInteractive, minVersion)
         bst_progress('removeimage');
         return;
     end
-    
-    % === DELETE UNWANTED FILES ===
-    if ~isempty(PlugDesc.DeleteFiles) && iscell(PlugDesc.DeleteFiles)
-        warning('off', 'MATLAB:RMDIR:RemovedFromPath');
-        for iDel = 1:length(PlugDesc.DeleteFiles)
-            if ~isempty(PlugDesc.SubFolder)
-                fileDel = bst_fullfile(PlugDesc.Path, PlugDesc.SubFolder, PlugDesc.DeleteFiles{iDel});
-            else
-                fileDel = bst_fullfile(PlugDesc.Path, PlugDesc.DeleteFiles{iDel});
-            end
-            if file_exist(fileDel)
-                try
-                    file_delete(fileDel, 1, 3);
-                catch
-                    disp(['BST> Plugin ' PlugName ': Could not delete file: ' PlugDesc.DeleteFiles{iDel}]);
-                end
-            else
-                disp(['BST> Plugin ' PlugName ': Missing file: ' PlugDesc.DeleteFiles{iDel}]);
-            end
-        end
-        warning('on', 'MATLAB:RMDIR:RemovedFromPath');
-    end
-
-    % === SEARCH PROCESSES ===
-    % Look for process_* functions in the process folder
-    PlugProc = file_find(PlugPath, 'process_*.m', Inf, 0);
-    if ~isempty(PlugProc)
-        % Remove absolute path: use only path relative to the plugin Path
-        PlugDesc.Processes = cellfun(@(c)file_win2unix(strrep(c, [PlugPath, filesep], '')), PlugProc, 'UniformOutput', 0);
-    end
-    
-    % === SAVE PLUGIN.MAT ===
-    % Save installation date
-    c = clock();
-    PlugDesc.InstallDate = datestr(datenum(c(1), c(2), c(3), c(4), c(5), c(6)), 'dd-mmm-yyyy HH:MM:SS');
-    % Get readme and logo
-    PlugDesc.ReadmeFile = GetReadmeFile(PlugDesc);
-    PlugDesc.LogoFile = GetLogoFile(PlugDesc);
-    % Update plugin.mat after loading
-    PlugDescSave = rmfield(PlugDesc, excludedFields);
-    bst_save(PlugMatFile, PlugDescSave, 'v6');
-    
-    % === CALLBACK: POST-INSTALL ===
-    [isOk, errMsg] = ExecuteCallback(PlugDesc, 'InstalledFcn');
+    % Update plugin description after first load, and delete unwanted files
+    [isOk, errMsg, PlugDesc] = UpdateDescription(PlugDesc, 1);
     if ~isOk
         return;
-    end
-    
-    % === GET INSTALLED VERSION ===
-    % Get installed version
-    if ~isempty(PlugDesc.GetVersionFcn)
-        testVer = [];
-        try
-            if ischar(PlugDesc.GetVersionFcn)
-                testVer = eval(PlugDesc.GetVersionFcn);
-            elseif isa(PlugDesc.GetVersionFcn, 'function_handle')
-                testVer = feval(PlugDesc.GetVersionFcn);
-            end
-        catch
-            disp(['BST> Could not get installed version with callback: ' PlugDesc.GetVersionFcn]);
-        end
-        if ~isempty(testVer)
-            PlugDesc.Version = testVer;
-            % Update plugin.mat
-            PlugDescSave.Version = testVer;
-            bst_save(PlugMatFile, PlugDescSave, 'v6');
-        end
     end
     
     % === SHOW PLUGIN INFO ===
@@ -1522,6 +1742,96 @@ function [isOk, errMsg, PlugDesc] = Install(PlugName, isInteractive, minVersion)
     isOk = 1;
 end
 
+
+%% ===== UPDATE DESCRIPTION =====
+% USAGE:  [isOk, errMsg, PlugDesc] = bst_plugin('UpdateDescription', PlugDesc, doDelete=0)
+function [isOk, errMsg, PlugDesc] = UpdateDescription(PlugDesc, doDelete)
+    isOk        = 1;
+    errMsg      = '';
+    PlugPath    = PlugDesc.Path;
+    PlugName    = PlugDesc.Name;
+
+    if nargin < 2
+        doDelete = 0;
+    end
+
+    % Plug in needs to be installed
+    if isempty(bst_plugin('GetInstalled', PlugDesc.Name))
+        isOk = 0;
+        errMsg = ['Cannot update description, plugin ''' PlugDesc.Name ''' needs to be installed'];
+        return
+    end
+
+    % === DELETE UNWANTED FILES ===
+    if doDelete && ~isempty(PlugDesc.DeleteFiles) && iscell(PlugDesc.DeleteFiles)
+        warning('off', 'MATLAB:RMDIR:RemovedFromPath');
+        for iDel = 1:length(PlugDesc.DeleteFiles)
+            if ~isempty(PlugDesc.SubFolder)
+                fileDel = bst_fullfile(PlugDesc.Path, PlugDesc.SubFolder, PlugDesc.DeleteFiles{iDel});
+            else
+                fileDel = bst_fullfile(PlugDesc.Path, PlugDesc.DeleteFiles{iDel});
+            end
+            if file_exist(fileDel)
+                try
+                    file_delete(fileDel, 1, 3);
+                catch
+                    disp(['BST> Plugin ' PlugName ': Could not delete file: ' PlugDesc.DeleteFiles{iDel}]);
+                end
+            else
+                disp(['BST> Plugin ' PlugName ': Missing file: ' PlugDesc.DeleteFiles{iDel}]);
+            end
+        end
+        warning('on', 'MATLAB:RMDIR:RemovedFromPath');
+    end
+
+    % === SEARCH PROCESSES ===
+    % Look for process_* functions in the process folder
+    PlugProc = file_find(PlugPath, 'process_*.m', Inf, 0);
+    if ~isempty(PlugProc)
+        % Remove absolute path: use only path relative to the plugin Path
+        PlugDesc.Processes = cellfun(@(c)file_win2unix(strrep(c, [PlugPath, filesep], '')), PlugProc, 'UniformOutput', 0);
+    end
+    
+    % === SAVE PLUGIN.MAT ===
+    % Save installation date
+    c = clock();
+    PlugDesc.InstallDate = datestr(datenum(c(1), c(2), c(3), c(4), c(5), c(6)), 'dd-mmm-yyyy HH:MM:SS');
+    % Get readme and logo
+    PlugDesc.ReadmeFile = GetReadmeFile(PlugDesc);
+    PlugDesc.LogoFile = GetLogoFile(PlugDesc);
+    % Update plugin.mat
+    excludedFields = {'LoadedFcn', 'UnloadedFcn', 'DownloadedFcn', 'InstalledFcn', 'UninstalledFcn', 'Path', 'isLoaded', 'isManaged'};
+    PlugDescSave = rmfield(PlugDesc, excludedFields);
+    PlugMatFile = bst_fullfile(PlugDesc.Path, 'plugin.mat');
+    bst_save(PlugMatFile, PlugDescSave, 'v6');
+    
+    % === CALLBACK: POST-INSTALL ===
+    [isOk, errMsg] = ExecuteCallback(PlugDesc, 'InstalledFcn');
+    if ~isOk
+        return;
+    end
+    
+    % === GET INSTALLED VERSION ===
+    % Get installed version
+    if ~isempty(PlugDesc.GetVersionFcn)
+        testVer = [];
+        try
+            if ischar(PlugDesc.GetVersionFcn)
+                testVer = eval(PlugDesc.GetVersionFcn);
+            elseif isa(PlugDesc.GetVersionFcn, 'function_handle')
+                testVer = feval(PlugDesc.GetVersionFcn);
+            end
+        catch
+            disp(['BST> Could not get installed version with callback: ' PlugDesc.GetVersionFcn]);
+        end
+        if ~isempty(testVer)
+            PlugDesc.Version = testVer;
+            % Update plugin.mat
+            PlugDescSave.Version = testVer;
+            bst_save(PlugMatFile, PlugDescSave, 'v6');
+        end
+    end
+end
 
 %% ===== INSTALL INTERACTIVE =====
 % USAGE:  [isOk, errMsg, PlugDesc] = bst_plugin('InstallInteractive', PlugName)
@@ -1773,6 +2083,12 @@ function [isOk, errMsg, PlugDesc] = Load(PlugDesc, isVerbose)
     if ~isempty(errMsg)
         return;
     end
+    % Check if plugin is supported on Apple silicon
+    OsType = bst_get('OsType', 0);
+    if strcmpi(OsType, 'mac64arm') && ismember(PlugDesc.Name, PluginsNotSupportAppleSilicon())
+        errMsg = ['Plugin ', PlugDesc.Name ' is not supported on Apple silicon yet.'];
+        return;
+    end
     % Minimum Matlab version
     if ~isempty(PlugDesc.MinMatlabVer) && (PlugDesc.MinMatlabVer > 0) && (bst_get('MatlabVersion') < PlugDesc.MinMatlabVer)
         strMinVer = sprintf('%d.%d', ceil(PlugDesc.MinMatlabVer / 100), mod(PlugDesc.MinMatlabVer, 100));
@@ -1902,11 +2218,16 @@ function [isOk, errMsg, PlugDesc] = Load(PlugDesc, isVerbose)
                     if isequal(filesep, '\')
                         subDir = strrep(subDir, '/', '\');
                     end
-                    if isdir([PlugHomeDir, filesep, subDir])
+                    if ~isempty(dir([PlugHomeDir, filesep, subDir]))
                         if isVerbose
                             disp(['BST> Adding plugin ' PlugDesc.Name ' to path: ', PlugHomeDir, filesep, subDir]);
                         end
-                        addpath([PlugHomeDir, filesep, subDir]);
+                        if regexp(subDir, '\*[/\\]*$')
+                            subDir = regexprep(subDir, '\*[/\\]*$', '');
+                            addpath(genpath([PlugHomeDir, filesep, subDir]));
+                        else
+                            addpath([PlugHomeDir, filesep, subDir]);
+                        end
                     end
                 end
             end
@@ -2173,11 +2494,33 @@ function strList = List(Target, isGui)
             strDate = '';
             strPath = '';
         end
-        % Cut version string (short github SHA)
-        if (length(PlugDesc(iPlug).Version) > 13)
+        % Get installed version
+        if (length(PlugDesc(iPlug).Version) > 13)   % Cut version string (short github SHA)
             plugVer = ['git @', PlugDesc(iPlug).Version(1:7)];
         else
             plugVer = PlugDesc(iPlug).Version;
+        end
+        % Get installed version with GetVersionFcn
+        if isempty(plugVer) && isfield(PlugDesc(iPlug),'GetVersionFcn') && ~isempty(PlugDesc(iPlug).GetVersionFcn)
+            % Load plugin if needed
+            tmpLoad = 0;
+            if ~PlugDesc(iPlug).isLoaded
+                tmpLoad = 1;
+                Load(PlugDesc(iPlug), 0);
+            end
+            try
+                if ischar(PlugDesc(iPlug).GetVersionFcn)
+                    plugVer = eval(PlugDesc(iPlug).GetVersionFcn);
+                elseif isa(PlugDesc(iPlug).GetVersionFcn, 'function_handle')
+                    plugVer = feval(PlugDesc(iPlug).GetVersionFcn);
+                end
+            catch 
+                disp(['BST> Could not get installed version with callback: ' PlugDesc(iPlug).GetVersionFcn]);
+            end
+            % Unload plugin
+            if tmpLoad
+                Unload(PlugDesc(iPlug), 0);
+            end
         end
         % Assemble plugin text row
         strList = [strList strLoaded, ...
@@ -2197,17 +2540,32 @@ end
 
 
 %% ===== MENUS: CREATE =====
-function j = MenuCreate(jMenu, fontSize)
+function j = MenuCreate(jMenu, jPlugsPrev, fontSize)
     import org.brainstorm.icon.*;
     % Get all the supported plugins
     PlugDesc = GetSupported();
     % Get Matlab version
     MatlabVersion = bst_get('MatlabVersion');
     isCompiled = bst_iscompiled();
-    % Submenus
+    % Submenus array
     jSub = {};
+    % Generate submenus array from existing menu
+    if ~isCompiled && jMenu.getMenuComponentCount > 0
+        for iItem = 0 : jMenu.getItemCount-1
+            if ~isempty(regexp(jMenu.getMenuComponent(iItem).class, 'JMenu$', 'once'))
+                jSub(end+1,1:2) = {char(jMenu.getMenuComponent(iItem).getText), jMenu.getMenuComponent(iItem)};
+            end
+        end
+    end
+    % Editing an existing menu?
+    if isempty(jPlugsPrev)
+        isNewMenu = 1;
+        j = repmat(struct(), 0);
+    else
+        isNewMenu = 0;
+        j = repmat(jPlugsPrev(1), 0);
+    end
     % Process each plugin
-    j = repmat(struct(), 0);
     for iPlug = 1:length(PlugDesc)
         Plug = PlugDesc(iPlug);
         % Skip if Matlab is too old
@@ -2217,6 +2575,18 @@ function j = MenuCreate(jMenu, fontSize)
         % Skip if not supported in compiled version
         if isCompiled && (Plug.CompiledStatus == 0)
             continue;
+        end
+        % === Add menus for each plugin ===
+        % One menu per plugin
+        ij = length(j) + 1;
+        j(ij).name = Plug.Name;
+        % Skip if it is already a menu item
+        if ~isNewMenu
+            iPlugPrev = ismember({jPlugsPrev.name}, Plug.Name);
+            if any(iPlugPrev)
+                j(ij) = jPlugsPrev(iPlugPrev);
+                continue
+            end
         end
         % Category=submenu
         if ~isempty(Plug.Category)
@@ -2230,9 +2600,6 @@ function j = MenuCreate(jMenu, fontSize)
         else
             jParent = jMenu;
         end
-        % One menu per plugin
-        ij = length(j) + 1;
-        j(ij).name = Plug.Name;
         % Compiled and included: Simple static menu
         if isCompiled && (Plug.CompiledStatus == 2)
             j(ij).menu = gui_component('MenuItem', jParent, [], Plug.Name, [], [], [], fontSize);
@@ -2275,8 +2642,51 @@ function j = MenuCreate(jMenu, fontSize)
             end
         end
     end
+    % === Remove menus for plugins with description ===
+    if ~isempty(jPlugsPrev)
+        [~, iOld] = setdiff({jPlugsPrev.name}, {PlugDesc.Name});
+        for ix = 1 : length(iOld)
+            % Find category menu component
+            jMenuCat = jPlugsPrev(iOld(ix)).menu.getParent.getInvoker;
+            % Find index in parent
+            iDel = [];
+            for ic = 0 : jMenuCat.getMenuComponentCount-1
+                if jPlugsPrev(iOld(ix)).menu == jMenuCat.getMenuComponent(ic)
+                    iDel = ic;
+                    break
+                end
+            end
+            % Remove from parent
+            if ~isempty(iDel)
+                jMenuCat.remove(iDel);
+            end
+        end
+    end
+    % Create options for adding user-defined plugins
+    if ~isCompiled && isNewMenu
+        menuCategory = 'User defined';
+        jMenuUserDef = [];
+        for iMenuItem = 0 : jMenu.getItemCount-1
+             if ~isempty(regexp(jMenu.getMenuComponent(iMenuItem).class, 'JMenu$', 'once')) && strcmp(char(jMenu.getMenuComponent(iMenuItem).getText), menuCategory)
+                 jMenuUserDef = jMenu.getMenuComponent(iMenuItem);
+             end
+        end
+        if isempty(jMenuUserDef)
+            jMenuUserDef = gui_component('Menu', jMenu, [], menuCategory, IconLoader.ICON_FOLDER_OPEN, [], [], fontSize);
+        end
+        jAddUserDefMan  = gui_component('MenuItem', [], [], 'Add manually',  IconLoader.ICON_EDIT,   [], @(h,ev)AddUserDefDesc('manual'), fontSize);
+        jAddUserDefFile = gui_component('MenuItem', [], [], 'Add from file', IconLoader.ICON_EDIT,   [], @(h,ev)AddUserDefDesc('file'),   fontSize);
+        jAddUserDefUrl  = gui_component('MenuItem', [], [], 'Add from URL',  IconLoader.ICON_EDIT,   [], @(h,ev)AddUserDefDesc('url'),    fontSize);
+        jRmvUserDefMan  = gui_component('MenuItem', [], [], 'Remove plugin', IconLoader.ICON_DELETE, [], @(h,ev)RemoveUserDefDesc,        fontSize);
+        % Insert "Add" options at the begining of the 'User defined' menu
+        jMenuUserDef.insert(jAddUserDefMan,  0);
+        jMenuUserDef.insert(jAddUserDefFile, 1);
+        jMenuUserDef.insert(jAddUserDefUrl,  2);
+        jMenuUserDef.insert(jRmvUserDefMan,  3);
+        jMenuUserDef.insertSeparator(4);
+    end
     % List
-    if ~isCompiled
+    if ~isCompiled && isNewMenu
         jMenu.addSeparator();
         gui_component('MenuItem', jMenu, [], 'List', IconLoader.ICON_EDIT, [], @(h,ev)List('Installed', 1), fontSize);
     end
@@ -2284,8 +2694,13 @@ end
 
 
 %% ===== MENUS: UPDATE =====
-function MenuUpdate(jPlugs)
+function MenuUpdate(jMenu, fontSize)
     import org.brainstorm.icon.*;
+    % Regenerate plugin menu to look for new plugins
+    global GlobalData
+    jPlugs = GlobalData.Program.GUI.pluginMenus;
+    jPlugs = MenuCreate(jMenu, jPlugs, fontSize);
+    GlobalData.Program.GUI.pluginMenus = jPlugs;
     % If compiled: disable most menus
     isCompiled = bst_iscompiled();
     % Interface scaling
@@ -2524,23 +2939,20 @@ function Archive(OutputFile)
 
     % ===== TEMP FOLDER =====
     bst_progress('start', 'Export environment', 'Creating temporary folder...');
-    % Empty temporary folder
-    gui_brainstorm('EmptyTempFolder');
-    % Create temporary folder for storing all the files to package
-    EnvDir = bst_fullfile(bst_get('BrainstormTmpDir'), ['bst_env_' strDate]);
-    mkdir(EnvDir);
 
     % ===== COPY BRAINSTORM =====
     bst_progress('text', 'Copying: brainstorm...');
     % Get Brainstorm path and version
     bstVer = bst_get('Version');
     bstDir = bst_get('BrainstormHomeDir');
+    % Create temporary folder for storing all the files to package
+    TmpDir = bst_get('BrainstormTmpDir', 0, 'bstenv');
     % Get brainstorm3 destination folder: add version number
     if ~isempty(bstVer.Version) && ~any(bstVer.Version == '?')
-        envBst = bst_fullfile(EnvDir, ['brainstorm', bstVer.Version]);
+        envBst = bst_fullfile(TmpDir, ['brainstorm', bstVer.Version]);
     else
         [tmp, bstName] = bst_fileparts(bstDir);
-        envBst = bst_fullfile(EnvDir, bstName);
+        envBst = bst_fullfile(TmpDir, bstName);
     end
     % Add git commit hash
     if (length(bstVer.Commit) >= 30)
@@ -2583,14 +2995,25 @@ function Archive(OutputFile)
         envPlug = bst_fullfile(envPlugins, PlugDesc(iPlug).Name);
         isOk = file_copy(PlugDesc(iPlug).Path, envPlug);
         if ~isOk
-            error(['Cannot copy folder: "' userProc '" into "' envProc '"']);
+            error(['Cannot copy folder: "' PlugDesc(iPlug).Path '" into "' envProc '"']);
+        end
+    end
+    % Copy user-defined JSON files
+    PlugJson = dir(fullfile(bst_get('UserPluginsDir'), 'plugin_*.json'));
+    for iPlugJson = 1:length(PlugJson)
+        bst_progress('text', ['Copying use-defined plugin JSON file: ' PlugJson(iPlugJson).name '...']);
+        plugJsonFile = bst_fullfile(PlugJson(iPlugJson).folder, PlugJson(iPlugJson).name);
+        envPlugJson = bst_fullfile(envPlugins, PlugJson(iPlugJson).name);
+        isOk = file_copy(plugJsonFile, envPlugJson);
+        if ~isOk
+            error(['Cannot copy file: "' plugJsonFile '" into "' envProc '"']);
         end
     end
 
     % ===== SAVE LIST OF VERSIONS =====
     strList = bst_plugin('List', 'installed', 0);
     % Open file versions.txt
-    VersionFile = bst_fullfile(EnvDir, 'versions.txt');
+    VersionFile = bst_fullfile(TmpDir, 'versions.txt');
     fid = fopen(VersionFile, 'wt');
     if (fid < 0)
         error(['Cannot save file: ' VersionFile]);
@@ -2606,9 +3029,9 @@ function Archive(OutputFile)
     % ===== ZIP FILES =====
     bst_progress('text', 'Zipping environment...');
     % Zip files with bst_env_* being the first level
-    zip(OutputFile, EnvDir, bst_fileparts(EnvDir));
-    % Cleaning up
-    gui_brainstorm('EmptyTempFolder');
+    zip(OutputFile, TmpDir, bst_fileparts(TmpDir));
+    % Delete the temporary files
+    file_delete(TmpDir, 1, 1);
     % Close progress bar
     bst_progress('stop');
 end
@@ -2678,6 +3101,10 @@ function LinkCatSpm(Action)
         if isempty(PlugCat) || ~PlugCat.isLoaded
             error('Plugin CAT12 is not loaded.');
         end
+        % Return if installation is not complete yet (first load before installation ends)
+        if isempty(PlugCat.InstallDate)
+            return
+        end
         % Define source and target for the link
         if ~isempty(PlugCat.SubFolder)
             linkTarget = bst_fullfile(PlugCat.Path, PlugCat.SubFolder);
@@ -2723,8 +3150,14 @@ function SetProgressLogo(PlugDesc)
         end
         % Set link
         if ~isempty(PlugDesc.URLinfo)
-            bst_progress('setlink', 'http://openmeeg.github.io');
+            bst_progress('setlink', PlugDesc.URLinfo);
         end
     end
 end
 
+
+%% ===== NOT SUPPORTED APPLE SILICON =====
+% Return list of plugins not supported on Apple silicon
+function pluginNames = PluginsNotSupportAppleSilicon()
+    pluginNames = {'brain2mesh', 'duneuro', 'iso2mesh', 'mcxlab-cl', 'mcxlab-cuda', 'xdf'};
+end

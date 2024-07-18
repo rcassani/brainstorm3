@@ -77,8 +77,8 @@ function decorationSize = GetDecorationSize(jBstWindow)
         jBstWindow.getBounds.getHeight() - jBstWindow.getRootPane.getBounds.getHeight() - jBstWindow.getRootPane.getBounds.getY(), ...
         20, ...% jBstWindow.getJMenuBar.getSize.getHeight(), ...
         28]; % TOOLBAR HEIGHT
-    % For windows 10 and macos, remove the borders of the figures (they are transparent)
-    if ispc && ~isempty(strfind(system_dependent('getos'), '10'))
+    % For Windows 10 and 11, remove the borders of the figures (they are transparent)
+    if ispc && (~isempty(strfind(system_dependent('getos'), '10')) || ~isempty(strfind(system_dependent('getos'), '11')))
         decorationSize(1) = 0;
         decorationSize(2) = 31;
         decorationSize(3) = 2;
@@ -247,7 +247,7 @@ function ScreenDef = GetScreenClientArea()
         % === SCALING ===
         try
             % Adjust with the OS scaling factor (for high-DPI screens)
-            javaScreenSize = jScreens(i).getDisplayMode().getWidth();
+            javaScreenSize = jScreens(i).getDefaultConfiguration().getBounds().getWidth();
             if (i == 1) || (i > size(MonitorPositions,1))
                 matlabScreenSize = MonitorPositions(1,3) - MonitorPositions(1,1) + 1;
             else

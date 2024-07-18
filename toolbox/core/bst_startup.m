@@ -27,7 +27,7 @@ function bst_startup(BrainstormHomeDir, GuiLevel, BrainstormDbDir)
 % =============================================================================@
 %
 % Authors: Sylvain Baillet, John C. Mosher, 1999
-%          Francois Tadel, 2008-2022
+%          Francois Tadel, 2008-2023
 
 
 %% ===== MATLAB CHECK =====
@@ -71,6 +71,10 @@ GlobalData.Program.GuiLevel = GuiLevel;
 GlobalData.Program.DispSqlDebug = 1;
 % Save the software home directory
 bst_set('BrainstormHomeDir', BrainstormHomeDir);
+% Debugging: show path in compiled application
+if isCompiled
+    disp(['BST> BrainstormHomeDir = ' BrainstormHomeDir]);
+end
 % Test for headless mode
 if (GuiLevel >= 0) && (java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment.isHeadless() || java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment.isHeadlessInstance())
     disp(' ');
@@ -146,6 +150,17 @@ if (MatlabVersion <= 803)
     disp('BST> Warning: For better graphics, use Matlab >= 2014b');
 end
 
+% Check for New Matlab Desktop (started with R2023a)
+if (MatlabVersion >= 914) && panel_options('isJSDesktop')
+    disp('BST> Warning: Brainstorm is not fully tested and supported on the New Matlab Desktop.');
+end
+
+% Check for Apple silicon (started with R2023b)
+if (MatlabVersion >= 2302) && strcmp(bst_get('OsType', 0), 'mac64arm')
+    disp(['BST> Warning: Running on Apple silicon, some functions and plugins are not supported yet:' 10 ...
+          '              Use Matlab < 2023b or Matlab for Intel processor for full support']);
+end
+
 
 %% ===== FORCE COMPILATION OF SOME INTERFACE FILES =====
 if (GuiLevel == 1)
@@ -161,11 +176,6 @@ if (GuiLevel == 1)
     bst_memory();
     bst_navigator();
 end
-
-
-%% ===== EMPTY TEMPORARY DIRECTORY =====
-% gui_brainstorm('EmptyTempFolder');
-% Execute when closing instead, to avoid conflicts
 
 
 %% ===== EMPTY REPORTS DIRECTORY =====
@@ -309,22 +319,28 @@ if (length(GlobalData.ChannelMontages.Montages) < 5) || any(~ismember({'CTF LF',
 end
 
 
+%% ===== INTERNET CONNECTION =====
+% Check internet connection
+fprintf(1, 'BST> Checking internet connectivity... ');
+[GlobalData.Program.isInternet, onlineRel] = bst_check_internet();
+if GlobalData.Program.isInternet
+    disp('ok');
+else
+    disp('failed');
+end
+
+
 %% ===== AUTOMATIC UPDATES =====
-% Automatic updates disabled: do not check for internet connection
+% Automatic updates disabled
 if ~bst_get('AutoUpdates')
     disp('BST> Warning: Automatic updates are disabled.');
     disp('BST> Warning: Make sure your version of Brainstorm is up to date.');
 % Matlab is running: check for updates
 elseif ~isCompiled && (GuiLevel == 1)
-    % Check internect connection
-    fprintf(1, 'BST> Checking internet connectivity... ');
-    [GlobalData.Program.isInternet, onlineRel] = bst_check_internet();
     % If no internet connection
     if ~GlobalData.Program.isInternet
-        disp('failed');
         disp('BST> Could not check for Brainstorm updates.')
     else
-        disp('ok');
         % Determine if release is old (local version > 30 days older than online version)
         daysOnline = onlineRel.year*365 + onlineRel.month*30 + onlineRel.day;
         daysLocal  =  localRel.year*365 +  localRel.month*30 +  localRel.day;
@@ -424,6 +440,11 @@ if (GuiLevel >= 0)
 end
 
 
+%% ===== USER-DEFINED PLUGINS =====
+% Print information about user-defined plugins
+bst_plugin('GetSupported', [], 1);
+
+
 %% ===== LOAD PLUGINS =====
 % Get installed plugins
 [InstPlugs, AllPlugs] = bst_plugin('GetInstalled');
@@ -456,6 +477,40 @@ end
 % Parse process folder
 disp('BST> Reading process folder...');
 panel_process_select('ParseProcessFolder', 1);
+
+
+%% ===== INSTALL ANATOMY TEMPLATE =====
+% Download ICBM152 template if missing (e.g. when cloning from GitHub)
+TemplateDir = fullfile(BrainstormHomeDir, 'defaults', 'anatomy', 'ICBM152');
+if ~isCompiled && ~exist(TemplateDir, 'file')
+    TemplateName = 'ICBM152_2023b';
+    isSkipTemplate = 0;
+    % Template file
+    ZipFile = bst_fullfile(bst_get('UserDefaultsDir'), 'anatomy', [TemplateName '.zip']);
+    % If template is not downloaded yet: download it
+    if ~exist(ZipFile, 'file')
+        disp('BST> Downloading ICBM152 template...');
+        % Download file
+        errMsg = gui_brainstorm('DownloadFile', ['http://neuroimage.usc.edu/bst/getupdate.php?t=' TemplateName], ZipFile, 'Download template');
+        % Error message
+        if ~isempty(errMsg)
+            disp(['BST> Error: Could not download template: ' errMsg]);
+            isSkipTemplate = 1;
+        end
+    end
+    % If the template is available as a zip file
+    if ~isSkipTemplate
+        disp('BST> Installing ICBM152 template...');
+        % Create folder
+        mkdir(TemplateDir);
+        % URL: Download zip file
+        try
+            unzip(ZipFile, TemplateDir);
+        catch
+            disp(['BST> Error: Could not unzip anatomy template: ' lasterr]);
+        end
+    end
+end
 
 
 %% ===== LICENSE AGREEMENT =====
@@ -704,6 +759,9 @@ if ~isempty(strfind(TmpDir, '/home/bic/'))
     % Edit preferences
     gui_show('panel_options', 'JavaWindow', 'Brainstorm preferences', [], 1, 0, 0);
 end
+
+% Empty temporary folder with confirmation (if nogui/server: display warning)
+gui_brainstorm('EmptyTempFolder', 1);
 
 
 %% ===== PREPARE BUG REPORTING =====

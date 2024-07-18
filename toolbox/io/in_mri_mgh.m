@@ -7,7 +7,7 @@ function [sMri, vox2ras, tReorient] = in_mri_mgh(MriFile, isApplyBst, isApplyVox
 %    - MriFile    : full path to a MRI file, WITH EXTENSION
 %    - isApplyBst : If 1, apply best orientation found to match Brainstorm convention
 %                   considering that the volume is aligned as the standard T1.mgz in the 
-%                   FreeSurfer output folder.
+%                   FreeSurfer output folder from 'recon-all'.
 %    - isApplyVox2ras : Apply additional transformation to the volume
 % OUTPUT:
 %    - sMri      : Standard brainstorm structure for MRI volumes
@@ -34,7 +34,7 @@ function [sMri, vox2ras, tReorient] = in_mri_mgh(MriFile, isApplyBst, isApplyVox
 % For more information type "brainstorm license" at command prompt.
 % =============================================================================@
 %
-% Authors: Francois Tadel, 2008-2022
+% Authors: Francois Tadel, 2008-2023
 
 % Initialize returned values
 vox2ras = [];
@@ -50,12 +50,13 @@ end
 
 %% ===== UNZIP FILE =====
 [MRIpath, MRIbase, MRIext] = bst_fileparts(MriFile);
+TmpDir = [];
 % If file is gzipped
 if strcmpi(MRIext, '.mgz')
     % Get temporary folder
-    tmpDir = bst_get('BrainstormTmpDir');
+    TmpDir = bst_get('BrainstormTmpDir', 0, 'importmri');
     % Target file
-    gunzippedFile = bst_fullfile(tmpDir, [MRIbase, '.mgh']);
+    gunzippedFile = bst_fullfile(TmpDir, [MRIbase, '.mgh']);
     % Unzip file
     res = org.brainstorm.file.Unpack.gunzip(MriFile, gunzippedFile);
     if ~res
@@ -141,7 +142,7 @@ end
 if isempty(isApplyBst)
     isApplyBst = java_dialog('confirm', ['Apply the standard transformation FreeSurfer=>Brainstorm?' 10 10 ...
                                          'Answer "yes" if importing transformed volumes such as T1.mgz in the' 10 ...
-                                         'FreeSurfer output folder, or other volumes in the same folder.' 10 10],  'MRI orientation');
+                                         'FreeSurfer output folder from ''recon-call'', or other volumes in the same folder.' 10 10],  'MRI orientation');
 end
 
 % Apply transformation
@@ -179,5 +180,8 @@ if ~isempty(vox2ras) && ~isequal(isApplyVox2ras, 0)
     [sMri, vox2ras, tReorient] = cs_nii2bst(sMri, vox2ras, isApplyVox2ras);
 end
 
-
+% ===== DELETE TEMPORARY FILE =====
+if ~isempty(TmpDir)
+    file_delete(TmpDir, 1, 1);
+end
 

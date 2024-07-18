@@ -58,11 +58,14 @@ else
 end
 
 %% ===== LOAD MRI =====
+isProgress = ~bst_progress('isVisible');
 if isempty(sMri)
     % Load MRI
     bst_progress('start', 'Generate head surface', 'Loading MRI...');
     sMri = bst_memory('LoadMri', MriFile);
-    bst_progress('stop');
+    if isProgress
+        bst_progress('stop');
+    end
 end
 % Save current scouts modifications
 panel_scout('SaveModifications');
@@ -197,8 +200,9 @@ else
 end
 
 % Close, success
-bst_progress('stop');
-
+if isProgress
+    bst_progress('stop');
+end
 
 
 

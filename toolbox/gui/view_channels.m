@@ -26,7 +26,7 @@ function [hFig, iDS, iFig] = view_channels(ChannelFile, Modality, isMarkers, isL
 % For more information type "brainstorm license" at command prompt.
 % =============================================================================@
 %
-% Authors: Francois Tadel, 2008-2019
+% Authors: Francois Tadel, 2008-2023
 
 global GlobalData;
 % Parse inputs
@@ -139,6 +139,7 @@ if isempty(GlobalData.DataSet(iDS).ChannelFile) || ~strcmpi(GlobalData.DataSet(i
     GlobalData.DataSet(iDS).Channel         = ChannelMat.Channel;
     GlobalData.DataSet(iDS).MegRefCoef      = ChannelMat.MegRefCoef;
     GlobalData.DataSet(iDS).Projector       = ChannelMat.Projector;
+    GlobalData.DataSet(iDS).Clusters        = ChannelMat.Clusters;
     GlobalData.DataSet(iDS).IntraElectrodes = ChannelMat.IntraElectrodes;
     GlobalData.DataSet(iDS).HeadPoints      = ChannelMat.HeadPoints;
 end
@@ -201,6 +202,10 @@ if is3DElectrodes
     if isLabels
         figure_3d('ViewSensors', hFig, 1, 1, 0, Modality);
     end
+    % Open iEEG tab
+    if ismember(Modality, {'SEEG', 'ECOG', 'ECOG+SEEG'})
+        gui_brainstorm('ShowToolTab', 'iEEG');
+    end
 elseif ismember(lower(Modality), {'ctf', 'vectorview306', '4d', 'kit', 'kriss', 'babymeg', 'ricoh'})
     figure_3d('PlotCoils', hFig, Modality, isMarkers);
 elseif ismember(lower(Modality), {'nirs','nirs-brs'})
@@ -208,6 +213,10 @@ elseif ismember(lower(Modality), {'nirs','nirs-brs'})
 else
     isMesh = ~isequal(Modality, 'SEEG');
     figure_3d('ViewSensors', hFig, isMarkers, isLabels, isMesh, Modality);
+end
+% Open Cluster tab
+if ~isempty(GlobalData.DataSet(iDS).Clusters)
+    gui_brainstorm('ShowToolTab', 'Cluster');
 end
 % Update lights
 camlight(findobj(hFig, 'Tag', 'FrontLight'), 'headlight');

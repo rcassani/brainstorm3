@@ -169,6 +169,11 @@ function ColormapChangedCallback(iDS, iFig) %#ok<DEFNU>
     if ~isempty(getappdata(hFig, 'Dipoles')) && gui_brainstorm('isTabVisible', 'Dipoles')
         panel_dipoles('PlotSelectedDipoles', hFig);
     end
+    % If displaying color-coded head points (see channel_align_manual)
+    HeadpointsDistMax = getappdata(hFig, 'HeadpointsDistMax');
+    if ~isempty(HeadpointsDistMax)
+        UpdateHeadPointsColormap(hFig);
+    end
 end
 
 
@@ -489,10 +494,8 @@ function FigureMouseMoveCallback(hFig, varargin)
                                     sign(motionAxes(1,moveAxis)) .* ...
                                     moveDirection(1);
                     % Save the detected movement direction and orientation
-                    if ismember(moveDirection, [1 2 3])
-                        setappdata(hFig, 'moveAxis',      moveAxis);
-                        setappdata(hFig, 'moveDirection', moveDirection);
-                    end
+                    setappdata(hFig, 'moveAxis',      moveAxis);
+                    setappdata(hFig, 'moveDirection', moveDirection);
                 % === MOVE SLICE ===
                 else                
                     % Get saved information about current motion
@@ -511,6 +514,8 @@ function FigureMouseMoveCallback(hFig, varargin)
                         posXYZ = [NaN, NaN, NaN];
                         posXYZ(moveAxis) = newPos;
                         panel_surface('PlotMri', hFig, posXYZ, 1);
+                        % Update sliders in surface panel
+                        panel_surface('UpdateSurfaceProperties');
                     end
                 end
             end
@@ -578,7 +583,7 @@ function FigureMouseUpCallback(hFig, varargin)
     % Update figure selection
     if strcmpi(Figure.Id.Type, '3DViz')
         bst_figures('SetCurrentFigure', hFig, '3D');
-    elseif ismember(Figure.Id.SubType, {'3DSensorCap', '3DElectrodes'})
+    elseif ismember(Figure.Id.SubType, {'3DSensorCap', '3DElectrodes', '3DOptodes'})
         bst_figures('SetCurrentFigure', hFig, '3D');
         bst_figures('SetCurrentFigure', hFig, '2D');
     else
@@ -606,9 +611,24 @@ function FigureMouseUpCallback(hFig, varargin)
             
         % === SELECTING POINT ===
         elseif isSelectingCoordinates
-            % Selecting from Coordinates panel
-            if gui_brainstorm('isTabVisible', 'Coordinates')
-                panel_coordinates('SelectPoint', hFig);
+            % Selecting from Coordinates or iEEG panels
+            if gui_brainstorm('isTabVisible', 'Coordinates') || gui_brainstorm('isTabVisible', 'iEEG')
+                if gui_brainstorm('isTabVisible', 'iEEG')
+                    % For SEEG, making sure centroid calculation for plotting contacts is active
+                    [iTess, TessInfo, hFig, sSurf] = panel_surface('GetSurface', hFig, [], 'Other');
+                    if ~isempty(sSurf)
+                        iIsoSurf = find(cellfun(@(x) ~isempty(regexp(x, '_isosurface', 'match')), {sSurf.FileName}));
+                        if ~isempty(iIsoSurf)
+                            panel_coordinates('SelectPoint', hFig, 0, 1);
+                        else
+                            panel_coordinates('SelectPoint', hFig);
+                        end
+                    else
+                        panel_coordinates('SelectPoint', hFig);
+                    end
+                else
+                    panel_coordinates('SelectPoint', hFig);
+                end
             % Selecting fiducials linked with MRI viewer
             else
                 hView3DHeadFig = findobj(0, 'Type', 'Figure', 'Tag', 'View3DHeadFig', '-depth', 1);
@@ -817,7 +837,9 @@ function FigureMouseUpCallback(hFig, varargin)
                     % If there are intra electrodes defined, and if the channels are SEEG/ECOG: try to select the electrode in panel_ieeg
                     if ~isempty(GlobalData.DataSet(iDS).IntraElectrodes) && all(~cellfun(@isempty, {GlobalData.DataSet(iDS).Channel(iSelChan).Group}))
                         selGroup = unique({GlobalData.DataSet(iDS).Channel(iSelChan).Group});
+                        % Highlight the electrode and contacts
                         panel_ieeg('SetSelectedElectrodes', selGroup);
+                        panel_ieeg('SetSelectedContacts', SelChan);
                     end
                 end
             end
@@ -1114,6 +1136,24 @@ function FigureKeyPressedCallback(hFig, keyEvent)
                             end
                         end
                     end
+                % CTRL+H : Head points
+                case 'h'
+                    if ismember('control', keyEvent.Modifier) && ~isempty(GlobalData.DataSet(iDS).HeadPoints) && ...
+                            ~isempty(GlobalData.DataSet(iDS).HeadPoints.Loc) && ~strcmpi(GlobalData.DataSet(iDS).Figure(iFig).Id.Type, 'Topography')
+                        % Are head points visible
+                        hHeadPointsMarkers = findobj(GlobalData.DataSet(iDS).Figure(iFig).hFigure, 'Tag', 'HeadPointsMarkers');
+                        isVisible = ~isempty(hHeadPointsMarkers) && strcmpi(get(hHeadPointsMarkers, 'Visible'), 'on');
+                        % Are head points color coded by distance
+                        isColorDist = ~isempty(hHeadPointsMarkers) && strcmpi(get(hHeadPointsMarkers, 'MarkerFaceColor'), 'flat');
+                        % Cycle between three modes: Hide, Show plain, Show color coded 
+                        if isVisible && isColorDist
+                            ViewHeadPoints(hFig, 0, 0);
+                        elseif isVisible
+                            ViewHeadPoints(hFig, 1, 1);
+                        else
+                            ViewHeadPoints(hFig, 1, 0);
+                        end
+                    end
                 % CTRL+I : Save as image
                 case 'i'
                     if ismember('control', keyEvent.Modifier)
@@ -1124,6 +1164,21 @@ function FigureKeyPressedCallback(hFig, keyEvent)
                     if ismember('control', keyEvent.Modifier)
                         out_figure_image(hFig, 'Viewer');
                     end
+                % CTRL+L : SEEG/ECOG electrodes
+                case 'l'
+                    if ~isAlignFig && ismember('control', keyEvent.Modifier) && ~isempty(GlobalData.DataSet(iDS).ChannelFile)
+                        AllTypes = unique({GlobalData.DataSet(iDS).Channel.Type});
+                        if ~isempty(AllTypes)
+                            ChannelFile = GlobalData.DataSet(iDS).ChannelFile;
+                            if ismember('ECOG', AllTypes) && ismember('SEEG', AllTypes)
+                                view_channels(ChannelFile, 'ECOG+SEEG', 1, 0, hFig, 1);
+                            elseif ismember('ECOG', AllTypes)
+                                view_channels(ChannelFile, 'ECOG', 1, 0, hFig, 1);
+                            elseif ismember('SEEG', AllTypes)
+                                view_channels(ChannelFile, 'SEEG', 1, 0, hFig, 1);
+                            end
+                        end
+                    end
                 % CTRL+F : Open as figure
                 case 'f'
                     if ismember('control', keyEvent.Modifier)
@@ -1132,6 +1187,20 @@ function FigureKeyPressedCallback(hFig, keyEvent)
                 % M : Jump to maximum
                 case 'm'
                     JumpMaximum(hFig);
+                % CTRL+P : Toggle point selection mode
+                case 'p'
+                    if ismember('control', keyEvent.Modifier)
+                        tmp = bst_get('PanelControls', 'Coordinates');
+                        if isempty(tmp)
+                            gui_brainstorm('ShowToolTab', 'Coordinates');
+                        end
+                        tmp = bst_get('PanelControls', 'iEEG');
+                        if ~isempty(tmp)
+                            gui_brainstorm('ShowToolTab', 'iEEG');
+                        end
+                        pause(0.01);
+                        panel_coordinates('SetSelectionState', ~panel_coordinates('GetSelectionState'));
+                    end
                 % CTRL+R : Recordings time series
                 case 'r'
                     if ismember('control', keyEvent.Modifier) && ~isempty(GlobalData.DataSet(iDS).DataFile) && ~strcmpi(FigureId.Modality, 'MEG GRADNORM')
@@ -1242,11 +1311,15 @@ function ResetView(hFig)
     % Get axes
     hAxes = findobj(hFig, 'Tag', 'Axes3D');
     % Reset zoom
-    zoom(hAxes, 'out');    
+    zoom(hAxes, 'out');
     % 2D LAYOUT: separate function
     if strcmpi(GlobalData.DataSet(iDS).Figure(iFig).Id.SubType, '2DLayout')
         GlobalData.DataSet(iDS).Figure(iFig).Handles.DisplayFactor = 1;
-        GlobalData.Preferences.TopoLayoutOptions.TimeWindow = abs(GlobalData.UserTimeWindow.Time(2) - GlobalData.UserTimeWindow.Time(1)) .* [-1, 1];
+        if ~getappdata(hFig, 'isStaticFreq')
+            GlobalData.Preferences.TopoLayoutOptions.FreqWindow = [GlobalData.UserFrequencies.Freqs(1), GlobalData.UserFrequencies.Freqs(end)];
+        else
+            GlobalData.Preferences.TopoLayoutOptions.TimeWindow = abs(GlobalData.UserTimeWindow.Time(2) - GlobalData.UserTimeWindow.Time(1)) .* [-1, 1];
+        end
         figure_topo('UpdateTopo2dLayout', iDS, iFig);
         return
     % 3D figures
@@ -1379,13 +1452,12 @@ function SetStandardView(hFig, viewNames)
     end
 end
 
-
 %% ===== GET COORDINATES =====
 function GetCoordinates(varargin)
     % Show Coordinates panel
     gui_show('panel_coordinates', 'JavaWindow', 'Get coordinates', [], 0, 1, 0);
-    % Start point selection
-    panel_coordinates('SetSelectionState', 1);
+    % Toggle point selection mode
+    panel_coordinates('SetSelectionState', ~panel_coordinates('GetSelectionState'));
 end
 
 
@@ -1573,6 +1645,10 @@ function DisplayFigurePopup(hFig)
             jItem = gui_component('MenuItem', jPopup, [], 'View sources', IconLoader.ICON_RESULTS, [], @(h,ev)bst_figures('ViewResults',hFig));
             jItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_MASK));
         end
+        % === VIEW SPECTRUM ===
+        if strcmpi(FigureType, 'Topography') && strcmpi(GlobalData.DataSet(iDS).Figure(iFig).Id.SubType, '2DLayout') && getappdata(hFig, 'isStatic')
+            jItem = gui_component('MenuItem', jPopup, [], [Modality ' Spectrum'], IconLoader.ICON_SPECTRUM, [], @(h,ev)view_spectrum(TfFile, 'Spectrum'));
+        end
         % === VIEW PAC/TIME-FREQ ===
         if strcmpi(FigureType, 'Topography') && ~isempty(SelChan) && ~isempty(Modality) && (Modality(1) ~= '$')
             if ~isempty(strfind(TfFile, '_pac_fullmaps'))
@@ -1597,7 +1673,11 @@ function DisplayFigurePopup(hFig)
         TopoLayoutOptions = bst_get('TopoLayoutOptions');
         % Create menu
         jMenu = gui_component('Menu', jPopup, [], '2DLayout options', IconLoader.ICON_2DLAYOUT);
-        gui_component('MenuItem', jMenu, [], 'Set time window...', [], [], @(h,ev)figure_topo('SetTopoLayoutOptions', 'TimeWindow'));
+        if ~getappdata(hFig, 'isStatic')
+            gui_component('MenuItem', jMenu, [], 'Set time window...', [], [], @(h,ev)figure_topo('SetTopoLayoutOptions', 'TimeWindow'));
+        else
+            gui_component('MenuItem', jMenu, [], 'Set frequency window...', [], [], @(h,ev)figure_topo('SetTopoLayoutOptions', 'FreqWindow'));
+        end
         jItem = gui_component('CheckBoxMenuItem', jMenu, [], 'White background', [], [], @(h,ev)figure_topo('SetTopoLayoutOptions', 'WhiteBackground', ~TopoLayoutOptions.WhiteBackground));
         jItem.setSelected(TopoLayoutOptions.WhiteBackground);
         jItem = gui_component('CheckBoxMenuItem', jMenu, [], 'Show reference lines', [], [], @(h,ev)figure_topo('SetTopoLayoutOptions', 'ShowRefLines', ~TopoLayoutOptions.ShowRefLines));
@@ -1733,15 +1813,45 @@ function DisplayFigurePopup(hFig)
             AllTypes = unique({GlobalData.DataSet(iDS).Channel.Type});
             if ~isempty(AllTypes) && ismember('ECOG', AllTypes)
                 ChannelFile = GlobalData.DataSet(iDS).ChannelFile;
-                gui_component('MenuItem', jMenuChannels, [], 'ECOG contacts', IconLoader.ICON_CHANNEL, [], @(h,ev)view_channels(ChannelFile, 'ECOG', 1, 0, hFig, 1));
+                jItem = gui_component('MenuItem', jMenuChannels, [], 'ECOG contacts', IconLoader.ICON_CHANNEL, [], @(h,ev)view_channels(ChannelFile, 'ECOG', 1, 0, hFig, 1));
+                jItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, KeyEvent.CTRL_MASK));
             end
             if ~isempty(AllTypes) && ismember('SEEG', AllTypes)
                 ChannelFile = GlobalData.DataSet(iDS).ChannelFile;
-                gui_component('MenuItem', jMenuChannels, [], 'SEEG contacts', IconLoader.ICON_CHANNEL, [], @(h,ev)view_channels(ChannelFile, 'SEEG', 1, 0, hFig, 1));
+                jItem = gui_component('MenuItem', jMenuChannels, [], 'SEEG contacts', IconLoader.ICON_CHANNEL, [], @(h,ev)view_channels(ChannelFile, 'SEEG', 1, 0, hFig, 1));
+                jItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, KeyEvent.CTRL_MASK));
+            end
+            % Edit interpolation distance
+            if ~isempty(Modality) && ismember(Modality, {'ECOG','SEEG','ECOG+SEEG'}) && ~isempty(TessInfo(1).DataSource.Type) && ismember(TessInfo(1).DataSource.Type, {'Data', 'Timefreq'})
+                jMenuChannels.addSeparator();
+                gui_component('MenuItem', jMenuChannels, [], 'Edit interpolation distance', IconLoader.ICON_SURFACE_CORTEX, [], @(h,ev)EditInterpDist(Modality));
             end
         end
     end
-    
+
+    % Show Head points
+    if ~isempty(GlobalData.DataSet(iDS).ChannelFile)
+        isHeadPoints = ~isempty(GlobalData.DataSet(iDS).HeadPoints) && ~isempty(GlobalData.DataSet(iDS).HeadPoints.Loc);
+        if isHeadPoints && ~strcmpi(FigureType, 'Topography')
+            if isAlignFig
+                jMenuChannels = gui_component('Menu', jPopup, [], 'Channels', IconLoader.ICON_CHANNEL);
+            else
+                jMenuChannels.addSeparator();
+            end
+            % Are head points visible
+            hHeadPointsMarkers = findobj(GlobalData.DataSet(iDS).Figure(iFig).hFigure, 'Tag', 'HeadPointsMarkers');
+            isVisible = ~isempty(hHeadPointsMarkers) && strcmpi(get(hHeadPointsMarkers, 'Visible'), 'on');
+            jItem = gui_component('CheckBoxMenuItem', jMenuChannels, [], 'View head points', IconLoader.ICON_CHANNEL, [], @(h,ev)ViewHeadPoints(hFig, ~isVisible));
+            jItem.setSelected(isVisible);
+            jItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, KeyEvent.CTRL_MASK));
+            % Are head points color coded by distance
+            isColorDist = ~isempty(hHeadPointsMarkers) && strcmpi(get(hHeadPointsMarkers, 'MarkerFaceColor'), 'flat');
+            jItem = gui_component('CheckBoxMenuItem', jMenuChannels, [], 'Color head points by distance', IconLoader.ICON_CHANNEL, [], @(h,ev)ViewHeadPoints(hFig, isVisible, ~isColorDist));
+            jItem.setSelected(isColorDist);
+            jItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, KeyEvent.CTRL_MASK));
+        end
+    end
+
     % ==== MENU: MONTAGE ====
     if strcmpi(FigureType, 'Topography') && ~isempty(Modality) && (Modality(1) ~= '$') && (isempty(TsInfo) || isempty(TsInfo.RowNames))
         jMenuMontage = gui_component('Menu', jPopup, [], 'Montage', IconLoader.ICON_TS_DISPLAY_MODE);
@@ -1752,8 +1862,40 @@ function DisplayFigurePopup(hFig)
     % Create the colormaps menus
     bst_colormaps('CreateAllMenus', jPopup, hFig, 0);
     
-    % ==== MENU: MRI DISPLAY ====
+    % === ANATOMICAL ATLASES ===
     ColormapInfo = getappdata(hFig, 'Colormap');
+    if ismember('anatomy', ColormapInfo.AllTypes)
+        [AtlasNames, AtlasFiles, iAtlas] = figure_mri('GetVolumeAtlases', hFig);
+        % Get index of Anatomy surface in the figure
+        TessInfo = getappdata(hFig, 'Surface');
+        iTess = find(file_compare({TessInfo.Name}, 'Anatomy'));
+        % Get atlas name in the figure
+        AtlasNameFig = getappdata(hFig, 'AnatAtlas');
+        if isempty(AtlasNameFig)
+            AtlasNameFig  = 'none';
+        end
+        if ~isempty(AtlasNames)
+            jMenuAtlas = gui_component('Menu', jPopup, [], 'Anatomical atlas', IconLoader.ICON_ANATOMY, [], []);
+            for i = 1:length(AtlasNames)
+                jCheck = gui_component('radiomenuitem', jMenuAtlas, [], AtlasNames{i}, [], [], @(h,ev)SetVolumeAtlas(hFig, AtlasNames{i}));
+                if strcmpi(AtlasNameFig, AtlasNames{i})
+                    jCheck.setSelected(1);
+                end
+            end
+            % Show/Hide atlas
+            if ~strcmpi(AtlasNameFig, 'none')
+                if isempty(TessInfo(iTess).DataSource.FileName)
+                    jMenuAtlas.addSeparator();
+                    gui_component('MenuItem', jMenuAtlas, [], 'Show atlas', [], [], @(h,ev)panel_surface('SetSurfaceData', hFig, 1, 'Anatomy', AtlasFiles{iAtlas}, 0));
+                elseif file_compare(AtlasFiles{iAtlas}, TessInfo(iTess).DataSource.FileName)
+                    jMenuAtlas.addSeparator();
+                    gui_component('MenuItem', jMenuAtlas, [], 'Hide atlas', [], [], @(h,ev)panel_surface('RemoveSurfaceData', hFig, 1));
+                end
+            end
+        end
+    end
+
+    % ==== MENU: MRI DISPLAY ====
     if ismember('anatomy', ColormapInfo.AllTypes)
         jMenuMri = gui_component('Menu', jPopup, [], 'MRI display', IconLoader.ICON_ANATOMY);
         MriOptions = bst_get('MriOptions');
@@ -1785,7 +1927,7 @@ function DisplayFigurePopup(hFig)
             % MENU: Interpolation MRI/sources
             % Interpolate values
             jMenuInterp = gui_component('Menu', jMenuMri, [], 'Interpolation sources>MRI', IconLoader.ICON_ANATOMY);
-            jCheck = gui_component('checkboxmenuitem', jMenuInterp, [], 'Grid interpolation', [], [], @(h,ev)SetGridSmooth(hFig, ~TessInfo(1).DataSource.GridSmooth));
+            jCheck = gui_component('checkboxmenuitem', jMenuInterp, [], 'Interpolate values', [], [], @(h,ev)SetGridSmooth(hFig, ~TessInfo(1).DataSource.GridSmooth));
             jCheck.setSelected(TessInfo(1).DataSource.GridSmooth);
             % Distance threshold
             jMenuInterp.addSeparator();
@@ -1797,13 +1939,14 @@ function DisplayFigurePopup(hFig)
             jItem2.setSelected(MriOptions.DistanceThresh == 4);
             jItem3.setSelected(MriOptions.DistanceThresh == 6);
             jItem4.setSelected(MriOptions.DistanceThresh == 9);
-%             jMenuMri = gui_component('Menu', jPopup, [], 'Sources resolution', IconLoader.ICON_ANATOMY);
-%             jItem1 = gui_component('radiomenuitem', jMenuMri, [], '1mm',    [], [], @(h,ev)SetMriResolution(hFig, 1));
-%             jItem2 = gui_component('radiomenuitem', jMenuMri, [], '2mm',    [], [], @(h,ev)SetMriResolution(hFig, 2));
-%             jItem3 = gui_component('radiomenuitem', jMenuMri, [], '3mm',    [], [], @(h,ev)SetMriResolution(hFig, 3));
-%             jItem1.setSelected(MriOptions.InterpDownsample == 1);
-%             jItem2.setSelected(MriOptions.InterpDownsample == 2);
-%             jItem3.setSelected(MriOptions.InterpDownsample == 3);
+            % Resolution
+            jMenuInterp.addSeparator();
+            jItem1 = gui_component('radiomenuitem', jMenuInterp, [], 'Resolution: 1 voxel',  [], [], @(h,ev)SetMriResolution(hFig, 1));
+            jItem2 = gui_component('radiomenuitem', jMenuInterp, [], 'Resolution: 2 voxels', [], [], @(h,ev)SetMriResolution(hFig, 2));
+            jItem3 = gui_component('radiomenuitem', jMenuInterp, [], 'Resolution: 3 voxels', [], [], @(h,ev)SetMriResolution(hFig, 3));
+            jItem1.setSelected(MriOptions.InterpDownsample == 1);
+            jItem2.setSelected(MriOptions.InterpDownsample == 2);
+            jItem3.setSelected(MriOptions.InterpDownsample == 3);
         end
         jMenuMri.addSeparator();
         % Upsample image
@@ -1844,7 +1987,9 @@ function DisplayFigurePopup(hFig)
     
     % ==== MENU: GET COORDINATES ====
     if ~strcmpi(FigureType, 'Topography')
-        gui_component('MenuItem', jPopup, [], 'Get coordinates...', IconLoader.ICON_SCOUT_NEW, [], @GetCoordinates);
+        jItem = gui_component('checkboxmenuitem', jPopup, [], 'Get coordinates...', IconLoader.ICON_SCOUT_NEW, [], @GetCoordinates);
+        jItem.setSelected(panel_coordinates('GetSelectionState'));
+        jItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, KeyEvent.CTRL_MASK));
     end
     
     % ==== MENU: SNAPSHOT ====
@@ -1854,8 +1999,8 @@ function DisplayFigurePopup(hFig)
         DefaultOutputDir = LastUsedDirs.ExportImage;
         % Is there a time window defined
         isTime = ~isempty(GlobalData) && ~isempty(GlobalData.UserTimeWindow.CurrentTime) && ~isempty(GlobalData.UserTimeWindow.Time) ...
-                 && (~isempty(DataFile) || ~isempty(ResultsFile) || ~isempty(Dipoles) || ~isempty(TfFile));
-        isFreq = ~isempty(GlobalData) && ~isempty(GlobalData.UserFrequencies.iCurrentFreq) && ~isempty(TfFile);
+                 && (~isempty(DataFile) || ~isempty(ResultsFile) || ~isempty(Dipoles) || ~isempty(TfFile)) && ~getappdata(hFig, 'isStatic');
+        isFreq = ~isempty(GlobalData) && ~isempty(GlobalData.UserFrequencies.iCurrentFreq) && ~isempty(TfFile) && ~getappdata(hFig, 'isStaticFreq');
         % === SAVE AS IMAGE ===
         jItem = gui_component('MenuItem', jMenuSave, [], 'Save as image', IconLoader.ICON_SAVE, [], @(h,ev)out_figure_image(hFig));
         jItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_I, KeyEvent.CTRL_MASK));
@@ -1877,12 +2022,14 @@ function DisplayFigurePopup(hFig)
         end
         % === SAVE SURFACE ===
         if ~isempty(TessInfo)
-            if ~isempty([TessInfo.hPatch]) && any([TessInfo.nVertices] > 5)
-                jMenuSave.addSeparator();
-            end
+            addSeparator = 1;
             % Loop on all the surfaces
             for it = 1:length(TessInfo)
                 if ~isempty(TessInfo(it).SurfaceFile) && ~isempty(TessInfo(it).hPatch) && (TessInfo(it).nVertices > 5)
+                    if addSeparator == 1
+                        jMenuSave.addSeparator();
+                        addSeparator = 0;
+                    end
                     jItem = gui_component('MenuItem', jMenuSave, [], ['Save surface: ' TessInfo(it).Name], IconLoader.ICON_SAVE, [], @(h,ev)SaveSurface(TessInfo(it)));
                 end
             end
@@ -1927,6 +2074,12 @@ function DisplayFigurePopup(hFig)
                 gui_component('MenuItem', jMenuSave, [], 'Time contact sheet: Sagittal', IconLoader.ICON_CONTACTSHEET, [], @(h,ev)view_contactsheet(hFig, 'time', 'x', DefaultOutputDir));
                 gui_component('MenuItem', jMenuSave, [], 'Time contact sheet: Axial',    IconLoader.ICON_CONTACTSHEET, [], @(h,ev)view_contactsheet(hFig, 'time', 'z', DefaultOutputDir));
             end
+            if isFreq
+                jMenuSave.addSeparator();
+                gui_component('MenuItem', jMenuSave, [], 'Frequency contact sheet: Coronal',  IconLoader.ICON_CONTACTSHEET, [], @(h,ev)view_contactsheet(hFig, 'freq', 'y', DefaultOutputDir));
+                gui_component('MenuItem', jMenuSave, [], 'Frequency contact sheet: Sagittal', IconLoader.ICON_CONTACTSHEET, [], @(h,ev)view_contactsheet(hFig, 'freq', 'x', DefaultOutputDir));
+                gui_component('MenuItem', jMenuSave, [], 'Frequency contact sheet: Axial',    IconLoader.ICON_CONTACTSHEET, [], @(h,ev)view_contactsheet(hFig, 'freq', 'z', DefaultOutputDir));
+            end
             jMenuSave.addSeparator();
             gui_component('MenuItem', jMenuSave, [], 'Volume contact sheet: Coronal',  IconLoader.ICON_CONTACTSHEET, [], @(h,ev)view_contactsheet(hFig, 'volume', 'y', DefaultOutputDir));
             gui_component('MenuItem', jMenuSave, [], 'Volume contact sheet: Sagittal', IconLoader.ICON_CONTACTSHEET, [], @(h,ev)view_contactsheet(hFig, 'volume', 'x', DefaultOutputDir));
@@ -1944,16 +2097,7 @@ function DisplayFigurePopup(hFig)
         isAxis = ~isempty(findobj(hFig, 'Tag', 'AxisXYZ'));
         jItem = gui_component('CheckBoxMenuItem', jMenuFigure, [], 'View axis', IconLoader.ICON_AXES, [], @(h,ev)ViewAxis(hFig, ~isAxis));
         jItem.setSelected(isAxis);
-        jItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.CTRL_MASK)); 
-        % Show Head points
-        isHeadPoints = ~isempty(GlobalData.DataSet(iDS).HeadPoints) && ~isempty(GlobalData.DataSet(iDS).HeadPoints.Loc);
-        if isHeadPoints && ~strcmpi(FigureType, 'Topography')
-            % Are head points visible
-            hHeadPointsMarkers = findobj(GlobalData.DataSet(iDS).Figure(iFig).hFigure, 'Tag', 'HeadPointsMarkers');
-            isVisible = ~isempty(hHeadPointsMarkers) && strcmpi(get(hHeadPointsMarkers, 'Visible'), 'on');
-            jItem = gui_component('CheckBoxMenuItem', jMenuFigure, [], 'View head points', IconLoader.ICON_CHANNEL, [], @(h,ev)ViewHeadPoints(hFig, ~isVisible));
-            jItem.setSelected(isVisible);
-        end
+        jItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.CTRL_MASK));
         jMenuFigure.addSeparator();
         % Change background color
         gui_component('MenuItem', jMenuFigure, [], 'Change background color', IconLoader.ICON_COLOR_SELECTION, [], @(h,ev)bst_figures('SetBackgroundColor', hFig));
@@ -2076,8 +2220,8 @@ function SetDistanceThresh(hFig, DistanceThresh)
         [iDS, iResult] = bst_memory('GetDataSetResult', TessInfo(1).DataSource.FileName);
         if ~isempty(iDS)
             GlobalData.DataSet(iDS).Results(iResult).grid2mri_interp = [];
-            bst_figures('FireCurrentTimeChanged', 1);
         end
+        bst_figures('FireCurrentTimeChanged', 1);
     end
 end
 % RADIO: MRI RESOLUTION
@@ -2093,8 +2237,8 @@ function SetMriResolution(hFig, InterpDownsample)
         [iDS, iResult] = bst_memory('GetDataSetResult', TessInfo(1).DataSource.FileName);
         if ~isempty(iDS)
             GlobalData.DataSet(iDS).Results(iResult).grid2mri_interp = [];
-            bst_figures('FireCurrentTimeChanged', 1);
         end
+        bst_figures('FireCurrentTimeChanged', 1);
     end
 end
 % CHECKBOX: GRID SMOOTH
@@ -2113,8 +2257,8 @@ function SetGridSmooth(hFig, GridSmooth)
         [iDS, iResult] = bst_memory('GetDataSetResult', TessInfo(1).DataSource.FileName);
         if ~isempty(iDS)
             GlobalData.DataSet(iDS).Results(iResult).grid2mri_interp = [];
-            bst_figures('FireCurrentTimeChanged', 1);
         end
+        bst_figures('FireCurrentTimeChanged', 1);
     end
 end
 
@@ -2773,7 +2917,6 @@ function hGrid = PlotGrid(hFig, GridLoc, GridValues, GridInd, DataAlpha, DataLim
     end
 end
 
-
 %% ===== PLOT 3D ELECTRODES =====
 function [hElectrodeGrid, ChanLoc] = PlotSensors3D(iDS, iFig, Channel, ChanLoc, TopoType) %#ok<DEFNU>
     global GlobalData;
@@ -3251,7 +3394,7 @@ function UpdateSurfaceAlpha(hFig, iTess)
     % Apply current smoothing
     SmoothSurface(hFig, iTess, Surface.SurfSmoothValue);
     % Apply structures selection
-    if isequal(Surface.Resect, 'struct')
+    if isequal(Surface.Resect{2}, 'struct')
         SetStructLayout(hFig, iTess);
     end
     % Get surfaces vertices
@@ -3267,7 +3410,7 @@ function UpdateSurfaceAlpha(hFig, iTess)
     FaceVertexAlphaData = ones(length(sSurf.Faces),1) * (1-Surface.SurfAlpha);
     
     % ===== HEMISPHERE SELECTION (CHAR) =====
-    if ischar(Surface.Resect) && ~strcmpi(Surface.Resect, 'none')
+    if ischar(Surface.Resect{2}) && ~strcmpi(Surface.Resect{2}, 'none')
         % Detect hemispheres
         if strcmpi(Surface.Name, 'FEM')
             isConnected = 1;
@@ -3277,13 +3420,15 @@ function UpdateSurfaceAlpha(hFig, iTess)
         % If there is no separation between  left and right: use the numeric split
         if isConnected
             iHideVert = [];
-            switch (Surface.Resect)
-                case 'right', Surface.Resect = [0  0.0000001 0];
-                case 'left',  Surface.Resect = [0 -0.0000001 0];
+            switch (Surface.Resect{2})
+                case 'right'
+                    Surface.Resect{1}(2) = max( 0.0000001, Surface.Resect{1}(2));
+                case 'left'
+                    Surface.Resect{1}(2) = min(-0.0000001, Surface.Resect{1}(2));
             end
         % If there is a structural separation between left and right: usr
         else
-            switch (Surface.Resect)
+            switch (Surface.Resect{2})
                 case 'right', iHideVert = lH;
                 case 'left',  iHideVert = rH;
                 otherwise,    iHideVert = [];
@@ -3297,7 +3442,7 @@ function UpdateSurfaceAlpha(hFig, iTess)
     end
         
     % ===== RESECT (DOUBLE) =====
-    if isnumeric(Surface.Resect) && (length(Surface.Resect) == 3) && (~all(Surface.Resect == 0) || strcmpi(Surface.Name, 'FEM'))
+    if isnumeric(Surface.Resect{1}) && (length(Surface.Resect{1}) == 3) && (~all(Surface.Resect{1} == 0) || strcmpi(Surface.Name, 'FEM'))
         % Regular triangular surface
         if ~strcmpi(Surface.Name, 'FEM')
             iNoModif = [];
@@ -3305,12 +3450,12 @@ function UpdateSurfaceAlpha(hFig, iTess)
             meanVertx = mean(Vertices, 1);
             maxVertx  = max(abs(Vertices), [], 1);
             % Limit values
-            resectVal = Surface.Resect .* maxVertx + meanVertx;
+            resectVal = Surface.Resect{1} .* maxVertx + meanVertx;
             % Get vertices that are kept in all the cuts
             for iCoord = 1:3
-                if Surface.Resect(iCoord) > 0
+                if Surface.Resect{1}(iCoord) > 0
                     iNoModif = union(iNoModif, find(Vertices(:,iCoord) < resectVal(iCoord)));
-                elseif Surface.Resect(iCoord) < 0
+                elseif Surface.Resect{1}(iCoord) < 0
                     iNoModif = union(iNoModif, find(Vertices(:,iCoord) > resectVal(iCoord)));
                 end
             end
@@ -3335,7 +3480,7 @@ function UpdateSurfaceAlpha(hFig, iTess)
                 % For the projected vertices: get the distance from each cut
                 distToCut = abs(Vertices(iVerticesToProject, :) - repmat(resectVal, [length(iVerticesToProject), 1]));
                 % Set the distance to the cuts that are not required to infinite
-                distToCut(:,(Surface.Resect == 0)) = Inf;
+                distToCut(:,(Surface.Resect{1} == 0)) = Inf;
                 % Get the closest cut
                 [minDist, closestCut] = min(distToCut, [], 2);
 
@@ -3364,7 +3509,7 @@ function UpdateSurfaceAlpha(hFig, iTess)
         else
             % Create a surface for the outside surface of this tissue
             Elements = get(Surface.hPatch, 'UserData');
-            Faces = tess_voledge(Vertices, Elements, Surface.Resect);
+            Faces = tess_voledge(Vertices, Elements, Surface.Resect{1});
             % Update patch
             set(Surface.hPatch, 'Faces', Faces);
         end
@@ -3689,8 +3834,20 @@ end
 
 
 %% ===== VIEW HEAD POINTS =====
-function ViewHeadPoints(hFig, isVisible)
+function ViewHeadPoints(hFig, isVisible, isColorDist)
     global GlobalData;
+    % Parse inputs
+    if (nargin < 3) || isempty(isColorDist)
+        isColorDist = 0;
+    elseif isColorDist
+        % Find scalp surface
+        [iTess, ~, hFig, sSurf] = panel_surface('GetSurface', hFig, '', 'Scalp');
+        if isempty(iTess)
+            % Can't use color distance without scalp surface.
+            isColorDist = 0;
+        end
+    end
+
     % Get figure description
     [hFig, iFig, iDS] = bst_figures('GetFigure', hFig);
     if isempty(iDS)
@@ -3719,15 +3876,41 @@ function ViewHeadPoints(hFig, isVisible)
         [HeadPoints.Loc(1,iDupli), HeadPoints.Loc(2,iDupli), HeadPoints.Loc(3,iDupli)] = sph2cart(th, phi, r - 0.0001);
     end
     
-    % Else, get previous head points
+    % Look for previous head points
     hHeadPointsMarkers = findobj(hAxes, 'Tag', 'HeadPointsMarkers');
     hHeadPointsLabels  = findobj(hAxes, 'Tag', 'HeadPointsLabels');
     % If head points graphic objects already exist: set the "Visible" property
     if ~isempty(hHeadPointsMarkers)
         if isVisible
-            set([hHeadPointsMarkers hHeadPointsLabels], 'Visible', 'on');
+            set([hHeadPointsMarkers(:)' hHeadPointsLabels(:)'], 'Visible', 'on');
         else
-            set([hHeadPointsMarkers hHeadPointsLabels], 'Visible', 'off');
+            set([hHeadPointsMarkers(:)' hHeadPointsLabels(:)'], 'Visible', 'off');
+        end
+        % Toggle color modes
+        ColormapInfo = getappdata(hFig, 'Colormap');
+        ColormapType = 'stat1';
+        if isColorDist && ~strcmpi(get(hHeadPointsMarkers, 'MarkerFaceColor'), 'flat')
+            % Color points according to distance to surface
+            % Get scalp surface
+            if ~isempty(sSurf) && isfield(sSurf, 'Vertices') && ~isempty(sSurf.Vertices)
+                % Compute the distance
+                Dist = bst_surfdist(get(hHeadPointsMarkers, 'Vertices'), sSurf.Vertices, sSurf.Faces);
+                set(hHeadPointsMarkers, 'CData', Dist * 1000, ...
+                    'MarkerFaceColor', 'flat', 'MarkerEdgeColor', 'flat');
+                setappdata(hFig, 'HeadpointsDistMax', max(Dist));
+                if ~ismember(ColormapType, ColormapInfo.AllTypes)
+                    % Add missing colormap (color was toggled after points were displayed)
+                    bst_colormaps('AddColormapToFigure', hFig, ColormapType, 'mm');
+                end
+                ColormapChangedCallback(iDS, iFig);
+                bst_colormaps('SetColorbarVisible', hFig, 1);
+            end
+        elseif ~isColorDist && strcmpi(get(hHeadPointsMarkers, 'MarkerFaceColor'), 'flat')
+            % Conventional fixed color
+            set(hHeadPointsMarkers, 'MarkerFaceColor', [.3 1 .3], 'MarkerEdgeColor', [.4 .7 .4]);
+            if strcmpi(ColormapInfo.Type, ColormapType)
+                bst_colormaps('SetColorbarVisible', hFig, 0);
+            end
         end
     % If head points objects were not created yet: create them
     elseif isVisible
@@ -3805,19 +3988,58 @@ function ViewHeadPoints(hFig, isVisible)
         end
         % Plot extra head points
         if ~isempty(iExtra)
-            % Display markers
-            line(digLoc(iExtra,1), digLoc(iExtra,2), digLoc(iExtra,3), ...
+            % Color code points by distance
+            if isColorDist
+                % Compute the distance
+                Dist = bst_surfdist(digLoc(iExtra, :), sSurf.Vertices, sSurf.Faces);
+                CData = Dist * 1000; % mm
+                setappdata(hFig, 'HeadpointsDistMax', max(Dist));
+                MarkerFaceColor = 'flat';
+                MarkerEdgeColor = 'flat';
+                bst_colormaps('AddColormapToFigure', hFig, 'stat1', 'mm');
+            else
+                CData = 'w'; % any color, not displayed
+                MarkerFaceColor = [.3 1 .3];
+                MarkerEdgeColor = [.4 .7 .4];
+            end
+            patch(digLoc(iExtra,1), digLoc(iExtra,2), digLoc(iExtra,3), CData, ... 
                 'Parent',          hAxes, ...
                 'LineWidth',       2, ...
-                'LineStyle',       'none', ...
-                'MarkerFaceColor', [.3 1 .3], ...
-                'MarkerEdgeColor', [.4 .7 .4], ...
+                'FaceColor',       'none', ...
+                'EdgeColor',       'none', ...
+                'MarkerFaceColor', MarkerFaceColor, ...
+                'MarkerEdgeColor', MarkerEdgeColor, ...
                 'MarkerSize',      6, ...
                 'Marker',          'o', ...
                 'UserData',        iExtra, ...
                 'Tag',             'HeadPointsMarkers');
+            if isColorDist
+                ColormapChangedCallback(iDS, iFig);
+            end
         end
     end
+end
+
+
+%% ===== UPDATE HEADPOINTS COLORMAP =====
+function UpdateHeadPointsColormap(hFig)
+    % If not using color-coded display
+    hHeadPointsMarkers = findobj(hFig, 'Tag', 'HeadPointsMarkers');
+    if ~strcmpi(get(hHeadPointsMarkers, 'MarkerFaceColor'), 'flat')
+        return;
+    end
+    % Get colormap configuration
+    sColormap = bst_colormaps('GetColormap', 'stat1');
+    % Update axes color limits, which will update de colorbar
+    hAxes = get(hHeadPointsMarkers, 'Parent');
+    if strcmpi(sColormap.MaxMode, 'custom')
+        set(hAxes, 'CLim', [sColormap.MinValue, sColormap.MaxValue]);
+    else
+        HeadpointsDistMax = getappdata(hFig, 'HeadpointsDistMax');
+        set(hAxes, 'CLim', [0, HeadpointsDistMax * 1000]);
+    end
+    % Update colorbar
+    bst_colormaps('ConfigureColorbar', hFig, 'stat1', 'stat', 'mm');
 end
 
 
@@ -3841,7 +4063,7 @@ function ViewAxis(hFig, isVisible)
         text(0, d+0.002, 0, 'Y', 'Color', [0 1 0], 'Parent', hAxes, 'Tag', 'AxisXYZ');
         text(0, 0, d+0.002, 'Z', 'Color', [0 0 1], 'Parent', hAxes, 'Tag', 'AxisXYZ');
         % Enforce camera target at (0,0,0)
-        camtarget(hAxes, [0,0,0]);
+        % camtarget(hAxes, [0,0,0]);
     else
         hAxisXYZ = findobj(hAxes, 'Tag', 'AxisXYZ');
         if ~isempty(hAxisXYZ)
@@ -4480,6 +4702,34 @@ function [hNet, hOrient] = PlotSensorsNet( hAxes, vertices, isFaces, isMesh, ori
 end
 
 
+%% ===== EDIT INTERPOLATION ELECTRODE-SURFACE DISTANCE =====
+function EditInterpDist(Modality)
+    % Get current value
+    val = bst_get('ElecInterpDist', Modality);
+    % Ask new value to user
+    newVal = java_dialog('input', ['Maximum distance when interpolating ' Modality ' on surface (millimeters):'], 'Interpolation distance', [], num2str(val * 1000));
+    if isempty(newVal) || isnan(str2double(newVal)) || (str2double(newVal) <= 0) 
+        return;
+    end
+    val = str2double(newVal) / 1000;
+    % Set value
+    bst_set('ElecInterpDist', Modality, val);
+    % Update figures
+    hFigures = bst_figures('GetFiguresByType', '3DViz');
+    for iFig = 1:length(hFigures)
+        TessInfo = getappdata(hFigures(iFig), 'Surface');
+        for iTess = 1:length(TessInfo)
+            if ~isempty(TessInfo(iTess).DataSource.Type) && ismember(TessInfo(iTess).DataSource.Type, {'Data', 'Timefreq'}) && ~isempty(TessInfo(iTess).DataWmat)
+                % Remove interpolation and recompute it
+                TessInfo(iTess).DataWmat = [];
+                setappdata(hFigures(iFig), 'Surface', TessInfo);
+                panel_surface('UpdateSurfaceData', hFigures(iFig), iTess);
+            end
+        end
+    end
+end
+
+
 %% ===== SAVE SURFACE =====
 function SaveSurface(TessInfo)
     % Progress bar
@@ -4752,4 +5002,76 @@ function hTensorCut = PlotTensorCut(hFig, CutPosition, CutDim, isRelative, Facto
     % Update figure handles
     Handles.TensorDisplay = opt;
     bst_figures('SetFigureHandles', hFig, Handles);
+end
+
+%% ===== SET VOLUME ATLAS =====
+% USAGE:  SetVolumeAtlas(hFig, AnatAtlas)   % Set to a specific atlas
+function SetVolumeAtlas(hFig, AnatAtlas)
+    % Parse inputs
+    if (nargin < 2) || isempty(AnatAtlas)
+        AnatAtlas = [];
+    end
+    % Get default MRI display options
+    MriOptions = bst_get('MriOptions');
+    % Get surfaces list
+    TessInfo = getappdata(hFig, 'Surface');
+    % Find the first anatomy entry
+    iTess = find(file_compare({TessInfo.Name}, 'Anatomy'));    
+    % Get available atlases for this figure
+    [AtlasNames, AtlasFiles] = figure_mri('GetVolumeAtlases', hFig);
+    if isempty(AtlasNames)
+        return;
+    end
+    % Open progress bar
+    isProgress = bst_progress('isVisible');
+    if ~isProgress
+        bst_progress('start', 'MRI Viewer', 'Loading volume atlas...');
+    end
+    % If atlas is not specified: pick the saved one, or Desikan-Killiany, or the first one
+    if isempty(AnatAtlas)
+        if ~isempty(MriOptions.DefaultAtlas) && ismember(MriOptions.DefaultAtlas, AtlasNames)
+            AnatAtlas = MriOptions.DefaultAtlas;
+        elseif ismember('aparc.DKTatlas+aseg', AtlasNames)
+            AnatAtlas = 'aparc.DKTatlas+aseg';
+        elseif ismember('aparc.a2009s+aseg', AtlasNames)
+            AnatAtlas = 'aparc.a2009s+aseg';
+        elseif ismember('DKT', AtlasNames)
+            AnatAtlas = 'DKT';
+        elseif ismember('Destrieux', AtlasNames)
+            AnatAtlas = 'Destrieux';
+        else
+            AnatAtlas = AtlasNames{1};
+        end
+    end
+    % Atlas as surface data
+    if strcmpi(AnatAtlas, 'none')
+        % Remvoe atlas data from the MRI slices
+        panel_surface('RemoveSurfaceData', hFig, 1);
+    else
+        iAtlas = find(strcmpi(AnatAtlas, AtlasNames));
+        if isempty(iAtlas)
+            disp(['BST> Error: Atlas "' AnatAtlas '" not available for this figure.']);
+            if ~isProgress
+                bst_progress('stop');
+            end
+            return;
+        elseif (length(iAtlas) > 1)
+            duplicAtlas = unique(AtlasNames(iAtlas));
+            disp(['BST> Warning: Multiple atlases with identical name: ' sprintf('%s ', duplicAtlas{:})]);
+            iAtlas = iAtlas(1);
+        end
+        % If the atlas is currently displayed: reload the overlay
+        if TessInfo(iTess).isOverlayAtlas
+            panel_surface('SetSurfaceData', hFig, 1, 'Anatomy', AtlasFiles{iAtlas}, 0);
+        end
+    end
+    % Save atlas name for figure
+    setappdata(hFig, 'AnatAtlas', AnatAtlas);
+    % Save default value for future use
+    MriOptions.DefaultAtlas = AnatAtlas;
+    bst_set('MriOptions', MriOptions);
+    % Close progress bar
+    if ~isProgress
+        bst_progress('stop');
+    end
 end

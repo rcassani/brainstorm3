@@ -1,5 +1,5 @@
 function errorMsg = import_anatomy_fs(iSubject, FsDir, nVertices, isInteractive, sFid, isExtraMaps, isVolumeAtlas, isKeepMri)
-% IMPORT_ANATOMY_FS: Import a full FreeSurfer folder as the subject's anatomy.
+% IMPORT_ANATOMY_FS: Import a full FreeSurfer folder as the subject's anatomy, obtained with either 'recon-all' or 'recon-all-clinical'
 %
 % USAGE:  errorMsg = import_anatomy_fs(iSubject, FsDir=[ask], nVertices=[ask], isInteractive=1, sFid=[], isExtraMaps=0, isVolumeAtlas=1, isKeepMri=0)
 %
@@ -134,21 +134,31 @@ nVertHemi = round(nVertices / 2);
 
 %% ===== PARSE FREESURFER FOLDER =====
 bst_progress('start', 'Import FreeSurfer folder', 'Parsing folder...');
-% Find MRI
-T1File = file_find(FsDir, 'T1.mgz', 2);
-T2File = file_find(FsDir, 'T2.mgz', 2);
-if isempty(T1File)
-    T1File = file_find(FsDir, '*.nii.gz', 0);
-    if ~isempty(T1File)
-        T1Comment = 'MRI';
+% Find MRI files
+isReconAllClinical = ~isempty(file_find(FsDir, 'synthSR.mgz', 2));
+isReconAll         = ~isempty(file_find(FsDir, 'T1.mgz', 2)) && ~isReconAllClinical;
+
+mri1File = '';
+if isReconAll
+    mri1File = file_find(FsDir, 'T1.mgz', 2);
+    mri2File = file_find(FsDir, 'T2.mgz', 2);
+    mri1Comment = 'MRI T1';
+    mri2Comment = 'MRI T2';
+elseif isReconAllClinical
+    mri1File = file_find(FsDir, 'synthSR.raw.mgz', 2);
+    mri2File = file_find(FsDir, 'native.mgz', 2);
+    mri1Comment = 'MRI (synthSR)';
+    mri2Comment = 'MRI (native)';
+end
+if isempty(mri1File)
+    mri1File = file_find(FsDir, '*.nii.gz', 0);
+    if ~isempty(mri1File)
+        mri2File    = '';
+        mri1Comment = 'MRI';
+        mri2Comment = '';
     else
         errorMsg = [errorMsg 'MRI file was not found: T1.mgz' 10];
     end
-elseif ~isempty(T1File) && ~isempty(T2File)
-    T1Comment = 'MRI T1';
-    T2Comment = 'MRI T2';
-else
-    T1Comment = 'MRI';
 end
 % Find surface: lh.pial (or lh.pial.T1)
 TessLhFile = file_find(FsDir, 'lh.pial', 2);
@@ -240,16 +250,16 @@ if ~isempty(errorMsg)
 end
 
 
-%% ===== IMPORT T1 =====
+%% ===== IMPORT PRIMARY MRI =====
 if isKeepMri && ~isempty(sAnatFilesMri)
-    sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
-    BstT1File = file_fullpath(sAnatFile.FileName);
-    in_mri_bst(BstT1File);
+    sAnatFile   = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+    BstMri1File = file_fullpath(sAnatFile.FileName);
+    in_mri_bst(BstMri1File);
 else
-    % Read T1 MRI
-    BstT1File = import_mri(iSubject, T1File, 'ALL', 0, [], T1Comment);
-    if isempty(BstT1File)
-        errorMsg = 'Could not import FreeSurfer folder: MRI was not imported properly';
+    % Read primary MRI
+    BstMri1File = import_mri(iSubject, mri1File, 'ALL', 0, [], mri1Comment);
+    if isempty(BstMri1File)
+        errorMsg = ['Could not import FreeSurfer folder: MRI "' mri1File '" was not imported properly'];
         if isInteractive
             bst_error(errorMsg, 'Import FreeSurfer folder', 0);
         end
@@ -263,7 +273,7 @@ end
 
 %% ===== DEFINE FIDUCIALS / MNI NORMALIZATION =====
 % Set fiducials and/or compute linear MNI normalization
-[isComputeMni, errCall] = process_import_anatomy('SetFiducials', iSubject, FsDir, BstT1File, sFid, isKeepMri, isInteractive);
+[isComputeMni, errCall] = process_import_anatomy('SetFiducials', iSubject, FsDir, BstMri1File, sFid, isKeepMri, isInteractive);
 % Error handling
 if ~isempty(errCall)
     errorMsg = [errorMsg, errCall];
@@ -276,12 +286,12 @@ if ~isempty(errCall)
 end
 
 
-%% ===== IMPORT T2 =====
-% Read T2 MRI (optional)
-if ~isempty(T2File)
-    BstT2File = import_mri(iSubject, T2File, 'ALL', 0, [], T2Comment);
-    if isempty(BstT2File)
-        disp('BST> Could not import T2.mgz.');
+%% ===== IMPORT SECONDARY MRI =====
+% Read secondary MRI (optional)
+if ~isempty(mri2File)
+    BstMri2File = import_mri(iSubject, mri2File, 'ALL', 0, [], mri2Comment);
+    if isempty(BstMri2File)
+        disp(['BST> Could not import "' mri2File '" MRI file.']);
     end
 end
 
@@ -434,7 +444,8 @@ if ~isempty(errorMsg)
     else
         disp(['ERROR: ' errorMsg]);
     end
-    return;
+    % Keep importing, as missing atlases or spheres do not block the rest of the process
+    % return;
 end
 % Inner skull
 if ~isempty(TessInnerFile)
@@ -447,16 +458,28 @@ end
 
 
 %% ===== GENERATE MID-SURFACE =====
+BstTessLmFile = [];
+BstTessRmFile = [];
 % Do not compute without volume atlases, to make a very light default import
 if isVolumeAtlas && ~isempty(TessLhFile) && ~isempty(TessRhFile) && ~isempty(TessLwFile) && ~isempty(TessRwFile)
     bst_progress('start', 'Import FreeSurfer folder', 'Generating mid-surface...');
     % Average pial and white surfaces
-    BstTessLmFile = tess_average({BstTessLhFile, BstTessLwFile});
-    BstTessRmFile = tess_average({BstTessRhFile, BstTessRwFile});
-    % Downsample
-    bst_progress('start', 'Import FreeSurfer folder', 'Downsampling: mid-surface...');
-    [BstTessLmLowFile, iLmLow, xLmLow] = tess_downsize(BstTessLmFile, nVertHemi, 'reducepatch');
-    [BstTessRmLowFile, iRmLow, xRmLow] = tess_downsize(BstTessRmFile, nVertHemi, 'reducepatch');
+    [BstTessLmFile, ~, errMsgL] = tess_average({BstTessLhFile, BstTessLwFile});
+    [BstTessRmFile, ~, errMsgR] = tess_average({BstTessRhFile, BstTessRwFile});
+    % If computed: downsample the surfaces
+    if ~isempty(BstTessLmFile) && ~isempty(BstTessRmFile)
+        bst_progress('start', 'Import FreeSurfer folder', 'Downsampling: mid-surface...');
+        [BstTessLmLowFile, iLmLow, xLmLow] = tess_downsize(BstTessLmFile, nVertHemi, 'reducepatch');
+        [BstTessRmLowFile, iRmLow, xRmLow] = tess_downsize(BstTessRmFile, nVertHemi, 'reducepatch');
+    else
+        errorMsg = [errorMsg 10 'Could not compute mid-surfaces: ' 10 errMsgL 10 errMsgR];
+        if isInteractive
+            bst_error(errorMsg, 'Import FreeSurfer folder', 0);
+        else
+            disp(['ERROR: ' errorMsg]);
+        end
+        % Not a blocking error: No need to have the mid-surface to keep going
+    end
 end
 
 
@@ -508,7 +531,7 @@ if ~isempty(TessLwFile) && ~isempty(TessRwFile)
     db_set('AnatomyFile', struct('FileName', WhiteLowFile), sAnatFile.Id);
 end
 % Merge hemispheres: mid-surface (do not compute without volume atlases, to make a very light default import)
-if isVolumeAtlas && ~isempty(TessLhFile) && ~isempty(TessRhFile) && ~isempty(TessLwFile) && ~isempty(TessRwFile)
+if ~isempty(BstTessLmFile) && ~isempty(BstTessRmFile)
     % Hi-resolution surface
     MidHiFile  = tess_concatenate({BstTessLmFile,    BstTessRmFile},    sprintf('mid_%dV', nVertOrigL + nVertOrigR), 'Cortex');
     MidLowFile = tess_concatenate({BstTessLmLowFile, BstTessRmLowFile}, sprintf('mid_%dV', length(xLmLow) + length(xRmLow)), 'Cortex');
@@ -542,11 +565,26 @@ HeadFile = tess_isohead(iSubject, 10000, 0, 2);
 
 %% ===== IMPORT ASEG ATLAS =====
 if isVolumeAtlas && ~isempty(AsegFile)
+    BstMriFiles = {};
     % Import atlas as volume
-    import_mri(iSubject, AsegFile);
+    BstMriFiles{end+1} = import_mri(iSubject, AsegFile);
     % Import other ASEG volumes
     for iFile = 1:length(OtherAsegFiles)
-        import_mri(iSubject, OtherAsegFiles{iFile});
+        BstMriFiles{end+1} = import_mri(iSubject, OtherAsegFiles{iFile});
+    end
+    % Remove padding introduced in every direction by 'mri_synth_surf.py' call in 'recon-all-clinical.sh'
+    if isReconAllClinical
+        for iAtlas = 1 : length(BstMriFiles)
+            sMriAtlas = in_mri_bst(BstMriFiles{iAtlas});
+            if iAtlas == 1
+                sMri1 = in_mri_bst(BstMri1File);
+                nPad = unique((size(sMriAtlas.Cube) - size(sMri1.Cube)) / 2);
+            end
+            if length(nPad) == 1 && nPad > 0 && round(nPad) == nPad
+                sMriAtlas.Cube = sMriAtlas.Cube(1+nPad:end-nPad, 1+nPad:end-nPad, 1+nPad:end-nPad);
+                bst_save(BstMriFiles{iAtlas}, sMriAtlas, 'v7');
+            end
+        end
     end
     % Import atlas as surfaces
     SelLabels = {...

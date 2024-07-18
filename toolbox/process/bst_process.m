@@ -79,6 +79,7 @@ function [sInputs, sInputs2] = Run(sProcesses, sInputs, sInputs2, isReport)
         bst_report('Start', sInputAll);
     end
     UseProgress = 1;
+    isProgress = ~bst_progress('isVisible');
     % Group some processes together to optimize the pipeline speed
     sProcesses = OptimizePipeline(sProcesses);
     
@@ -433,7 +434,7 @@ function [sInputs, sInputs2] = Run(sProcesses, sInputs, sInputs2, isReport)
         end
     end
     % Close progress bar (unless the last process does not use the progress bar)
-    if UseProgress
+    if UseProgress && isProgress
         bst_progress('stop');
     end
     % Report processing
@@ -706,14 +707,14 @@ function OutputFile = ProcessFilter(sProcess, sInput)
         else
             [rawPathIn, rawBaseIn] = bst_fileparts(sFileIn.filename);
         end
-        % Make sure that there are not weird characters in the folder names
-        rawBaseIn = file_standardize(rawBaseIn);
         % New folder name
         if isfield(sFileIn, 'condition') && ~isempty(sFileIn.condition)
             newCondition = ['@raw', sFileIn.condition, fileTag];
         else
             newCondition = ['@raw', rawBaseIn, fileTag];
         end
+        % Make sure that there are not weird characters in the folder names
+        newCondition = file_standardize(newCondition);
         % Get new condition name
         newStudyPath = file_unique(bst_fullfile(ProtocolInfo.STUDIES, sInput.SubjectName, newCondition));
         % Output file name derives from the condition name
@@ -1095,7 +1096,7 @@ function OutputFile = ProcessFilter(sProcess, sInput)
     if isfield(sProcess.options, 'Comment') && isfield(sProcess.options.Comment, 'Value') && ~isempty(sProcess.options.Comment.Value)
         sMat.Comment = sProcess.options.Comment.Value;
     % Modify comment based on modifications in function Run
-    elseif ~isRaw && isfield(sInput, 'Comment') && ~isempty(sInput.Comment) && ~isequal(sMat.Comment, sInput.Comment)
+    elseif ~isRaw && isfield(sInput, 'Comment') && ~isempty(sInput.Comment) && ~isequal(sMat.Comment, sInput.Comment) && ~isAbsolute
         sMat.Comment = sInput.Comment;
     % Add file tag (defined in process Run function)
     elseif isfield(sInput, 'CommentTag') && ~isempty(sInput.CommentTag)
@@ -1970,26 +1971,31 @@ function [sInput, nSignals, iRows] = LoadInputFile(FileName, Target, TimeWindow,
         'nComponents',   [], ...
         'nAvg',          1, ...
         'Leff',          1, ...
-        'Freqs',         []);
+        'Freqs',         [], ...
+        'DisplayUnits',  []);
     % Find file in database
     [sStudy, sInput.iStudy, iFile, sInput.DataType] = bst_get('AnyFile', FileName);
     
     % ===== LOAD SCOUT =====
     % Load scouts time series (Target = scout structure or list)
     if ~isempty(Target) && (isstruct(Target) || iscell(Target))
-        % Add row name only when extracting all the scouts
+        % Add row vertex index only when extracting all the scouts (could just set to true here: it only applies to 'all')
         AddRowComment = ~isempty(OPTIONS.TargetFunc) && strcmpi(OPTIONS.TargetFunc, 'all');
         % Flip sign only for results    
         isflip = ismember(sInput.DataType, {'link','results'}) && ...
                          isempty(strfind(FileName, '_norm')) && ...
                          isempty(strfind(FileName, 'NIRS'))  && ...
-                         isempty(strfind(FileName, 'Summed_sensitivities'));
+                         isempty(strfind(FileName, 'Summed_sensitivities')) && ... 
+                         isempty(strfind(FileName, 'bold')); 
+        
         % Call process
         sMat = CallProcess('process_extract_scout', FileName, [], ...
             'timewindow',     TimeWindow, ...
             'scouts',         Target, ...
             'scoutfunc',      OPTIONS.TargetFunc, ... % If TargetFunc is not defined, use the scout function available in each scout
-            'isflip',         isflip, ...            
+            'isflip',         isflip, ...      
+            'flatten',        0, ...
+            'pcaedit',        [], ... % if pca: run legacy or load pre-computed scouts (atlas-based file)
             'isnorm',         OPTIONS.isNorm, ...
             'concatenate',    0, ...
             'save',           0, ...
@@ -1997,7 +2003,7 @@ function [sInput, nSignals, iRows] = LoadInputFile(FileName, Target, TimeWindow,
             'addfilecomment', 0, ...
             'progressbar',    0);
         if isempty(sMat)
-            bst_report('Error', OPTIONS.ProcessName, [], 'Could not calculate the clusters time series.');
+            bst_report('Error', OPTIONS.ProcessName, FileName, 'Could not calculate the scout time series.');
             sInput.Data = [];
             return;
         end
@@ -2008,17 +2014,21 @@ function [sInput, nSignals, iRows] = LoadInputFile(FileName, Target, TimeWindow,
         sInput.nComponents = sMat.nComponents;
         sInput.nAvg        = sMat.nAvg;
         sInput.Leff        = sMat.Leff;
-        % If only non-All scouts: use just the scouts labels, if not use the full description string
-        sScouts = sMat.Atlas.Scouts;
-        if ~isequal(lower(OPTIONS.TargetFunc), 'all') && ~isempty(sScouts) && all(~strcmpi({sScouts.Function}, 'All'))
-            sInput.RowNames = {sScouts.Label}';
-        else
-            sInput.RowNames = sMat.Description;
-            for iRow = 1:length(sInput.RowNames)
-                iAt = find(sInput.RowNames{iRow} == '@', 1);
-                if ~isempty(iAt)
-                    sInput.RowNames{iRow} = strtrim(sInput.RowNames{iRow}(1:iAt-1));
-                end
+        sInput.DisplayUnits= sMat.DisplayUnits;
+        % We may still need the GridAtlas for mixed models: some regions may have 1 component, others 3.
+        if isfield(sMat, 'GridAtlas')
+            % Fix the GridAtlas.Grid2Source array for the new scout/source matrix. Needed for
+            % bst_source_orient (e.g. connectivity on unconstrained sources).
+            sMat = process_extract_scout('FixAtlasBasedGrid', OPTIONS.ProcessName, FileName, sMat);
+            sInput.GridAtlas = sMat.GridAtlas;
+            sInput.GridLoc = sMat.GridLoc;
+        end
+        % Get row names. Can't use just the scouts labels: unconstrained or mixed models have more than one row per scout.
+        sInput.RowNames = sMat.Description;
+        for iRow = 1:length(sInput.RowNames)
+            iAt = find(sInput.RowNames{iRow} == '@', 1);
+            if ~isempty(iAt)
+                sInput.RowNames{iRow} = strtrim(sInput.RowNames{iRow}(1:iAt-1));
             end
         end
         
@@ -2232,6 +2242,9 @@ function [sInput, nSignals, iRows] = LoadInputFile(FileName, Target, TimeWindow,
     else
         sInput.Leff = 1;
     end
+    if isfield(sMat, 'DisplayUnits') && ~isempty(sMat.DisplayUnits)
+        sInput.DisplayUnits = sMat.DisplayUnits;
+    end
     % Count output signals
     if ~isempty(sInput.ImagingKernel) 
         nSignals = size(sInput.ImagingKernel, 1);
@@ -2347,7 +2360,12 @@ function [OutputFiles, OutputFiles2, sInputs, sInputs2] = CallProcess(sProcess, 
             updateVal{1} = newVal;
         elseif ismember(lower(defType), {'timewindow','baseline','poststim','value','range','freqrange','freqrange_static'}) && isempty(defVal) && ~isempty(newVal) && ~iscell(newVal)
             updateVal = {newVal, 's', []};
-        elseif ismember(lower(defType), {'timewindow','baseline','poststim','value','range','freqrange','freqrange_static','combobox','combobox_label'}) && iscell(defVal) && ~isempty(defVal) && ~iscell(newVal) && ~isempty(newVal)
+        elseif ismember(lower(defType), {'timewindow','baseline','poststim','value','range','freqrange','freqrange_static','combobox'}) && iscell(defVal) && ~isempty(defVal) && ~iscell(newVal) && ~isempty(newVal)
+            updateVal{1} = newVal;
+        elseif ismember(lower(defType), {'combobox_label'}) && iscell(defVal) && ~isempty(defVal) && ismember(newVal, defVal{2})
+            if iscell(newVal) && length(newVal) == 1
+                newVal = newVal{1};
+            end
             updateVal{1} = newVal;
         % Generic call: just copy the value
         else

@@ -83,6 +83,7 @@ end
 
 %% ===== GET ALL ACCESSIBLE DATA =====
 iDS = [];
+iTimefreq = [];
 % Re-use existing figure
 if ~isempty(hFig)
     [hFig, iFig, iDS] = bst_figures('GetFigure', hFig);
@@ -103,7 +104,7 @@ elseif ~isempty(FileName)
         case {'results', 'link', 'presults'}
             iDS = bst_memory('GetDataSetResult', FileName);
         case {'timefreq', 'ptimefreq'}
-            iDS = bst_memory('GetDataSetTimefreq', FileName);
+            [iDS, iTimefreq] = bst_memory('GetDataSetTimefreq', FileName);
         case {'matrix', 'pmatrix'}
             iDS = bst_memory('GetDataSetMatrix', FileName);
     end
@@ -156,6 +157,8 @@ end
 if ~isempty(FileName) && strcmpi(file_gettype(FileName), 'timefreq') && ~isempty(strfind(FileName, '_connectn'))
     hAxes = findobj(hFig, '-depth', 1, 'Tag', 'AxesImage');
     set(hAxes, 'DataAspectRatio', [1 1 1]);
+    title(hAxes, DisplayUnits)
+    DisplayUnits = '';
 end
 
 
@@ -168,6 +171,17 @@ GlobalData.DataSet(iDS).Figure(iFig).Handles.DimLabels    = DimLabels;
 GlobalData.DataSet(iDS).Figure(iFig).Handles.ColormapType = ColormapType;
 GlobalData.DataSet(iDS).Figure(iFig).Handles.ShowLabels   = ShowLabels;
 GlobalData.DataSet(iDS).Figure(iFig).Handles.PageName     = PageName;
+% Only for connectivity files
+if ~isempty(iTimefreq) && ~isempty(GlobalData.DataSet(iDS).Timefreq(iTimefreq).RefRowNames)
+    % If there are some self-connectivity values in the displayed matrix
+    if any(ismember(GlobalData.DataSet(iDS).Timefreq(iTimefreq).RefRowNames, GlobalData.DataSet(iDS).Timefreq(iTimefreq).RowNames))
+        GlobalData.DataSet(iDS).Figure(iFig).Id.SubType = 'self_connect';
+        GlobalData.DataSet(iDS).Figure(iFig).Handles.HideSelfConnect = 1;
+    else
+        GlobalData.DataSet(iDS).Figure(iFig).Id.SubType = '';
+        GlobalData.DataSet(iDS).Figure(iFig).Handles.HideSelfConnect = 0;
+    end
+end
 % By default: link the 4th dimension of the data to the frequency slider
 isFreq = isequal(PageName, '$freq');
 % Configure figure

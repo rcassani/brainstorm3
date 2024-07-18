@@ -181,15 +181,11 @@ if isDeleteDir
     file_delete(templateDir, 1, 3);
 end
 
-%% ===== CHECK FIDUCIALS =====
-if isInteractive
-    % Get MRI files for Subject
-    sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'FileName', 'volume', 'Image');
-    if ~isempty(sAnatFiles)
-        % DEFAULT ANAT: Check if the positions of the fiducials have been validated
-        figure_mri('FiducialsValidation', sAnatFiles(1).FileName);
-    end
-end
+% %% ===== CHECK FIDUCIALS =====
+% if isInteractive && ~isempty(sSubject.Anatomy)
+%     % DEFAULT ANAT: Check if the positions of the fiducials have been validated
+%     figure_mri('FiducialsValidation', sSubject.Anatomy(1).FileName);
+% end
 
 
 

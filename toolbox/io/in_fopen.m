@@ -175,6 +175,8 @@ switch (FileFormat)
     % ===== IMPORTED STRUCTURES =====
     case 'BST-DATA'
         [sFile, ChannelMat, DataMat] = in_fopen_bstmat(DataFile);
+    case 'BST-MATRIX'
+        [sFile, ChannelMat, DataMat] = in_fopen_bstmatrix(DataFile);
         
     % ===== OBJECTS IN MEMORY =====
     case 'MNE-PYTHON'
@@ -185,6 +187,8 @@ switch (FileFormat)
         [DataMat, ChannelMat] = in_data_ascii(DataFile);
     case 'EEG-BESA'
         [DataMat, ChannelMat] = in_data_besa(DataFile);
+    case 'EEG-BIOPAC'
+        [DataMat, ChannelMat] = in_data_biopac(DataFile);
     case 'EEG-BRAINVISION'
         DataMat = in_data_ascii(DataFile);
     case 'EEG-CARTOOL'
@@ -205,6 +209,8 @@ switch (FileFormat)
         DataMat = in_data_neuroscan_dat(DataFile);
     case 'EEG-TVB'
         [DataMat, ChannelMat] = in_data_tvb(DataFile);
+    case 'EEG-XDF'
+        [DataMat, ChannelMat] = in_data_xdf(DataFile);
     case 'FT-TIMELOCK'
         [DataMat, ChannelMat] = in_data_fieldtrip(DataFile, ImportOptions.DisplayMessages);
         % Check that time is linear

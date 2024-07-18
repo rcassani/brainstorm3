@@ -1,7 +1,7 @@
 function [Cxy, freq, nWin, nFFT, Messages] = bst_cohn_2021(Xs, Ys, Fs, WinLen, Overlap, CohMeasure, MaxFreq, ImagingKernel, waitMax)
 % BST_COHN_2021: Updated version of bst_cohn.m 
 %
-% USAGE:  [Cxy, freq, nWin, nFFT, Messages] = bst_cohn_2021(Xs, Ys, Fs, WinLen, Overlap=0.5, CohMeasure='mscohere', isSymmetric=0, ImagingKernel=[], waitMax=100)
+% USAGE:  [Cxy, freq, nWin, nFFT, Messages] = bst_cohn_2021(Xs, Ys, Fs, WinLen, Overlap=0.5, CohMeasure='mscohere', MaxFreq=[], ImagingKernel=[], waitMax=100)
 %
 % INPUTS:
 %    - Xs      : Cell array of signals {[nSignals1, nSamples1], [nSignals2, nSamples2], ...}
@@ -90,6 +90,8 @@ nWin = 0;
 nFFT = [];
 Messages = [];
 
+% Get Matlab version, for local replacement for pagemtimes for older versions of Matlab
+MatlabVersion = bst_get('MatlabVersion');
 % Get current progress bar position
 waitStart = bst_progress('get');
 
@@ -121,7 +123,6 @@ if ~isempty(MaxFreq)
         freq = freq(1:nKeep);
     end
 end
-nWin = 0;
 % Initialize accumulators
 Sxy = [];
 Sxx = [];
@@ -200,7 +201,14 @@ for iFile = 1 : nFiles
                 Syy = zeros(size(ImagingKernel,1), length(freq));
             end
             % Auto-spectrum (PSD) of y (sources)
-            epYSource = pagemtimes(ImagingKernel, epY);
+            if MatlabVersion >= 909  %  >= Matlab 2020b
+                epYSource = pagemtimes(ImagingKernel, epY);
+            else  % Local replacement for older Matlab versions 
+                epYSource = zeros(size(ImagingKernel,1), size(epY,2), size(epY,3));
+                for k = 1:size(epY,3)
+                    epYSource(:,:,k) = ImagingKernel * epY(:,:,k);
+                end
+            end
             Syy = Syy + sum(epYSource .* conj(epYSource), 3);
         end   
 
@@ -277,7 +285,7 @@ if ~isempty(ImagingKernel)
     
     %% ===== Case 1xN =====
     if ~isNxN             
-        % Initialize Sxy and Syy in source space
+        % Initialize Sxy in source space
         Sxy_sources = complex(zeros(nSignalsX, nSourcesY, length(freq)));
         % Projection for each frequency
         for iFreq = 1:length(freq)
@@ -372,5 +380,3 @@ function epx = epoching(x, nEpochLen, nOverlap)
         epx(:,:,iEpoch) = x(:, markers(iEpoch) : markers(iEpoch) + nEpochLen - 1);
     end
 end
-
-

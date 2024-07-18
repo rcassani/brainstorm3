@@ -327,7 +327,7 @@ function OutputFiles = Run(sProcess, sInput)
             continue;
         end
         curStruct = struct();
-        curStruct.Path = outputPath;
+        curStruct.Path = file_short(outputPath);
         curStruct.File = fetFile.name;
         curStruct.Name = Montages{iMontage};
         curStruct.Mod  = 0;
@@ -354,10 +354,10 @@ function OutputFiles = Run(sProcess, sInput)
     DataMat_spikesorter.Comment  = ['KiloSort Spike Sorting' commentSuffix];
     DataMat_spikesorter.DataType = 'raw';%'ephys';
     DataMat_spikesorter.Device   = 'KiloSort';
-    DataMat_spikesorter.Parent   = outputPath;
+    DataMat_spikesorter.Parent   = file_short(outputPath);
     DataMat_spikesorter.Spikes   = spikes;
     DataMat_spikesorter.RawFile  = sInput.FileName;
-    DataMat_spikesorter.Name     = NewBstFile;
+    DataMat_spikesorter.Name     = file_short(NewBstFile);
     % Add history field
     DataMat_spikesorter = bst_history('add', DataMat_spikesorter, 'import', ['Link to unsupervised electrophysiology files: ' outputPath]);
     % Save file on hard drive
@@ -471,11 +471,11 @@ function ImportKilosortEvents(sFile, ChannelMat, parentPath, rez)
         events_spikes(index).times      = spikeTimes(selectedSpikes)'./sFile.prop.sfreq + sFile.prop.times(1);
         events_spikes(index).reactTimes = [];
         events_spikes(index).select     = 1;
-        events_spikes(index).notes      = cell(1, size(events_spikes(index).times, 2));
+        events_spikes(index).notes      = [];
         
         if uniqueClusters(iCluster)==1 || uniqueClusters(iCluster)==0
             events_spikes(index).label    = ['Spikes Noise |' num2str(uniqueClusters(iCluster)) '|'];
-            events_spikes(index).channels = cell(1, size(events_spikes(index).times, 2));
+            events_spikes(index).channels = [];
         else
             events_spikes(index).label    = [spikeEventPrefix ' ' ChannelMat.Channel(amplitude_max_channel(uniqueClusters(iCluster))).Name ' |' num2str(uniqueClusters(iCluster)) '|'];
             events_spikes(index).channels = repmat({{ChannelMat.Channel(amplitude_max_channel(uniqueClusters(iCluster))).Name}}, 1, size(events_spikes(index).times, 2));
@@ -525,8 +525,8 @@ function [events, Channels] = LoadKlustersEvents(SpikeSortedMat, iMontage)
     [tmp, study] = fileparts(SpikeSortedMat.Spikes(iMontage).File);
     [tmp, study] = fileparts(study);
     sMontage = num2str(iMontage);
-    clu = load(bst_fullfile(SpikeSortedMat.Parent, [study '.clu.' sMontage]));
-    fet = dlmread(bst_fullfile(SpikeSortedMat.Parent, [study '.fet.' sMontage]));
+    clu = load(bst_fullfile(file_fullpath(SpikeSortedMat.Parent), [study '.clu.' sMontage]));
+    fet = dlmread(bst_fullfile(file_fullpath(SpikeSortedMat.Parent), [study '.fet.' sMontage]));
 
     % Get the channels that belong in the selected montage
     [Channels, Montages, channelsMontage,montageOccurences] = ParseMontage(ChannelMat);
@@ -573,11 +573,11 @@ function [events, Channels] = LoadKlustersEvents(SpikeSortedMat, iMontage)
         events(index).epochs     = ones(1,length(events(index).times));
         events(index).reactTimes = [];
         events(index).select     = 1;
-        events(index).notes      = cell(1, size(events(index).times, 2));
+        events(index).notes      = [];
         
         if uniqueClusters(iCluster)==1 || uniqueClusters(iCluster)==0
             events(index).label    = ['Spikes Noise |' num2str(uniqueClusters(iCluster)) '|'];
-            events(index).channels = cell(1, size(events(index).times, 2));
+            events(index).channels = [];
         else
             events(index).label    = [spikesPrefix ' ' ChannelsInMontage(iElectrode).Name ' |' num2str(uniqueClusters(iCluster)) '|'];
             events(index).channels = repmat({{ChannelsInMontage(iElectrode).Name}}, 1, size(events(index).times, 2));
