@@ -417,18 +417,12 @@ function SliderCallback(hObject, event, target)
             SubjectFile = getappdata(hFig, 'SubjectFile');
             if ~isempty(SubjectFile)
                 sSubject = bst_get('Subject', SubjectFile);
-                CtFile = [];
-                MeshFile = [];
-                for i=1:length(sSubject.Anatomy)
-                    if ~isempty(regexp(sSubject.Anatomy(i).FileName, 'CT', 'match')) 
-                        CtFile = sSubject.Anatomy(i).FileName;
-                    end
-                end
-                for i=1:length(sSubject.Surface)
-                    if ~isempty(regexp(sSubject.Surface(i).FileName, 'tess_isosurface', 'match')) 
-                        MeshFile = sSubject.Surface(i).FileName;
-                    end
-                end
+                % get the CT file
+                iCt = find(cellfun(@(c)(~isempty(strfind(char(c), '_volct'))), {sSubject.Anatomy.FileName}));
+                CtFile = sSubject.Anatomy(iCt(1)).FileName;                
+                % get the isosurface
+                iIsosurface = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {sSubject.Surface.FileName}));
+                MeshFile = sSubject.Surface(iIsosurface(1)).FileName;
             end
             
             % ask user if they want to proceed
@@ -536,12 +530,9 @@ function isoValue = GetIsoValueMaxRange()
         SubjectFile = getappdata(hFig, 'SubjectFile');
         if ~isempty(SubjectFile)
             sSubject = bst_get('Subject', SubjectFile);
-            CtFile = [];
-            for i=1:length(sSubject.Anatomy)
-                if ~isempty(regexp(sSubject.Anatomy(i).FileName, 'CT', 'match')) 
-                    CtFile = sSubject.Anatomy(i).FileName;
-                end
-            end
+            % get the CT file
+            iCt = find(cellfun(@(c)(~isempty(strfind(char(c), '_volct'))), {sSubject.Anatomy.FileName}));
+            CtFile = sSubject.Anatomy(iCt(1)).FileName;
         end
         
         if ~isempty(CtFile)
