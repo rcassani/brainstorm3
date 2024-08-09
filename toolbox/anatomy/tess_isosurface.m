@@ -171,10 +171,12 @@ if isSave
         view_surface(MeshFile, [], [], hFig, []);
         panel_surface('SetIsoValue', isoValue);
     else % else just update the isosurface surface patch with new computed values
+        % update the data file with new mesh data in database
         sMesh = bst_history('add', sMesh, 'threshold_ct', 'CT thresholded isosurface updated');
         bst_save(MeshFile, sMesh, 'v7');
+        % reload the subject to reflect updated values 
         db_reload_subjects(iSubject);
-
+        % update the surface displayed in figure 
         hFig = bst_figures('GetFiguresByType', '3DViz');
         TessInfo = getappdata(hFig, 'Surface');
         iSurf = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));
