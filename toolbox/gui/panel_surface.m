@@ -438,7 +438,7 @@ function SliderCallback(hObject, event, target)
             isoValue = jSlider.getValue();
             
             % remove the old isosurface and generate and load the new one
-            ButtonRemoveSurfaceCallback();
+            % ButtonRemoveSurfaceCallback();
             tess_isosurface(CtFile, isoValue);
             
         case 'DataAlpha'

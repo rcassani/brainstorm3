@@ -145,6 +145,7 @@ sMesh.Faces    = sMesh.Faces(:,[2,1,3]);
 sMesh.Vertices = bst_bsxfun(@times, sMesh.Vertices, sMri.Voxsize);
 % Convert to SCS
 sMesh.Vertices = cs_convert(sMri, 'mri', 'scs', sMesh.Vertices ./ 1000);
+sMesh.Comment = sprintf('isoSurface (ISO_%d)', isoValue);
 
 %% ===== SAVE FILES =====
 if isSave
@@ -154,28 +155,36 @@ if isSave
     SurfaceDir   = bst_fullfile(ProtocolInfo.SUBJECTS, bst_fileparts(CtFile));
     % Get the mesh file
     MeshFile  = bst_fullfile(SurfaceDir, 'tess_isosurface.mat');
+    % Get isoSurface (tess_isosurface.mat)
+    [~, ~, iSurface] = bst_get('SurfaceFile', MeshFile);
 
-    % Replace existing isoSurface surface (tess_isosurface.mat)
-    [sSubjectTmp, iSubjectTmp, iSurfaceTmp] = bst_get('SurfaceFile', MeshFile);
-    if ~isempty(iSurfaceTmp)
-        file_delete(file_fullpath(MeshFile), 1);
-        sSubjectTmp.Surface(iSurfaceTmp) = [];
-        bst_set('Subject', iSubjectTmp, sSubjectTmp);
+    % if isosurface not created create it 
+    if isempty(iSurface)    
+        sMesh = bst_history('add', sMesh, 'threshold_ct', 'CT thresholded isosurface generated with Brainstorm');
+        bst_save(MeshFile, sMesh, 'v7');
+        iSurface = db_add_surface(iSubject, MeshFile, sMesh.Comment);
+        MriFile = sSubject.Anatomy(1).FileName;
+        hFig = bst_figures('GetFiguresByType', '3DViz');
+        if isempty(hFig)
+            hFig = view_mri_3d(MriFile, [], 0.3, []);
+        end
+        view_surface(MeshFile, [], [], hFig, []);
+        panel_surface('SetIsoValue', isoValue);
+    else % else just update the isosurface surface patch with new computed values
+        sMesh = bst_history('add', sMesh, 'threshold_ct', 'CT thresholded isosurface updated');
+        bst_save(MeshFile, sMesh, 'v7');
+        db_reload_subjects(iSubject);
+
+        hFig = bst_figures('GetFiguresByType', '3DViz');
+        TessInfo = getappdata(hFig, 'Surface');
+        iSurf = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));
+        TessInfo(iSurf).hPatch.Vertices = sMesh.Vertices;
+        TessInfo(iSurf).hPatch.Faces = sMesh.Faces;
+        TessInfo(iSurf).hPatch.FaceVertexCData = ones(size(sMesh.Vertices));
+        TessInfo(iSurf).nVertices = size(sMesh.Vertices, 1);
+        TessInfo(iSurf).nFaces = size(sMesh.Faces, 1);
+        setappdata(hFig, 'Surface',  TessInfo);
     end
-    
-    % Save isosurface
-    sMesh.Comment = sprintf('isoSurface (ISO_%d)', isoValue);
-    sMesh = bst_history('add', sMesh, 'threshold_ct', 'CT thresholded isosurface generated with Brainstorm');
-    bst_save(MeshFile, sMesh, 'v7');
-    iSurface = db_add_surface(iSubject, MeshFile, sMesh.Comment);
-    % Display mesh with 3D orthogonal slices of the default MRI
-    MriFile = sSubject.Anatomy(1).FileName;
-    hFig = bst_figures('GetFiguresByType', '3DViz');
-    if isempty(hFig)
-        hFig = view_mri_3d(MriFile, [], 0.3, []);
-    end
-    view_surface(MeshFile, 0.6, [], hFig, []);    
-    panel_surface('SetIsoValue', isoValue);
 else
     % Return surface
     MeshFile = sMesh.Vertices;
