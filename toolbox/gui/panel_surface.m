@@ -107,20 +107,6 @@ function bstPanelNew = CreatePanel() %#ok<DEFNU>
             % Quick preview
             java_setcb(jSliderSurfSmoothValue, 'StateChangedCallback',  @(h,ev)SliderQuickPreview(jSliderSurfSmoothValue, jLabelSurfSmoothValue, 1));
 
-            % Threshold title
-            jLabelSurfIsoValueTitle = gui_component('label', jPanelSurfaceOptions, 'br', 'Thresh.:');
-            % Min size slider
-            jSliderSurfIsoValue = JSlider(1, GetIsoValueMaxRange(), 1);
-            jSliderSurfIsoValue.setPreferredSize(Dimension(SLIDER_WIDTH, DEFAULT_HEIGHT));
-            jSliderSurfIsoValue.setToolTipText('isoSurface Threshold');
-            java_setcb(jSliderSurfIsoValue, 'MouseReleasedCallback', @(h,ev)SliderCallback(h, ev, 'SurfIsoValue'), ...
-                                            'KeyPressedCallback',    @(h,ev)SliderCallback(h, ev, 'SurfIsoValue'));
-            jPanelSurfaceOptions.add('tab hfill', jSliderSurfIsoValue);
-            % IsoValue label
-            jLabelSurfIsoValue = gui_component('label', jPanelSurfaceOptions, [], '   1', {JLabel.RIGHT, Dimension(LABEL_WIDTH, DEFAULT_HEIGHT)});
-            % Quick preview
-            java_setcb(jSliderSurfIsoValue, 'StateChangedCallback',  @(h,ev)SliderQuickPreview(jSliderSurfIsoValue, jLabelSurfIsoValue, 0));
-
             % Buttons
             jButtonSurfColor = gui_component('button', jPanelSurfaceOptions, 'br center', 'Color', {Dimension(BUTTON_WIDTH, DEFAULT_HEIGHT), Insets(0,0,0,0)}, 'Set surface color', @ButtonSurfColorCallback);
             jButtonSurfSulci = gui_component('toggle', jPanelSurfaceOptions, '',          'Sulci', {Dimension(BUTTON_WIDTH, DEFAULT_HEIGHT), Insets(0,0,0,0)}, 'Show/hide sulci map', @ButtonShowSulciCallback);
@@ -228,9 +214,6 @@ function bstPanelNew = CreatePanel() %#ok<DEFNU>
                                   'jButtonSurfColor',       jButtonSurfColor, ...
                                   'jLabelSurfSmoothValue',  jLabelSurfSmoothValue, ...
                                   'jSliderSurfSmoothValue', jSliderSurfSmoothValue, ...
-                                  'jLabelSurfIsoValueTitle',jLabelSurfIsoValueTitle, ...
-                                  'jLabelSurfIsoValue',     jLabelSurfIsoValue, ...
-                                  'jSliderSurfIsoValue',    jSliderSurfIsoValue, ...
                                   'jButtonSurfSulci',       jButtonSurfSulci, ...
                                   'jButtonSurfEdge',        jButtonSurfEdge, ...
                                   'jSliderResectX',         jSliderResectX, ...
@@ -258,8 +241,6 @@ function bstPanelNew = CreatePanel() %#ok<DEFNU>
             nVertices = str2num(char(jLabelNbVertices.getText()));
             sliderSizeVector = GetSliderSizeVector(nVertices);
             jText.setText(sprintf('%d', sliderSizeVector(double(jSlider.getValue()))));
-        elseif (jSlider == jSliderSurfIsoValue)
-            jText.setText(sprintf('%d', double(jSlider.getValue())));
         elseif isPercent
             jText.setText(sprintf('%d%%', double(jSlider.getValue())));
         else
@@ -410,36 +391,6 @@ function SliderCallback(hObject, event, target)
         case 'SurfSmoothValue'
             SurfSmoothValue = jSlider.getValue() / 100;
             SetSurfaceSmooth(hFig, iSurface, SurfSmoothValue, 1);
-
-        case 'SurfIsoValue'
-            % get the handles
-            hFig = bst_figures('GetFiguresByType', '3DViz');
-            SubjectFile = getappdata(hFig, 'SubjectFile');
-            if ~isempty(SubjectFile)
-                sSubject = bst_get('Subject', SubjectFile);
-                % get the CT file
-                iCt = find(cellfun(@(c)(~isempty(strfind(char(c), '_volct'))), {sSubject.Anatomy.FileName}));
-                CtFile = sSubject.Anatomy(iCt(1)).FileName;                
-                % get the isosurface
-                iIsosurface = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {sSubject.Surface.FileName}));
-                MeshFile = sSubject.Surface(iIsosurface(1)).FileName;
-            end
-            
-            % ask user if they want to proceed
-            isProceed = java_dialog('confirm', 'Do you want to proceed generating mesh with new isoValue ?', 'Changing threshold');
-            if ~isProceed
-                [sSubjectTmp, iSubjectTmp, iSurfaceTmp] = bst_get('SurfaceFile', MeshFile);
-                isoValue = regexp(sSubjectTmp.Surface(iSurfaceTmp).Comment, '\d*', 'match');
-                SetIsoValue(str2double(isoValue{1}));
-                return;
-            end
-            
-            % get the iso value from slider
-            isoValue = jSlider.getValue();
-            
-            % remove the old isosurface and generate and load the new one
-            % ButtonRemoveSurfaceCallback();
-            tess_isosurface(CtFile, isoValue);
             
         case 'DataAlpha'
             % Update value in Surface array
@@ -520,39 +471,6 @@ function sliderSizeVector = GetSliderSizeVector(nVertices)
     else
         sliderSizeVector = [1:19, 20:10:150, 200:50:1050, 1100:100:2000];
     end
-end
-
-%% ===== GET SLIDER ISOVALUE =====
-function isoValue = GetIsoValueMaxRange()
-    % get the handles
-    hFig = bst_figures('GetFiguresByType', '3DViz');
-    if ~isempty(hFig)
-        SubjectFile = getappdata(hFig, 'SubjectFile');
-        if ~isempty(SubjectFile)
-            sSubject = bst_get('Subject', SubjectFile);
-            % get the CT file
-            iCt = find(cellfun(@(c)(~isempty(strfind(char(c), '_volct'))), {sSubject.Anatomy.FileName}));
-            CtFile = sSubject.Anatomy(iCt(1)).FileName;
-        end
-        
-        if ~isempty(CtFile)
-            sMri = bst_memory('LoadMri', CtFile);
-            isoValue = double(sMri.Histogram.intensityMax);
-        end
-    else
-        isoValue = 4500.0;
-    end
-end
-
-%% ===== SET SLIDER ISOVALUE =====
-function SetIsoValue(isoValue)
-    % get panel controls
-    ctrl = bst_get('PanelControls', 'Surface');
-    if isempty(ctrl)
-        return;
-    end 
-    ctrl.jLabelSurfIsoValue.setText(sprintf('%d', isoValue));
-    ctrl.jSliderSurfIsoValue.setValue(isoValue);
 end
 
 %% ===== SCROLL MRI CUTS =====
@@ -1123,11 +1041,6 @@ function UpdateSurfaceProperties()
     end
     % If surface is sliced MRI
     isAnatomy = strcmpi(TessInfo(iSurface).Name, 'Anatomy');
-    if ~isempty(regexp(TessInfo(iSurface).SurfaceFile, 'isosurface', 'match'))
-        isIsoSurface = 1;
-    else
-        isIsoSurface = 0;
-    end
 
     % ==== Surface properties ====
     % Number of vertices
@@ -1143,15 +1056,6 @@ function UpdateSurfaceProperties()
     % Surface smoothing ALPHA
     ctrl.jSliderSurfSmoothValue.setValue(100 * TessInfo(iSurface).SurfSmoothValue);
     ctrl.jLabelSurfSmoothValue.setText(sprintf('%d%%', round(100 * TessInfo(iSurface).SurfSmoothValue)));
-    % Show/hide isoSurface thresholding
-    ctrl.jSliderSurfIsoValue.setVisible(isIsoSurface);
-    ctrl.jLabelSurfIsoValueTitle.setVisible(isIsoSurface);
-    ctrl.jLabelSurfIsoValue.setVisible(isIsoSurface);
-    if isIsoSurface
-        [sSubjectTmp, iSubjectTmp, iSurfaceTmp] = bst_get('SurfaceFile', TessInfo(iSurface).SurfaceFile);
-        isoValue = regexp(sSubjectTmp.Surface(iSurfaceTmp).Comment, '\d*', 'match');
-        SetIsoValue(str2double(isoValue{1}));
-    end
     % Show sulci button
     ctrl.jButtonSurfSulci.setSelected(TessInfo(iSurface).SurfShowSulci);
     % Show surface edges button

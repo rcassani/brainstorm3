@@ -169,7 +169,6 @@ if isSave
             hFig = view_mri_3d(MriFile, [], 0.3, []);
         end
         view_surface(MeshFile, [], [], hFig, []);
-        panel_surface('SetIsoValue', isoValue);
     else % else just update the isosurface surface patch with new computed values
         % update the data file with new mesh data in database
         sMesh = bst_history('add', sMesh, 'threshold_ct', 'CT thresholded isosurface updated');
