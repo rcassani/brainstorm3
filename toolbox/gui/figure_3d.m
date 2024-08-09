@@ -1862,6 +1862,13 @@ function DisplayFigurePopup(hFig)
     TessInfo = getappdata(hFig, 'Surface');
     iSurf = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));
     if ~isempty(iSurf)
+        % get the CT file details
+        SubjectFile = getappdata(hFig, 'SubjectFile');
+        sSubject = bst_get('Subject', SubjectFile);
+        iCt = find(cellfun(@(c)(~isempty(strfind(char(c), '_volct'))), {sSubject.Anatomy.FileName}));
+        CtFile = sSubject.Anatomy(iCt(1)).FileName;
+        sCt = bst_memory('LoadMri', CtFile);
+        % panel operations
         jPanel = gui_component('Panel');
         jPanel.setOpaque(0);
         jPopup.add(jPanel);
@@ -1871,16 +1878,11 @@ function DisplayFigurePopup(hFig)
         % Spin button
         sSurface = bst_memory('LoadSurface', TessInfo(iSurf).SurfaceFile);
         val = regexp(sSurface.Comment, '\d+', 'match');
-        spinmodel = SpinnerNumberModel(str2double(val(1)), -4500, 4500, 50);
+        spinmodel = SpinnerNumberModel(str2double(val(1)), double(sCt.Histogram.whiteLevel), double(sCt.Histogram.intensityMax), 50);
         jSpinner = JSpinner(spinmodel);
         jSpinner.setPreferredSize(Dimension(55,25));
         % jSpinner.setToolTipText(strTooltip);
         jPanel.add(jSpinner, BorderLayout.CENTER);
-        
-        SubjectFile = getappdata(hFig, 'SubjectFile');
-        sSubject = bst_get('Subject', SubjectFile);
-        iCt = find(cellfun(@(c)(~isempty(strfind(char(c), '_volct'))), {sSubject.Anatomy.FileName}));
-        CtFile = sSubject.Anatomy(iCt(1)).FileName;
         
         jButton1 = gui_component('button', [], '', 'Set', [], [], @(h,ev)tess_isosurface(CtFile, jSpinner.getValue()));
         jButton1.setPreferredSize(Dimension(55,25));
