@@ -47,6 +47,7 @@ function [MeshFile, iSurface] = tess_isosurface(iSubject, isoValue, Comment)
 MeshFile = [];
 iSurface = [];
 isSave = true;
+global GlobalData;
 
 % Parse inputs
 if (nargin < 3) || isempty(Comment)
@@ -128,6 +129,7 @@ end
 
 %% ===== CREATE SURFACE =====
 % Compute isosurface
+sMesh = db_template('LoadedSurface');
 bst_progress('start', 'Generate thresholded isosurface from CT', 'Creating isosurface...');
 [sMesh.Faces, sMesh.Vertices] = mri_isosurface(sMri.Cube, isoValue);
 bst_progress('inc', 10);
@@ -146,6 +148,7 @@ sMesh.Vertices = bst_bsxfun(@times, sMesh.Vertices, sMri.Voxsize);
 % Convert to SCS
 sMesh.Vertices = cs_convert(sMri, 'mri', 'scs', sMesh.Vertices ./ 1000);
 sMesh.Comment = sprintf('isoSurface (ISO_%d)', isoValue);
+sMesh.VertConn = tess_vertconn(sMesh.Vertices, sMesh.Faces);
 
 %% ===== SAVE FILES =====
 if isSave
@@ -157,7 +160,9 @@ if isSave
     MeshFile  = bst_fullfile(SurfaceDir, 'tess_isosurface.mat');
     % Get isoSurface (tess_isosurface.mat)
     [~, ~, iSurface] = bst_get('SurfaceFile', MeshFile);
-
+    
+    sMesh.FileName = file_short(MeshFile);
+    sMesh.Name = 'Other';
     % if isosurface not created create it 
     if isempty(iSurface)    
         sMesh = bst_history('add', sMesh, 'threshold_ct', 'CT thresholded isosurface generated with Brainstorm');
@@ -170,21 +175,24 @@ if isSave
         end
         view_surface(MeshFile, [], [], hFig, []);
     else % else just update the isosurface surface patch with new computed values
-        % update the data file with new mesh data in database
+        % update the surface displayed in figure 
+        hFig = bst_figures('GetFiguresByType', '3DViz');
+        TessInfo = getappdata(hFig, 'Surface');
+        iSurfPatch = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));
+        set(TessInfo(iSurfPatch).hPatch, 'Vertices', sMesh.Vertices);
+        set(TessInfo(iSurfPatch).hPatch, 'Faces', sMesh.Faces);
+        set(TessInfo(iSurfPatch).hPatch, 'FaceVertexCData', ones(size(sMesh.Vertices)));
+        TessInfo(iSurfPatch).nVertices = size(sMesh.Vertices, 1);
+        TessInfo(iSurfPatch).nFaces = size(sMesh.Faces, 1);
+        setappdata(hFig, 'Surface',  TessInfo);
+        % update the GlobalData with new surface
+        iSurfGlobal = find(file_compare({GlobalData.Surface.FileName}, sMesh.FileName));
+        GlobalData.Surface(iSurfGlobal) = sMesh;
+        % update the surface in tess_isosurface.mat 
         sMesh = bst_history('add', sMesh, 'threshold_ct', 'CT thresholded isosurface updated');
         bst_save(MeshFile, sMesh, 'v7');
         % reload the subject to reflect updated values 
         db_reload_subjects(iSubject);
-        % update the surface displayed in figure 
-        hFig = bst_figures('GetFiguresByType', '3DViz');
-        TessInfo = getappdata(hFig, 'Surface');
-        iSurf = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));
-        TessInfo(iSurf).hPatch.Vertices = sMesh.Vertices;
-        TessInfo(iSurf).hPatch.Faces = sMesh.Faces;
-        TessInfo(iSurf).hPatch.FaceVertexCData = ones(size(sMesh.Vertices));
-        TessInfo(iSurf).nVertices = size(sMesh.Vertices, 1);
-        TessInfo(iSurf).nFaces = size(sMesh.Faces, 1);
-        setappdata(hFig, 'Surface',  TessInfo);
     end
 else
     % Return surface

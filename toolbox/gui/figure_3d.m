@@ -1855,11 +1855,9 @@ function DisplayFigurePopup(hFig)
         jMenuMontage = gui_component('Menu', jPopup, [], 'Montage', IconLoader.ICON_TS_DISPLAY_MODE);
         panel_montage('CreateFigurePopupMenu', jMenuMontage, hFig);
     end
-    
 
     % ==== MENU: ISOSURFACE ====
     % Create isosurface
-    TessInfo = getappdata(hFig, 'Surface');
     iSurf = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));
     if ~isempty(iSurf)
         % get the CT file details
@@ -1883,10 +1881,9 @@ function DisplayFigurePopup(hFig)
         jSpinner.setPreferredSize(Dimension(55,25));
         % jSpinner.setToolTipText(strTooltip);
         jPanel.add(jSpinner, BorderLayout.CENTER);
-        
-        jButton1 = gui_component('button', [], '', 'Set', [], [], @(h,ev)tess_isosurface(CtFile, jSpinner.getValue()));
-        jButton1.setPreferredSize(Dimension(55,25));
-        jPanel.add(jButton1, BorderLayout.EAST);
+        jButtonSet = gui_component('button', [], '', 'Set', [], [], @(h,ev)tess_isosurface(CtFile, jSpinner.getValue()));
+        jButtonSet.setPreferredSize(Dimension(55,25));
+        jPanel.add(jButtonSet, BorderLayout.EAST);
     end
 
     % ==== MENU: COLORMAPS ====
