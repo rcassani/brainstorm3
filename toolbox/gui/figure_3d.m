@@ -993,6 +993,8 @@ function FigureKeyPressedCallback(hFig, keyEvent)
     % If figure is 2D
     is2D = ~strcmpi(FigureId.Type, '3DViz') && ~ismember(FigureId.SubType, {'3DSensorCap', '3DElectrodes', '3DOptodes'});
     isRaw = strcmpi(GlobalData.DataSet(iDS).Measures.DataType, 'raw');
+    % Get Surface
+    TessInfo = getappdata(hFig, 'Surface');
         
     % ===== PROCESS BY CHARACTERS =====
     switch (keyEvent.Character)
@@ -1069,29 +1071,33 @@ function FigureKeyPressedCallback(hFig, keyEvent)
                     end
                % === UP, DOWN, SPACE: Frequency or Tensor mode ===
                 case {'uparrow', 'downarrow'}
-                    % If there are tensors displayed: update display
+                    % Get figure handle
                     Handles = bst_figures('GetFigureHandles', hFig);
-                    TessInfo = getappdata(hFig, 'Surface');
-                    iSurf = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));
+                    % Check if there is SEEG isosurface displayed on the figure
+                    iSurf = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));      
+                    % If there are tensors displayed: update display
                     if isfield(Handles, 'TensorDisplay') && ~isempty(Handles.TensorDisplay)
                         PlotTensorCut(hFig, [], [], [], keyEvent.Key, []);
-                    % isovalue
+                    % update isoValue threshold (Shift + Up/Down)
                     elseif ismember('shift', keyEvent.Modifier) && ~isempty(iSurf)
+                        % get the CT file and structure
                         SubjectFile = getappdata(hFig, 'SubjectFile');
                         sSubject = bst_get('Subject', SubjectFile);
                         iCt = find(cellfun(@(c)(~isempty(strfind(char(c), '_volct'))), {sSubject.Anatomy.FileName}));
                         CtFile = sSubject.Anatomy(iCt(1)).FileName;
                         sCt = bst_memory('LoadMri', CtFile);
+                        % get the isosurface structure
                         sSurface = bst_memory('LoadSurface', TessInfo(iSurf(1)).SurfaceFile);
+                        % get the current isoValue
                         val = regexp(sSurface.Comment, '\d+', 'match');
+                        % increase/decrease isoValue by 100 for a coarse tuning by making sure it is in desired range
                         if strcmpi(keyEvent.Key, 'uparrow')
-                            if (str2double(val(1))+100 >= double(sCt.Histogram.whiteLevel)) && (str2double(val(1))+100 <= double(sCt.Histogram.intensityMax))
-                                tess_isosurface(CtFile, str2double(val(1))+100);
-                            end
+                            newVal = str2double(val(1)) + 100;
                         else
-                            if (str2double(val(1))-100 >= double(sCt.Histogram.whiteLevel)) && (str2double(val(1))-100 <= double(sCt.Histogram.intensityMax))
-                                tess_isosurface(CtFile, str2double(val(1))-100);
-                            end
+                            newVal = str2double(val(1)) - 100;
+                        end
+                        if (newVal >= double(sCt.Histogram.whiteLevel)) && (newVal <= double(sCt.Histogram.intensityMax))
+                           tess_isosurface(CtFile, newVal);
                         end
                     % Up/Down: Process by Freq panel
                     else
@@ -1689,12 +1695,14 @@ function DisplayFigurePopup(hFig)
     % Create isosurface
     iSurf = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));
     if ~isempty(iSurf)
-        % get the CT file details
+        % get the CT file and its structure
         SubjectFile = getappdata(hFig, 'SubjectFile');
         sSubject = bst_get('Subject', SubjectFile);
         iCt = find(cellfun(@(c)(~isempty(strfind(char(c), '_volct'))), {sSubject.Anatomy.FileName}));
         CtFile = sSubject.Anatomy(iCt(1)).FileName;
         sCt = bst_memory('LoadMri', CtFile);
+        % get the isosurface structure
+        sSurface = bst_memory('LoadSurface', TessInfo(iSurf).SurfaceFile);
         % panel operations
         jPanel = gui_component('Panel');
         jPanel.setOpaque(0);
@@ -1703,17 +1711,14 @@ function DisplayFigurePopup(hFig)
         jLabel = gui_component('label', [], '', '<HTML><B>isoValue threshold </B>', IconLoader.ICON_SURFACE);
         jPanel.add(jLabel, BorderLayout.WEST);
         % Spin button
-        sSurface = bst_memory('LoadSurface', TessInfo(iSurf).SurfaceFile);
+        % get the current isoValue
         val = regexp(sSurface.Comment, '\d+', 'match');
         spinmodel = SpinnerNumberModel(str2double(val(1)), double(sCt.Histogram.whiteLevel), double(sCt.Histogram.intensityMax), 50);
         jSpinner = JSpinner(spinmodel);
         jSpinner.setPreferredSize(Dimension(55,25));
-        % jSpinner.setToolTipText(strTooltip);
+        jSpinner.setToolTipText('isoValue thresholding');
         java_setcb(spinmodel, 'StateChangedCallback', @(h,ev)tess_isosurface(CtFile, jSpinner.getValue()));
         jPanel.add(jSpinner, BorderLayout.EAST);
-        % jButtonSet = gui_component('button', [], '', 'Set', [], [], @(h,ev)tess_isosurface(CtFile, jSpinner.getValue()));
-        % jButtonSet.setPreferredSize(Dimension(55,25));
-        % jPanel.add(jButtonSet, BorderLayout.EAST);
     end
 
     % ==== MENU: 2DLAYOUT ====
