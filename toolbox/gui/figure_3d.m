@@ -1664,6 +1664,36 @@ function DisplayFigurePopup(hFig)
         end
         jPopup.addSeparator();
     end
+    
+    % ==== MENU: ISOSURFACE ====
+    % Create isosurface
+    iSurf = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));
+    if ~isempty(iSurf)
+        % get the CT file details
+        SubjectFile = getappdata(hFig, 'SubjectFile');
+        sSubject = bst_get('Subject', SubjectFile);
+        iCt = find(cellfun(@(c)(~isempty(strfind(char(c), '_volct'))), {sSubject.Anatomy.FileName}));
+        CtFile = sSubject.Anatomy(iCt(1)).FileName;
+        sCt = bst_memory('LoadMri', CtFile);
+        % panel operations
+        jPanel = gui_component('Panel');
+        jPanel.setOpaque(0);
+        jPopup.add(jPanel);
+        % Title
+        jLabel = gui_component('label', [], '', '<HTML><B>isoValue </B>', IconLoader.ICON_SURFACE);
+        jPanel.add(jLabel, BorderLayout.WEST);
+        % Spin button
+        sSurface = bst_memory('LoadSurface', TessInfo(iSurf).SurfaceFile);
+        val = regexp(sSurface.Comment, '\d+', 'match');
+        spinmodel = SpinnerNumberModel(str2double(val(1)), double(sCt.Histogram.whiteLevel), double(sCt.Histogram.intensityMax), 50);
+        jSpinner = JSpinner(spinmodel);
+        jSpinner.setPreferredSize(Dimension(55,25));
+        % jSpinner.setToolTipText(strTooltip);
+        jPanel.add(jSpinner, BorderLayout.CENTER);
+        jButtonSet = gui_component('button', [], '', 'Set', [], [], @(h,ev)tess_isosurface(CtFile, jSpinner.getValue()));
+        jButtonSet.setPreferredSize(Dimension(55,25));
+        jPanel.add(jButtonSet, BorderLayout.EAST);
+    end
 
     % ==== MENU: 2DLAYOUT ====
     if strcmpi(FigureType, 'Topography') && strcmpi(GlobalData.DataSet(iDS).Figure(iFig).Id.SubType, '2DLayout')
@@ -1854,36 +1884,6 @@ function DisplayFigurePopup(hFig)
     if strcmpi(FigureType, 'Topography') && ~isempty(Modality) && (Modality(1) ~= '$') && (isempty(TsInfo) || isempty(TsInfo.RowNames))
         jMenuMontage = gui_component('Menu', jPopup, [], 'Montage', IconLoader.ICON_TS_DISPLAY_MODE);
         panel_montage('CreateFigurePopupMenu', jMenuMontage, hFig);
-    end
-
-    % ==== MENU: ISOSURFACE ====
-    % Create isosurface
-    iSurf = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));
-    if ~isempty(iSurf)
-        % get the CT file details
-        SubjectFile = getappdata(hFig, 'SubjectFile');
-        sSubject = bst_get('Subject', SubjectFile);
-        iCt = find(cellfun(@(c)(~isempty(strfind(char(c), '_volct'))), {sSubject.Anatomy.FileName}));
-        CtFile = sSubject.Anatomy(iCt(1)).FileName;
-        sCt = bst_memory('LoadMri', CtFile);
-        % panel operations
-        jPanel = gui_component('Panel');
-        jPanel.setOpaque(0);
-        jPopup.add(jPanel);
-        % Title
-        jLabel = gui_component('label', [], '', '<HTML><B>isoValue </B>', IconLoader.ICON_SURFACE);
-        jPanel.add(jLabel, BorderLayout.WEST);
-        % Spin button
-        sSurface = bst_memory('LoadSurface', TessInfo(iSurf).SurfaceFile);
-        val = regexp(sSurface.Comment, '\d+', 'match');
-        spinmodel = SpinnerNumberModel(str2double(val(1)), double(sCt.Histogram.whiteLevel), double(sCt.Histogram.intensityMax), 50);
-        jSpinner = JSpinner(spinmodel);
-        jSpinner.setPreferredSize(Dimension(55,25));
-        % jSpinner.setToolTipText(strTooltip);
-        jPanel.add(jSpinner, BorderLayout.CENTER);
-        jButtonSet = gui_component('button', [], '', 'Set', [], [], @(h,ev)tess_isosurface(CtFile, jSpinner.getValue()));
-        jButtonSet.setPreferredSize(Dimension(55,25));
-        jPanel.add(jButtonSet, BorderLayout.EAST);
     end
 
     % ==== MENU: COLORMAPS ====
