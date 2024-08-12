@@ -1071,8 +1071,28 @@ function FigureKeyPressedCallback(hFig, keyEvent)
                 case {'uparrow', 'downarrow'}
                     % If there are tensors displayed: update display
                     Handles = bst_figures('GetFigureHandles', hFig);
+                    TessInfo = getappdata(hFig, 'Surface');
+                    iSurf = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));
                     if isfield(Handles, 'TensorDisplay') && ~isempty(Handles.TensorDisplay)
                         PlotTensorCut(hFig, [], [], [], keyEvent.Key, []);
+                    % isovalue
+                    elseif ismember('shift', keyEvent.Modifier) && ~isempty(iSurf)
+                        SubjectFile = getappdata(hFig, 'SubjectFile');
+                        sSubject = bst_get('Subject', SubjectFile);
+                        iCt = find(cellfun(@(c)(~isempty(strfind(char(c), '_volct'))), {sSubject.Anatomy.FileName}));
+                        CtFile = sSubject.Anatomy(iCt(1)).FileName;
+                        sCt = bst_memory('LoadMri', CtFile);
+                        sSurface = bst_memory('LoadSurface', TessInfo(iSurf(1)).SurfaceFile);
+                        val = regexp(sSurface.Comment, '\d+', 'match');
+                        if strcmpi(keyEvent.Key, 'uparrow')
+                            if (str2double(val(1))+100 >= double(sCt.Histogram.whiteLevel)) && (str2double(val(1))+100 <= double(sCt.Histogram.intensityMax))
+                                tess_isosurface(CtFile, str2double(val(1))+100);
+                            end
+                        else
+                            if (str2double(val(1))-100 >= double(sCt.Histogram.whiteLevel)) && (str2double(val(1))-100 <= double(sCt.Histogram.intensityMax))
+                                tess_isosurface(CtFile, str2double(val(1))-100);
+                            end
+                        end
                     % Up/Down: Process by Freq panel
                     else
                         panel_freq('FreqKeyCallback', keyEvent);
@@ -1680,7 +1700,7 @@ function DisplayFigurePopup(hFig)
         jPanel.setOpaque(0);
         jPopup.add(jPanel);
         % Title
-        jLabel = gui_component('label', [], '', '<HTML><B>isoValue </B>', IconLoader.ICON_SURFACE);
+        jLabel = gui_component('label', [], '', '<HTML><B>isoValue threshold </B>', IconLoader.ICON_SURFACE);
         jPanel.add(jLabel, BorderLayout.WEST);
         % Spin button
         sSurface = bst_memory('LoadSurface', TessInfo(iSurf).SurfaceFile);
@@ -1689,10 +1709,11 @@ function DisplayFigurePopup(hFig)
         jSpinner = JSpinner(spinmodel);
         jSpinner.setPreferredSize(Dimension(55,25));
         % jSpinner.setToolTipText(strTooltip);
-        jPanel.add(jSpinner, BorderLayout.CENTER);
-        jButtonSet = gui_component('button', [], '', 'Set', [], [], @(h,ev)tess_isosurface(CtFile, jSpinner.getValue()));
-        jButtonSet.setPreferredSize(Dimension(55,25));
-        jPanel.add(jButtonSet, BorderLayout.EAST);
+        java_setcb(spinmodel, 'StateChangedCallback', @(h,ev)tess_isosurface(CtFile, jSpinner.getValue()));
+        jPanel.add(jSpinner, BorderLayout.EAST);
+        % jButtonSet = gui_component('button', [], '', 'Set', [], [], @(h,ev)tess_isosurface(CtFile, jSpinner.getValue()));
+        % jButtonSet.setPreferredSize(Dimension(55,25));
+        % jPanel.add(jButtonSet, BorderLayout.EAST);
     end
 
     % ==== MENU: 2DLAYOUT ====
