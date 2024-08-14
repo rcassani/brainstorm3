@@ -149,6 +149,9 @@ sMesh.Vertices = bst_bsxfun(@times, sMesh.Vertices, sMri.Voxsize);
 sMesh.Vertices = cs_convert(sMri, 'mri', 'scs', sMesh.Vertices ./ 1000);
 sMesh.Comment = sprintf('isoSurface (ISO_%d)', isoValue);
 sMesh.VertConn = tess_vertconn(sMesh.Vertices, sMesh.Faces);
+sMesh.VertNormals = tess_normals(sMesh.Vertices, sMesh.Faces, sMesh.VertConn);
+[~, sMesh.VertArea] = tess_area(sMesh.Vertices, sMesh.Faces);
+sMesh.SulciMap = tess_sulcimap(sMesh);
 
 %% ===== SAVE FILES =====
 if isSave
@@ -165,7 +168,7 @@ if isSave
     sMesh.Name = 'Other';
     % if isosurface not created create it 
     if isempty(iSurface)    
-        sMesh = bst_history('add', sMesh, 'threshold_ct', 'CT thresholded isosurface generated with Brainstorm');
+        sMesh = bst_history('add', sMesh, 'threshold_ct', ['CT isosurface generated with isoValue threshold ' num2str(isoValue)]);
         bst_save(MeshFile, sMesh, 'v7');
         iSurface = db_add_surface(iSubject, MeshFile, sMesh.Comment);
         MriFile = sSubject.Anatomy(1).FileName;
@@ -189,7 +192,8 @@ if isSave
         iSurfGlobal = find(file_compare({GlobalData.Surface.FileName}, sMesh.FileName));
         GlobalData.Surface(iSurfGlobal) = sMesh;
         % update the surface in tess_isosurface.mat 
-        sMesh = bst_history('add', sMesh, 'threshold_ct', 'CT thresholded isosurface updated');
+        sMesh = bst_history('add', sMesh, 'threshold_ct', ['CT isosurface updated with isovalue threshold ' num2str(isoValue)]);
+        sMesh.Curvature   = tess_curvature(sMesh.Vertices, sMesh.VertConn, sMesh.VertNormals, .1);
         bst_save(MeshFile, sMesh, 'v7');
         % reload the subject to reflect updated values 
         db_reload_subjects(iSubject);
