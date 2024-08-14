@@ -1074,20 +1074,20 @@ function FigureKeyPressedCallback(hFig, keyEvent)
                     % Get figure handle
                     Handles = bst_figures('GetFigureHandles', hFig);
                     % Check if there is SEEG isosurface displayed on the figure
-                    iSurf = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));      
+                    iIsoSurf = find(cellfun(@(x) ~isempty(regexp(x, '_isosurface', 'match')), {TessInfo.SurfaceFile}));      
                     % If there are tensors displayed: update display
                     if isfield(Handles, 'TensorDisplay') && ~isempty(Handles.TensorDisplay)
                         PlotTensorCut(hFig, [], [], [], keyEvent.Key, []);
                     % update isoValue threshold (Shift + Up/Down)
-                    elseif ismember('shift', keyEvent.Modifier) && ~isempty(iSurf)
+                    elseif ismember('shift', keyEvent.Modifier) && ~isempty(iIsoSurf)
                         % get the CT file and structure
                         SubjectFile = getappdata(hFig, 'SubjectFile');
                         sSubject = bst_get('Subject', SubjectFile);
-                        iCt = find(cellfun(@(c)(~isempty(strfind(char(c), '_volct'))), {sSubject.Anatomy.FileName}));
+                        iCt = find(cellfun(@(x) ~isempty(regexp(x, '_volct', 'match')), {sSubject.Anatomy.FileName}));
                         CtFile = sSubject.Anatomy(iCt(1)).FileName;
                         sCt = bst_memory('LoadMri', CtFile);
                         % get the isosurface structure
-                        sSurface = bst_memory('LoadSurface', TessInfo(iSurf(1)).SurfaceFile);
+                        sSurface = bst_memory('LoadSurface', TessInfo(iIsoSurf(1)).SurfaceFile);
                         % get the current isoValue
                         val = regexp(sSurface.Comment, '\d+', 'match');
                         % increase/decrease isoValue by 100 for a coarse tuning by making sure it is in desired range

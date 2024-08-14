@@ -178,7 +178,7 @@ if isSave
         % update the surface displayed in figure 
         hFig = bst_figures('GetFiguresByType', '3DViz');
         TessInfo = getappdata(hFig, 'Surface');
-        iSurfPatch = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));
+        iSurfPatch = find(cellfun(@(x) ~isempty(regexp(x, '_isosurface', 'match')), {TessInfo.SurfaceFile}));
         set(TessInfo(iSurfPatch).hPatch, 'Vertices', sMesh.Vertices);
         set(TessInfo(iSurfPatch).hPatch, 'Faces', sMesh.Faces);
         set(TessInfo(iSurfPatch).hPatch, 'FaceVertexCData', ones(size(sMesh.Vertices)));
