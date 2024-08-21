@@ -163,7 +163,9 @@ if isSave
     MeshFile  = bst_fullfile(SurfaceDir, 'tess_isosurface.mat');
     % Get isoSurface (tess_isosurface.mat)
     [~, ~, iSurface] = bst_get('SurfaceFile', MeshFile);
-    
+    % Get 3D figure window
+    hFig = bst_figures('GetFiguresByType', '3DViz');
+
     sMesh.FileName = file_short(MeshFile);
     sMesh.Name = 'Other';
     % if isosurface not created create it 
@@ -172,14 +174,18 @@ if isSave
         bst_save(MeshFile, sMesh, 'v7');
         iSurface = db_add_surface(iSubject, MeshFile, sMesh.Comment);
         MriFile = sSubject.Anatomy(1).FileName;
-        hFig = bst_figures('GetFiguresByType', '3DViz');
         if isempty(hFig)
             hFig = view_mri_3d(MriFile, [], 0.3, []);
         end
         view_surface(MeshFile, [], [], hFig, []);
-    else % else just update the isosurface surface patch with new computed values
+    else % else just update the isosurface surface patch with new computed values    
+        % if surface present in database but figure not opened, open it 
+        if isempty(hFig)
+            MriFile = sSubject.Anatomy(1).FileName;
+            hFig = view_mri_3d(MriFile, [], 0.3, []);
+            view_surface(MeshFile, [], [], hFig, []);
+        end
         % update the surface displayed in figure 
-        hFig = bst_figures('GetFiguresByType', '3DViz');
         TessInfo = getappdata(hFig, 'Surface');
         iSurfPatch = find(cellfun(@(x) ~isempty(regexp(x, '_isosurface', 'match')), {TessInfo.SurfaceFile}));
         set(TessInfo(iSurfPatch).hPatch, 'Vertices', sMesh.Vertices);
