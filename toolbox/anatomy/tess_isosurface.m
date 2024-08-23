@@ -47,6 +47,7 @@ function [MeshFile, iSurface] = tess_isosurface(iSubject, isoValue, Comment)
 MeshFile = [];
 iSurface = [];
 isSave = true;
+global GlobalData;
 
 % Parse inputs
 if (nargin < 3) || isempty(Comment)
@@ -128,6 +129,7 @@ end
 
 %% ===== CREATE SURFACE =====
 % Compute isosurface
+sMesh = db_template('LoadedSurface');
 bst_progress('start', 'Generate thresholded isosurface from CT', 'Creating isosurface...');
 [sMesh.Faces, sMesh.Vertices] = mri_isosurface(sMri.Cube, isoValue);
 bst_progress('inc', 10);
@@ -145,6 +147,11 @@ sMesh.Faces    = sMesh.Faces(:,[2,1,3]);
 sMesh.Vertices = bst_bsxfun(@times, sMesh.Vertices, sMri.Voxsize);
 % Convert to SCS
 sMesh.Vertices = cs_convert(sMri, 'mri', 'scs', sMesh.Vertices ./ 1000);
+sMesh.Comment = sprintf('isoSurface (ISO_%d)', isoValue);
+sMesh.VertConn = tess_vertconn(sMesh.Vertices, sMesh.Faces);
+sMesh.VertNormals = tess_normals(sMesh.Vertices, sMesh.Faces, sMesh.VertConn);
+[~, sMesh.VertArea] = tess_area(sMesh.Vertices, sMesh.Faces);
+sMesh.SulciMap = tess_sulcimap(sMesh);
 
 %% ===== SAVE FILES =====
 if isSave
@@ -152,30 +159,52 @@ if isSave
     % Create output filenames
     ProtocolInfo = bst_get('ProtocolInfo');
     SurfaceDir   = bst_fullfile(ProtocolInfo.SUBJECTS, bst_fileparts(CtFile));
-    % Get the mesh file
+    % Get the mesh file and MRI file
     MeshFile  = bst_fullfile(SurfaceDir, 'tess_isosurface.mat');
-
-    % Replace existing isoSurface surface (tess_isosurface.mat)
-    [sSubjectTmp, iSubjectTmp, iSurfaceTmp] = bst_get('SurfaceFile', MeshFile);
-    if ~isempty(iSurfaceTmp)
-        file_delete(file_fullpath(MeshFile), 1);
-        sSubjectTmp.Surface(iSurfaceTmp) = [];
-        bst_set('Subject', iSubjectTmp, sSubjectTmp);
-    end
-    
-    % Save isosurface
-    sMesh.Comment = sprintf('isoSurface (ISO_%d)', isoValue);
-    sMesh = bst_history('add', sMesh, 'threshold_ct', 'CT thresholded isosurface generated with Brainstorm');
-    bst_save(MeshFile, sMesh, 'v7');
-    iSurface = db_add_surface(iSubject, MeshFile, sMesh.Comment);
-    % Display mesh with 3D orthogonal slices of the default MRI
     MriFile = sSubject.Anatomy(1).FileName;
+    % add details to sMesh structure
+    sMesh.FileName = file_short(MeshFile);
+    sMesh.Name = 'Other';
+    % Get isoSurface (tess_isosurface.mat)
+    [~, ~, iSurface] = bst_get('SurfaceFile', MeshFile);
+    % Get 3D figure window
     hFig = bst_figures('GetFiguresByType', '3DViz');
-    if isempty(hFig)
-        hFig = view_mri_3d(MriFile, [], 0.3, []);
+    
+    % if isosurface not created create it 
+    if isempty(iSurface)    
+        sMesh = bst_history('add', sMesh, 'threshold_ct', ['CT isosurface generated with isoValue threshold ' num2str(isoValue)]);
+        bst_save(MeshFile, sMesh, 'v7');
+        iSurface = db_add_surface(iSubject, MeshFile, sMesh.Comment);
+        % open figure after saving
+        if isempty(hFig)
+            hFig = view_mri_3d(MriFile, [], 0.3, []);
+            view_surface(MeshFile, [], [], hFig, []);
+        end
+    else % else just update the isosurface surface patch with new computed values    
+        % if surface present in database but figure not opened, open it 
+        if isempty(hFig)
+            hFig = view_mri_3d(MriFile, [], 0.3, []);
+            view_surface(MeshFile, [], [], hFig, []);
+        end
+        % update the surface displayed in figure 
+        TessInfo = getappdata(hFig, 'Surface');
+        iSurfPatch = find(cellfun(@(x) ~isempty(regexp(x, '_isosurface', 'match')), {TessInfo.SurfaceFile}));
+        set(TessInfo(iSurfPatch(1)).hPatch, 'Vertices', sMesh.Vertices);
+        set(TessInfo(iSurfPatch(1)).hPatch, 'Faces', sMesh.Faces);
+        set(TessInfo(iSurfPatch(1)).hPatch, 'FaceVertexCData', ones(size(sMesh.Vertices)));
+        TessInfo(iSurfPatch(1)).nVertices = size(sMesh.Vertices, 1);
+        TessInfo(iSurfPatch(1)).nFaces = size(sMesh.Faces, 1);
+        setappdata(hFig, 'Surface',  TessInfo);
+        % update the GlobalData with new surface
+        iSurfGlobal = find(file_compare({GlobalData.Surface.FileName}, sMesh.FileName));
+        GlobalData.Surface(iSurfGlobal) = sMesh;
+        % update the surface in tess_isosurface.mat 
+        sMesh = bst_history('add', sMesh, 'threshold_ct', ['CT isosurface updated with isovalue threshold ' num2str(isoValue)]);
+        sMesh.Curvature   = tess_curvature(sMesh.Vertices, sMesh.VertConn, sMesh.VertNormals, .1);
+        bst_save(MeshFile, sMesh, 'v7');
+        % reload the subject to reflect updated values 
+        db_reload_subjects(iSubject);
     end
-    view_surface(MeshFile, 0.6, [], hFig, []);    
-    panel_surface('SetIsoValue', isoValue);
 else
     % Return surface
     MeshFile = sMesh.Vertices;

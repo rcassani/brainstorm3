@@ -226,12 +226,13 @@ switch (lower(action))
                 % Get displayable modalities for this file
                 [tmp, DisplayMod] = bst_get('ChannelModalities', filenameRelative);
                 DisplayMod = intersect(DisplayMod, {'EEG','MEG','MEG GRAD','MEG MAG','ECOG','SEEG','ECOG+SEEG','NIRS'});
+                hFig = bst_figures('GetFiguresByType','3DViz');
                 % If only one modality
                 if ~isempty(DisplayMod)
                     if strcmpi(DisplayMod{1}, 'ECOG+SEEG') || (length(DisplayMod) >= 2) && all(ismember({'SEEG','ECOG'}, DisplayMod))
                         DisplayChannels(bstNodes, 'ECOG+SEEG', 'cortex', 1);
                     elseif strcmpi(DisplayMod{1}, 'SEEG')
-                        DisplayChannels(bstNodes, DisplayMod{1}, 'anatomy', 1, 0);
+                        DisplayChannels(bstNodes, DisplayMod{1}, 'anatomy', 1, 0, hFig);
                     elseif strcmpi(DisplayMod{1}, 'ECOG')
                         DisplayChannels(bstNodes, DisplayMod{1}, 'cortex', 1);
                     elseif ismember(DisplayMod{1}, {'MEG','MEG GRAD','MEG MAG'})
@@ -835,6 +836,7 @@ switch (lower(action))
                 % Get avaible modalities for this data file
                 [AllMod, DisplayMod] = bst_get('ChannelModalities', filenameRelative);
                 Device = bst_get('ChannelDevice', filenameRelative);
+                hFig = bst_figures('GetFiguresByType','3DViz');
                 % Replace SEEG+ECOG with iEEG
                 if ~isempty(AllMod) && all(ismember({'SEEG','ECOG'}, AllMod))
                     AllMod = cat(2, {'ECOG+SEEG'}, setdiff(AllMod, {'SEEG','ECOG'}));
@@ -923,7 +925,7 @@ switch (lower(action))
                 end
                 % === SEEG IMPLANTATION ===
                 if (length(bstNodes) == 1) && ((isempty(AllMod) && strcmpi(sStudy.Name, 'implantation')) || any(ismember({'SEEG','ECOG','ECOG+SEEG'}, AllMod)))
-                        gui_component('MenuItem', jPopup, [], 'SEEG/ECOG implantation', IconLoader.ICON_SEEG_DEPTH, [], @(h,ev)DisplayChannels(bstNodes, 'SEEG', 'anatomy', 1, 0));
+                        gui_component('MenuItem', jPopup, [], 'SEEG/ECOG implantation', IconLoader.ICON_SEEG_DEPTH, [], @(h,ev)DisplayChannels(bstNodes, 'SEEG', 'anatomy', 1, 0, hFig));
                 end
                 % === SEEG CONTACT LABELLING ===
                 if (length(bstNodes) == 1) && ~isempty(AllMod) && any(ismember({'SEEG','ECOG','ECOG+SEEG'}, AllMod))
