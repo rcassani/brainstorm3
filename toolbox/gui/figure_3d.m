@@ -1090,11 +1090,11 @@ function FigureKeyPressedCallback(hFig, keyEvent)
                         sSurface = bst_memory('LoadSurface', TessInfo(iIsoSurf(1)).SurfaceFile);
                         % get the current isoValue
                         val = regexp(sSurface.Comment, '\d+', 'match');
-                        % increase/decrease isoValue by 100 for a coarse tuning by making sure it is in desired range
+                        % increase/decrease isoValue by 300 for a coarse tuning by making sure it is in permissible range
                         if strcmpi(keyEvent.Key, 'uparrow')
-                            newVal = str2double(val(1)) + 100;
+                            newVal = str2double(val(1)) + 300;
                         else
-                            newVal = str2double(val(1)) - 100;
+                            newVal = str2double(val(1)) - 300;
                         end
                         if (newVal >= double(sCt.Histogram.whiteLevel)) && (newVal <= double(sCt.Histogram.intensityMax))
                            tess_isosurface(CtFile, newVal);
@@ -1693,16 +1693,16 @@ function DisplayFigurePopup(hFig)
     
     % ==== MENU: ISOSURFACE ====
     % Create isosurface
-    iSurf = find(cellfun(@(c)(~isempty(strfind(char(c), 'tess_isosurface'))), {TessInfo.SurfaceFile}));
-    if ~isempty(iSurf)
+    iIsoSurf = find(cellfun(@(x)(~isempty(regexp(x, '_isosurface', 'match'))), {TessInfo.SurfaceFile}));
+    if ~isempty(iIsoSurf)
         % get the CT file and its structure
         SubjectFile = getappdata(hFig, 'SubjectFile');
         sSubject = bst_get('Subject', SubjectFile);
-        iCt = find(cellfun(@(c)(~isempty(strfind(char(c), '_volct'))), {sSubject.Anatomy.FileName}));
+        iCt = find(cellfun(@(x)(~isempty(regexp(x, '_volct', 'match'))), {sSubject.Anatomy.FileName}));
         CtFile = sSubject.Anatomy(iCt(1)).FileName;
         sCt = bst_memory('LoadMri', CtFile);
         % get the isosurface structure
-        sSurface = bst_memory('LoadSurface', TessInfo(iSurf).SurfaceFile);
+        sSurface = bst_memory('LoadSurface', TessInfo(iIsoSurf(1)).SurfaceFile);
         % panel operations
         jPanel = gui_component('Panel');
         jPanel.setOpaque(0);
@@ -1713,9 +1713,10 @@ function DisplayFigurePopup(hFig)
         % Spin button
         % get the current isoValue
         val = regexp(sSurface.Comment, '\d+', 'match');
+        % increase/decrease isoValue by 50 for a fine tuning making sure it is in permissible range
         spinmodel = SpinnerNumberModel(str2double(val(1)), double(sCt.Histogram.whiteLevel), double(sCt.Histogram.intensityMax), 50);
         jSpinner = JSpinner(spinmodel);
-        jSpinner.setPreferredSize(Dimension(55,25));
+        jSpinner.setPreferredSize(Dimension(70,25));
         jSpinner.setToolTipText('isoValue thresholding');
         java_setcb(spinmodel, 'StateChangedCallback', @(h,ev)tess_isosurface(CtFile, jSpinner.getValue()));
         jPanel.add(jSpinner, BorderLayout.EAST);
