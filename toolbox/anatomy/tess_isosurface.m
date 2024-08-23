@@ -159,40 +159,41 @@ if isSave
     % Create output filenames
     ProtocolInfo = bst_get('ProtocolInfo');
     SurfaceDir   = bst_fullfile(ProtocolInfo.SUBJECTS, bst_fileparts(CtFile));
-    % Get the mesh file
+    % Get the mesh file and MRI file
     MeshFile  = bst_fullfile(SurfaceDir, 'tess_isosurface.mat');
+    MriFile = sSubject.Anatomy(1).FileName;
+    % add details to sMesh structure
+    sMesh.FileName = file_short(MeshFile);
+    sMesh.Name = 'Other';
     % Get isoSurface (tess_isosurface.mat)
     [~, ~, iSurface] = bst_get('SurfaceFile', MeshFile);
     % Get 3D figure window
     hFig = bst_figures('GetFiguresByType', '3DViz');
-
-    sMesh.FileName = file_short(MeshFile);
-    sMesh.Name = 'Other';
+    
     % if isosurface not created create it 
     if isempty(iSurface)    
         sMesh = bst_history('add', sMesh, 'threshold_ct', ['CT isosurface generated with isoValue threshold ' num2str(isoValue)]);
         bst_save(MeshFile, sMesh, 'v7');
         iSurface = db_add_surface(iSubject, MeshFile, sMesh.Comment);
-        MriFile = sSubject.Anatomy(1).FileName;
+        % open figure after saving
         if isempty(hFig)
             hFig = view_mri_3d(MriFile, [], 0.3, []);
+            view_surface(MeshFile, [], [], hFig, []);
         end
-        view_surface(MeshFile, [], [], hFig, []);
     else % else just update the isosurface surface patch with new computed values    
         % if surface present in database but figure not opened, open it 
         if isempty(hFig)
-            MriFile = sSubject.Anatomy(1).FileName;
             hFig = view_mri_3d(MriFile, [], 0.3, []);
             view_surface(MeshFile, [], [], hFig, []);
         end
         % update the surface displayed in figure 
         TessInfo = getappdata(hFig, 'Surface');
         iSurfPatch = find(cellfun(@(x) ~isempty(regexp(x, '_isosurface', 'match')), {TessInfo.SurfaceFile}));
-        set(TessInfo(iSurfPatch).hPatch, 'Vertices', sMesh.Vertices);
-        set(TessInfo(iSurfPatch).hPatch, 'Faces', sMesh.Faces);
-        set(TessInfo(iSurfPatch).hPatch, 'FaceVertexCData', ones(size(sMesh.Vertices)));
-        TessInfo(iSurfPatch).nVertices = size(sMesh.Vertices, 1);
-        TessInfo(iSurfPatch).nFaces = size(sMesh.Faces, 1);
+        set(TessInfo(iSurfPatch(1)).hPatch, 'Vertices', sMesh.Vertices);
+        set(TessInfo(iSurfPatch(1)).hPatch, 'Faces', sMesh.Faces);
+        set(TessInfo(iSurfPatch(1)).hPatch, 'FaceVertexCData', ones(size(sMesh.Vertices)));
+        TessInfo(iSurfPatch(1)).nVertices = size(sMesh.Vertices, 1);
+        TessInfo(iSurfPatch(1)).nFaces = size(sMesh.Faces, 1);
         setappdata(hFig, 'Surface',  TessInfo);
         % update the GlobalData with new surface
         iSurfGlobal = find(file_compare({GlobalData.Surface.FileName}, sMesh.FileName));
