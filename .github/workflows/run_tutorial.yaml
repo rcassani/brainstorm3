@@ -24,7 +24,6 @@ on:
         - tutorial_introduction
         - tutorial_connectivity
         - tutorial_coherence
-        - tutorial_dba
         - tutorial_ephys
         - tutorial_epilepsy
         - tutorial_epileptogenicity
