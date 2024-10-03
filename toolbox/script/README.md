@@ -25,7 +25,7 @@ These scripts can be run on Brainstorm releases (**source** and **binary**).
 | tutorial_phantom_elekta   | [Link](https://neuroimage.usc.edu/brainstorm/Tutorials/PhantomElekta)            | [Report](https://neuroimage.usc.edu/bst/examples/report_TutorialPhantomElekta.html) | 🐧🪟🍎 | 🐧🪟🍎 | 🐧🪟🍎 |  10 min |
 | tutorial_practicalmeeg    | [Link](https://neuroimage.usc.edu/brainstorm/WorkshopParis2019)                  | [Report](https://neuroimage.usc.edu/bst/examples/report_PracticalMEEG.html)         | 🐧🪟🍎 | 🐧🪟🍎 | 🐧🪟🍎 |  30 min |
 | tutorial_raw              | [Link](https://neuroimage.usc.edu/brainstorm/Tutorials/MedianNerveCtf)           | [Report](https://neuroimage.usc.edu/bst/examples/report_TutorialRaw.html)           | 🐧🪟🍎 | 🐧🪟🍎 | 🐧🪟🍎 |  10 min |
-| tutorial_resting          | [Link](https://neuroimage.usc.edu/brainstorm/Tutorials/Resting)                  | [Report](https://neuroimage.usc.edu/bst/examples/report_TutorialResting.html)       | 🐧🪟🍎 | 🐧🪟🍎 | 🐧🪟❌ |  XX min |**
+| tutorial_resting          | [Link](https://neuroimage.usc.edu/brainstorm/Tutorials/Resting)                  | [Report](https://neuroimage.usc.edu/bst/examples/report_TutorialResting.html)       | 🐧🪟🍎 | 🐧🪟🍎 | 🐧🪟🍎 |  85 min |
 | tutorial_simulations      | [Link](https://neuroimage.usc.edu/brainstorm/Tutorials/Simulations)              | [Report](https://neuroimage.usc.edu/bst/examples/report_TutorialSimulation.html)    | 🐧🪟🍎 | 🐧🪟🍎 | 🐧🪟🍎 |  40 min |
 | tutorial_yokogawa         | [Link](https://neuroimage.usc.edu/brainstorm/Tutorials/Yokogawa)                 | [Report](https://neuroimage.usc.edu/bst/examples/report_TutorialYokogawa.html)      | 🐧🪟🍎 | 🐧🪟🍎 | 🐧🪟🍎 |  50 min |
 
