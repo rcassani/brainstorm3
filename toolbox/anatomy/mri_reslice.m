@@ -277,7 +277,7 @@ if ~isempty(MriFileSrc)
     % Update comment
     sMriReg.Comment = file_unique(sMriReg.Comment, {sAnatFiles.Comment});
     % Add history entry
-    sMriReg = bst_history('add', sMriReg, 'resample', ['MRI co-registered on default file: ' MriFileRef]);
+    sMriReg = bst_history('add', sMriReg, 'resample', ['MRI resliced to default file: ' MriFileRef]);
     % Save new file
     MriFileRegFull = file_unique(strrep(file_fullpath(MriFileSrc), '.mat', [fileTag '.mat']));
     MriFileReg = file_short(MriFileRegFull);

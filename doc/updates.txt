@@ -1,3 +1,61 @@
+February 2025
+- Anatomy: Import MRI BESA volumes and surfaces
+- Anatomy: Export surfaces as STL files
+- Process: Add frequency band support to process PSD features
+- Process: Add z-score output to process Compare to normative PSD
+- Process: GUI, handle nested controller-classes in process options
+- Distrib: Compilation with Matlab 2025a
+--------------------------------------------------------------
+December 2024
+- Anatomy: Copy/Paste scout operations
+- Anatomy: Scalp scouts from sensor positions
+- Distrib: Compilation with Matlab 2024a
+- Distrib: Compilation with Matlab 2024b
+--------------------------------------------------------------
+November 2024
+- SEEG/ECOG: Allow iEEG implantation using MRI and/or CT and/or IsoSurface
+- Registration: Manual and auto localization of EEG sensors with 3D scanner mesh
+- Registration: Project EEG sensors for default caps in Colin27 def anat
+- Anatomy: Add skull stripping in Brainstorm (uses SPM or BrainSuite)
+- Anatomy: Add template 'Colin27 4NIRS' (2024)
+- IO: Process to merge (channel-wise) raw continue recordings
+- Distrib: Update script for epilepsy tutorial, add source estimation with MEM
+- Distrib: Script to run the BEst (Brain Entropy in space and time) tutorial
+- Plugins: iso2mesh, brain2mesh and xdf now support Apple Silicon
+--------------------------------------------------------------
+October 2024
+- Anatomy: Spatial correlations and brain annotations: 'bst-neuromaps' plugin
+- Anatomy: Support exporting mixed sources as NIfTI
+- Registration: Allow selecting and deleting head points
+- TimeFreq: Add model selection to FOOOF and SPRiNT
+- IO: Support of EDF files with multiple sampling rates (using FielTrip plugin)
+- Bugfix: Importing MEG sensor locations from FieldTrip data
+--------------------------------------------------------------
+September 2024
+- Artifacts: ICA, display explaned variance for ICs
+- Distrib: Function 'test_tutorial.m' and GitHub workflow 'run_tutorial.yaml'
+- Plugins: Bugfix, interaction between SPM and FieldTrip
+- Plugins: Bugfix, always read FIFF with functions in 'brainstorm3/external'
+- GUI: Show/hide hidden files (Linux, Windows and macOS)
+--------------------------------------------------------------
+August 2024
+- Anatomy: Improve volume computation, use 'boundary'
+- Coreg: New digitization panel
+- SEEG/ECOG: Improvements and bugfix for IEEG panel
+- IO: EDF+ support negative gains
+- Distrib: Linux and macOS, find Matlab runtime in full Matlab installation
+- Distrib: Add deep-brain-activity script
+- Distrib: Add deviation-maps tutorial
+--------------------------------------------------------------
+July 2024
+- Anatomy: Import output from FreeSurfer recon-all-clinical
+- Bugfix: Importing non-Atlas MRI volumes given in MNI space
+- Inverse: Process to apply exclusion zone around sensors for volume grids
+- Artifacts: New process for automatic detection of artifacts on MEG
+- Plugins: Add mTRF-Toolbox and Zeffiro
+- Plugins: OpenMEEG and MCXLAB now support Apple Silicon
+- Distrib: Menu option to retrieve system information
+--------------------------------------------------------------
 June 2024
 - Anatomy: Bugfix, set proper subtype on importing Fibers and FEM
 - Viz: Allow combination of resection options in Fig3D

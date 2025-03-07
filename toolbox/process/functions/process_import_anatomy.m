@@ -172,6 +172,11 @@ function OutputFiles = Run(sProcess, sInputs) %#ok<DEFNU>
         bst_report('Error', sProcess, [], ['Subject "' SubjectName '" is using the default anatomy (read-only).']);
         return
     end
+    % The subject can't be using the default anatomy
+    if (iSubject ~= 0) && sSubject.UseDefaultAnat
+        bst_report('Error', sProcess, [], ['Subject "' SubjectName '" is using the default anatomy (read-only).']);
+        return
+    end
 
     % ===== IMPORT FILES =====
     % Import folder
