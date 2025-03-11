@@ -21,7 +21,20 @@ function [sXml, Values] = in_gii(GiiFile)
 %
 % Authors: Francois Tadel, 2017
 
-import sun.misc.BASE64Decoder;
+% Note: Using `eval` allows using `import` inside an IF statement, 
+%       otherwise it runs before the statement. See `import` help
+[a, b] = methodsview('sun.misc.BASE64Decoder', 'noui');
+if ~isempty(a) && ~isempty(b)
+    eval('import sun.misc.BASE64Decoder');      % API JDK 8
+    decoder = BASE64Decoder();
+    decode = @decoder.decodeBuffer;
+else
+    % sun.misc.BASE64Encoder and sun.misc.BASE64Decoder have been removed in JDK 9
+    % https://docs.oracle.com/javase/9/migrate/toc.htm#JSMIG-GUID-B96BD00F-12A4-493A-9907-2FFE8DA6748C
+    eval('import java.util.Base64.getDecoder'); % API JDK 9
+    decoder = getDecoder();
+    decode = @decoder.decode;
+end
 
 % Read XML file
 sXml = in_xml(GiiFile);
@@ -56,8 +69,7 @@ for iArray = 1:nArrays
             
         case {'Base64Binary', 'GZipBase64Binary'}
             % Base64 decoding
-            decoder = BASE64Decoder();
-            Values{iArray} = decoder.decodeBuffer(sXml.GIFTI.DataArray(iArray).Data.text);
+            Values{iArray} = decode(sXml.GIFTI.DataArray(iArray).Data.text);
             % Unpack gzipped stream
             if strcmpi(sXml.GIFTI.DataArray(iArray).Encoding, 'GZipBase64Binary')
                 Values{iArray} = dunzip(Values{iArray});
