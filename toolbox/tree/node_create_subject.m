@@ -69,7 +69,7 @@ else
     % Volumes: images and atlases
     volimages = sAnatFiles(strcmpi('Image', {sAnatFiles.SubType}));
     volatlas  = sAnatFiles(strcmpi('Atlas', {sAnatFiles.SubType}));
-    volcts    = sAnatFiles(strcmpi('Ct',    {sAnatFiles.SubType}));
+    volcts    = sAnatFiles(strcmpi('CT',    {sAnatFiles.SubType}));
     % Surfaces
     surfaces  = sAnatFiles(strcmpi('surface', {sAnatFiles.Type}));
     % Sort by Id
@@ -93,7 +93,7 @@ else
         nodeType = 'anatomy';
         if strcmpi(volumes(iVolume).SubType, 'atlas')
             nodeType = 'volatlas';
-        elseif ismember(iAnatomy, iCt)
+        elseif strcmpi(volumes(iVolume).SubType, 'ct')
             nodeType = 'volct';
         end
         [nodeCreated, nodeVolume] = CreateNode(nodeType, ...
