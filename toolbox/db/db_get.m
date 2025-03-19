@@ -617,29 +617,22 @@ switch contextName
             end
         end
         if ischar(subjectFields), subjectFields = {subjectFields}; end
-        % Prepend 'Subject.' to requested subject fields
-        subjectFields = cellfun(@(x) ['Subject.' x], subjectFields, 'UniformOutput', 0);
         % Get study fields ONLY if output sStudy is expected
         if nargout > 1
             if ischar(studyFields), studyFields = {studyFields}; end
-            % Prepend 'Study.' to requested study fields
-            studyFields = cellfun(@(x) ['Study.' x], studyFields, 'UniformOutput', 0);
         else
             studyFields = {};
         end
-        fields = [subjectFields, studyFields];
-        % Join query
-        joinQry = 'Subject LEFT JOIN Study ON Subject.Id = Study.Subject';
-        % Add query
-        addQuery = 'AND Study.';
-        % Complete query with FileName of FileID
-        if ischar(args{1})
-            addQuery = [addQuery 'FileName = "' file_short(args{1}) '"'];
-        else
-            addQuery = [addQuery 'Id = ' num2str(args{1})];
+        % Study fields must contain Subject
+        if ~strcmpi('*', studyFields)
+            studyFields = [studyFields, setdiff({'Subject'}, studyFields)];
         end
-        % Select query
-        [varargout{1}, varargout{2}] = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        % Get Study
+        sStudy = db_get(sqlConn, 'Study', args{1}, studyFields);
+        % Get Subject
+        sSubject = db_get(sqlConn, 'Subject', sStudy.Subject, subjectFields);
+        varargout{1} = sSubject;
+        varargout{2} = sStudy;
 
 
 %% ==== CHANNEL FROM STUDY ====
