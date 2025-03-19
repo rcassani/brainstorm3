@@ -237,7 +237,7 @@ switch action
             fields = strcat(tableAliases, '.*');
         end
         % If all requested field names do not have the 'TableName.FieldName' format
-        if all(cellfun(@isempty, regexp(fields, '\w+\..*')))
+        if all(cellfun(@isempty, regexp(fields, '\w+\.(\w+|\*)"*$')))
             if length(tableAliases) < 2
                 fields = strcat([tableAliases{1}, '.'], fields);
             else
@@ -257,7 +257,8 @@ switch action
         resultSet = pstmt.executeQuery();
         
         % Make {Table, Field} as pairs
-        tmp = regexp(fields, '\.', 'split')';
+        tokens = regexp(fields, '(\w+)\.(\w+|\*)"*$', 'tokens');
+        tmp = [tokens{:}];
         fieldPairs = vertcat(tmp{:});
         % Default values for output strcutures. ('skip' fields are included)
         tablesDefValue  = cellfun(@(x) db_template(x), tableNames, 'UniformOutput', 0);
