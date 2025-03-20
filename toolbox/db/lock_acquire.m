@@ -57,13 +57,13 @@ end
 LockName = varargin{1};
 SubjectId = varargin{2};
 
-% Get subject ID
+% Get subject ID fron FileName or Name
 if ischar(SubjectId)
-    sSubject = db_get(sqlConn, 'Subject', struct('Name', SubjectId), 'Id');
+    sSubject = db_get(sqlConn, 'Subject', SubjectId, 'Id');
     SubjectId = sSubject.Id;
 end
 
-% Get study ID
+% Get study ID from FileName
 if length(varargin) > 2
     StudyId = varargin{3};
     if ischar(StudyId)
@@ -74,7 +74,7 @@ else
     StudyId = [];
 end
 
-% Get file ID
+% Get functional file ID from FileName
 if length(varargin) > 3
     FileId = varargin{4};
     if ischar(FileId)

@@ -66,9 +66,9 @@ ProtocolInfo     = bst_get('ProtocolInfo');
 if (iSubject == 0)
 	sSubject = db_get('Subject', '@default_subject');
     iSubject = sSubject.Id;
-% Normal subject 
+% Normal raw subject
 else
-    sSubject = db_get('Subject', iSubject);
+    sSubject = db_get('Subject', iSubject, '*', 'raw');
 end
 % Volume type
 volType = 'MRI';
