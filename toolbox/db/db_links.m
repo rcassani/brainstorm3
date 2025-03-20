@@ -45,7 +45,7 @@ OutputLinks = {};
 % CALL: db_links()
 if (length(varargin) == 0)
     % For all other subjects, except default subject
-    sSubjects = db_get(sqlConn, 'AllSubjects', 'Id');
+    sSubjects = db_get(sqlConn, 'AllSubjectsRaw', 'Id');
     % Update results links for global default study
     db_links(sqlConn, 'Subject', 0);
     % For all other subjects

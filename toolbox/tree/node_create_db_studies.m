@@ -79,7 +79,7 @@ sAnalysisStudy = db_get(sqlConn, 'Study', '@inter', {'Id', 'FileName'});
 if ~isempty(sAnalysisStudy) && ~sql_query(sqlConn, 'EXIST', 'FunctionalFile', struct('Study', sAnalysisStudy.Id))
     sAnalysisStudy = [];
 end
-sSubjects = db_get(sqlConn, 'AllSubjects', {'Id', 'FileName', 'Name'}, '@default_subject');
+sSubjects = db_get(sqlConn, 'AllSubjectsRaw', {'Id', 'FileName', 'Name'}, '@default_subject');
 sql_close(sqlConn);
 iDefaultSubject = find(strcmp({sSubjects.Name}, bst_get('DirDefaultSubject')), 1);
 iGroupSubject   = find(strcmp({sSubjects.Name}, bst_get('NormalizedSubjectName')), 1);

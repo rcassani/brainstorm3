@@ -3812,7 +3812,7 @@ end
 %% ===== PROJECT SOURCES: ALL SUBJECTS =====
 function ProjectSourcesAll(ResultFiles)
     % Get all the subjects in the protocol
-    sSubjects = db_get('AllSubjects');
+    sSubjects = db_get('AllSubjectsRaw');
     % Find subjects non using the default anatomy and with a valid default cortex
     iSubjects = [];
     for i = 1:length(sSubjects)
@@ -3849,7 +3849,7 @@ end
 %% ===== PROJECT GRID: ALL SUBJECTS =====
 function ProjectGridAll(ResultFiles)
     % Get all the subjects in the protocol
-    sSubjects = db_get('AllSubjects');
+    sSubjects = db_get('AllSubjectsRaw');
     % Use all the subjects except the group analysis one (already the source)
     iSubjects = find(~strcmpi({sSubjects.Name}, bst_get('NormalizedSubjectName')));
     % Ask which subject to use

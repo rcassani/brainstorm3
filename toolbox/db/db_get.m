@@ -17,9 +17,9 @@ function varargout = db_get(varargin)
 %    - db_get('Subject', '@default_subject', Fields)        : Get default Subject
 %    - db_get('Subject')                                    : Get current Subject in current protocol
 %    - db_get('NormalizedSubject')                          : Get Normalized subject if it exists, otherwise it's created
-%    - db_get('AllSubjects')                                : Get all Subjects in current protocol, excluding @default_subject
-%    - db_get('AllSubjects', Fields)                        : Get all Subjects in current protocol, excluding @default_subject
-%    - db_get('AllSubjects', Fields, '@default_subject')    : Get all Subjects in current protocol, including @default_subject
+%    - db_get('AllSubjectsRaw')                                : Get all Subjects in current protocol, excluding @default_subject
+%    - db_get('AllSubjectsRaw', Fields)                        : Get all Subjects in current protocol, excluding @default_subject
+%    - db_get('AllSubjectsRaw', Fields, '@default_subject')    : Get all Subjects in current protocol, including @default_subject
 %    - db_get('SubjectCount')                               : Get number of subjects in current protocol, exclude @default_subject
 %    - db_get('SubjectFromStudy', StudyID,       SubjectFields, StudyFields) : Get Subject and Study for StudyID
 %    - db_get('SubjectFromStudy', StudyFileName, SubjectFields, StudyFields) : Get Subject and Study for StudyFileName
@@ -294,7 +294,7 @@ switch contextName
             % Always use default anatomy
             UseDefaultAnat = 1;
             % If all the subjects use a global channel file: Use global default as well
-            allSubjects = db_get(sqlConn, 'AllSubjects', 'UseDefaultChannel');
+            allSubjects = db_get(sqlConn, 'AllSubjectsRaw', 'UseDefaultChannel');
             if all([allSubjects.UseDefaultChannel] == 2)
                 UseDefaultChannel = 2;
             else
@@ -308,11 +308,11 @@ switch contextName
         varargout{1} = sNormSubj;
 
 
-%% ==== ALL SUBJECTS ====
-    % sSubjects = db_get('AllSubjects');                             % Exclude @default_subject
-    %           = db_get('AllSubjects', Fields);                     % Exclude @default_subject
-    %           = db_get('AllSubjects', Fields, '@default_subject'); % Include @default_subject
-    case 'AllSubjects'
+%% ==== ALL SUBJECTS RAW ====
+    % sSubjects = db_get('AllSubjectsRaw');                             % Exclude @default_subject
+    %           = db_get('AllSubjectsRaw', Fields);                     % Exclude @default_subject
+    %           = db_get('AllSubjectsRaw', Fields, '@default_subject'); % Include @default_subject
+    case 'AllSubjectsRaw'
         includeDefaultSub = 0;
         fields = '*';
         addQuery = '';
@@ -1368,7 +1368,7 @@ switch contextName
         % If study is the global default study
         if isGlobalDefault
             % Get all the subjects of the protocol
-            sSubjects = db_get(sqlConn, 'AllSubjects', {'Id', 'UseDefaultChannel'});
+            sSubjects = db_get(sqlConn, 'AllSubjectsRaw', {'Id', 'UseDefaultChannel'});
             for ix = 1 : length(sSubjects)
                 if sSubjects(ix).UseDefaultChannel
                     tmp_sStudies = db_get(sqlConn, 'StudiesFromSubject', sSubjects(ix).Id, 'Id');

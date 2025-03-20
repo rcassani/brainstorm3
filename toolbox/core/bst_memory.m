@@ -2757,7 +2757,7 @@ function iDS = GetDataSetSubject(SubjectFile, createSubject)
     % look for loaded subjects that use the default anatomy
     if isempty(iDS) && strcmpi(bst_fileparts(sSubject.FileName), bst_get('DirDefaultSubject'))
         % Get all protocol subjects
-        ProtocolSubjects = db_get('AllSubjects', {'UseDefaultAnat', 'FileName'});
+        ProtocolSubjects = db_get('AllSubjectsRaw', {'UseDefaultAnat', 'FileName'});
         % If subjects are defined for the protocol
         if ~isempty(ProtocolSubjects)
             % Get subjects that use default anatomy

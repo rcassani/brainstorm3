@@ -48,7 +48,7 @@ for iNode = 1:length(bstNodes)
         % ==== DATABASE (Studies/cond, Studies/subj) ====
         case {'studydbsubj', 'studydbcond'}
             % Get all the protocol subjects (except default subject)
-            sSubjects = db_get(sqlConn, 'AllSubjects', 'Id');
+            sSubjects = db_get(sqlConn, 'AllSubjectsRaw', 'Id');
             if (length(sSubjects) <= 0)
                 return
             end
@@ -99,7 +99,7 @@ for iNode = 1:length(bstNodes)
             % Else: node is a 'Subject common files' in cond/subject view mode
             else
                 % Get all the protocol subjects (except default subject)
-                sSubjects = db_get(sqlConn, 'AllSubjects', 'Id');
+                sSubjects = db_get(sqlConn, 'AllSubjectsRaw', 'Id');
                 if (length(sSubjects) <= 0)
                     return
                 end

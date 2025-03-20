@@ -173,7 +173,7 @@ switch contextName
             end
         end
         % Get all Subjects
-        sSubjectsOld = db_get(sqlConn, 'AllSubjects', 'Id', '@default_subject');
+        sSubjectsOld = db_get(sqlConn, 'AllSubjectsRaw', 'Id', '@default_subject');
         % Update Subjects and their Anatomy Files
         [~, ~, ib] = intersect([sSubjectsOld.Id],[sSubjects.Id]);
         for ix = 1 : length(ib)

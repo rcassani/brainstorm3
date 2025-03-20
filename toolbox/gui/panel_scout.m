@@ -523,7 +523,7 @@ function UpdateMenus(sAtlas, sSurf)
         % Project to contralateral hemisphere
         gui_component('MenuItem', jMenuProject, [], 'Contralateral hemisphere', IconLoader.ICON_CORTEX, [], @(h,ev)bst_call(@ProjectScoutsContralateral, sSurf.FileName));
         % Get all subjects including @default_subject
-        sSubjects = db_get('AllSubjects', {'Id', 'Name', 'UseDefaultAnat'}, '@default_subject');
+        sSubjects = db_get('AllSubjectsRaw', {'Id', 'Name', 'UseDefaultAnat'}, '@default_subject');
         nMenus = 0;
         % Process all the subjects
         for ix = 1 : length(sSubjects)

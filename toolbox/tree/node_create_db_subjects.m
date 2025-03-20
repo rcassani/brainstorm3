@@ -54,7 +54,7 @@ if (isempty(ProtocolInfo))
     return
 end
 % Get current protocol subjects list
-sSubjects = db_get('AllSubjects', '*', '@default_subject');
+sSubjects = db_get('AllSubjectsRaw', '*', '@default_subject');
 % Index @default_subject
 iDefaultSubject = find(strcmp({sSubjects.Name}, bst_get('DirDefaultSubject')), 1);
 % Find subject "Group_analysis"

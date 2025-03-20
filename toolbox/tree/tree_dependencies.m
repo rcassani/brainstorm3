@@ -113,7 +113,7 @@ try
             % ==== DATABASE ====
             case {'studydbsubj', 'studydbcond'}
                 % Get the whole database
-                sSubjects = db_get(sqlConn, 'AllSubjects', {'Id', 'FileName', 'Name'});
+                sSubjects = db_get(sqlConn, 'AllSubjectsRaw', {'Id', 'FileName', 'Name'});
                 % Get list of subjects (sorted alphabetically => same order as in the tree)
                 iGroupSubject = find(strcmp({sSubjects.Name}, bst_get('NormalizedSubjectName')), 1);
                 [tmp__, iSubjectsSorted] = sort_nat({sSubjects.Name});

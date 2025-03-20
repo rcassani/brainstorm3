@@ -692,7 +692,7 @@ switch contextName
         argout1 = GlobalData.DataBase.(contextName)(argout2);
 
     case 'ProtocolSubjects'
-        deprecationWarning(contextName, 'AllSubjects');
+        deprecationWarning(contextName, 'AllSubjectsRaw');
 
         argout1 = db_template('ProtocolSubjects');
         if GlobalData.DataBase.iProtocol == 0
@@ -705,7 +705,7 @@ switch contextName
         
         iDefaultSubject = [];
         sSubjects  = repmat(db_template('Subject'), 0);
-        subjectIds = db_get('AllSubjects', 'Id', '@default_subject');
+        subjectIds = db_get('AllSubjectsRaw', 'Id', '@default_subject');
         % Get all subjects
         if ~isempty(subjectIds)
             subjectIds = [subjectIds.Id];
