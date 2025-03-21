@@ -308,8 +308,7 @@ switch (lower(action))
                 % Volume: MRI Viewer
                 if strcmpi(sFunctFile.ExtraStr2, 'volume')
                     % Get default anatomy for Subject
-                    sSubject  = db_get('SubjectFromFunctionalFile', iResult, 'Id');
-                    sSubject  = db_get('Subject', sSubject.Id, 'iAnatomy');
+                    sSubject  = db_get('SubjectFromFunctionalFile', iResult, 'iAnatomy');
                     sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
                     view_mri(sAnatFile.FileName, filenameRelative);
                 % Otherwise: 3D display
@@ -324,8 +323,7 @@ switch (lower(action))
                 % Volume: MRI Viewer
                 if strcmpi(ResultsMat.HeadModelType, 'volume')
                     % Get default anatomy for Subject
-                    sSubject  = db_get('SubjectFromFunctionalFile', filenameRelative, 'Id');
-                    sSubject  = db_get('Subject', sSubject.Id, 'iAnatomy');
+                    sSubject  = db_get('SubjectFromFunctionalFile', filenameRelative, 'iAnatomy');
                     sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
                     view_mri(sAnatFile.FileName, filenameRelative);
                 % Otherwise: 3D display

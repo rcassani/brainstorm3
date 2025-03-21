@@ -51,9 +51,8 @@ ChannelFile = file_short(ChannelFile);
 % ===== GET/CREATE DATASET =====
 if isempty(hFig)
     % Get Study and Subject that holds this ChannelFile
-    sFuncFile = db_get('FunctionalFile', ChannelFile, 'Study');
-    sStudy    = db_get('Study', sFuncFile.Study, 'FileName');
-    sSubject  = db_get('SubjectFromFunctionalFile', ChannelFile, 'FileName');
+    [sSubject, sStudy]  = db_get('SubjectFromFunctionalFile', ChannelFile, 'Id', 'FileName');
+    sSubject  = db_get('Subject', sSubject.Id, 'FileName', 'raw');
     % If this surface does not belong to any subject
     if isempty(sStudy)
         StudyFile = '';

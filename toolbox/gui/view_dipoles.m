@@ -32,10 +32,8 @@ global GlobalData;
 if (nargin < 2) || isempty(ViewMode)
     ViewMode = '';
 end
-% Get SubjectId for DipoleFile
-sSubject = db_get('SubjectFromFunctionalFile', DipolesFile, 'Id');
-% Get default Anatomy and Cortex fro Subject
-sSubject = db_get('Subject', sSubject.Id, {'iAnatomy', 'iCortex'});
+% Get Subject for DipoleFile
+sSubject = db_get('SubjectFromFunctionalFile', DipolesFile, {'iAnatomy', 'iCortex'});
 if isempty(sSubject)
     error('Subject is not registered in database.');
 end

@@ -171,9 +171,7 @@ end
 if plotFibers
     bst_progress('start', 'View connectivity map', 'Loading fibers...');
     % Get necessary surface files
-    sSubject = db_get('SubjectFromFunctionalFile', sFuncFile.FileName, 'Id');
-    % Get non-raw Subject
-    sSubject = db_get('Subject', sSubject.Id);
+    sSubject = db_get('SubjectFromFunctionalFile', sFuncFile.FileName, {'iCortex', 'iFibers'});
     sAnatFileSurf = db_get('AnatomyFile', sSubject.iCortex, 'FileName');
     sAnatFileFibr = db_get('AnatomyFile', sSubject.iFibers, 'FileName');
     if isempty(sAnatFileSurf) || isempty(sAnatFileFibr)

@@ -1281,7 +1281,8 @@ function destFile = CopyFile(iTarget, srcFile, srcType, iSrcStudy, sSubjectTarge
     % File info is not passed in input
     sqlConn = sql_connect();
     if nargin < 5 || isempty(sSubjectTargetRaw)
-        sSubjectTargetRaw = db_get(sqlConn, 'SubjectFromFunctionalFile', srcFile);
+        sSubjectTargetRaw = db_get(sqlConn, 'SubjectFromFunctionalFile', srcFile, 'Id');
+        sSubjectTargetRaw = db_get(sqlConn, 'Subject', sSubjectTargetRaw.Id, '*', 'raw');
     end
     if nargin < 6
         iParent = [];

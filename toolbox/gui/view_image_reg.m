@@ -91,7 +91,8 @@ if ~isempty(hFig)
 % If display is related to a file
 elseif ~isempty(FileName)
     % Get info for functional file
-    [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', FileName, 'FileName', 'FileName', 'FileName');
+    [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', FileName, 'Id', 'FileName', 'FileName');
+    sSubject = db_get('Subject', sSubject.Id, 'FileName', 'raw');
     DataType = file_gettype(sFuncFile.FileName);
     if isempty(sFuncFile)
         error('File is not registered in database.');

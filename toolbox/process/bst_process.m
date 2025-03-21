@@ -1616,7 +1616,8 @@ function sInputs = GetInputStruct(FileNames)
         iGroupFiles = find(J == iPath);
         GroupFileNames = FileNames(iGroupFiles);
         % Get study and subject information using first file
-        [sSubject, sStudy, sFuncFile] = db_get(sqlConn, 'SubjectFromFunctionalFile', GroupFileNames{1}, {'FileName', 'Name'}, {'Condition', 'iChannel'}, 'Study');
+        [sSubject, sStudy, sFuncFile] = db_get(sqlConn, 'SubjectFromFunctionalFile', GroupFileNames{1}, 'Id', {'Condition', 'iChannel'}, 'Study');
+        sSubject = db_get('Subject', sSubject.Id, {'FileName', 'Name'}, 'raw');
         if isempty(sSubject) || isempty(sStudy) || isempty(sFuncFile)
             sInputs = [];
             return;

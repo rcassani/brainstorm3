@@ -617,7 +617,8 @@ function [iDS, ChannelFile] = LoadDataFile(DataFile, isReloadForced, isTimeCheck
     end
     ChannelFile = [];
     % Get data file information from database
-    [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', DataFile, 'FileName', {'FileName', 'iChannel'}, '*');
+    [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', DataFile, 'Id', {'FileName', 'iChannel'}, {'FileName', 'Type', 'SubType'});
+    sSubject = db_get('Subject', sSubject.Id, 'FileName', 'raw');
     sChannel = db_get('FunctionalFile', sStudy.iChannel);
     if ~isempty(sChannel)
         ChannelFile = sChannel.FileName;
@@ -1090,7 +1091,8 @@ function [iDS, iResult] = LoadResultsFile(ResultsFile, isTimeCheck)
     
     % ===== GET FILE INFORMATION =====
     % Get file information
-    [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', ResultsFile, 'FileName', {'FileName', 'iChannel'}, {'Type', 'ExtraStr1', 'ExtraNum'});
+    [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', ResultsFile, 'Id', {'FileName', 'iChannel'}, {'Type', 'ExtraStr1', 'ExtraNum'});
+    sSubject = db_get('Subject', sSubject.Id, 'FileName', 'raw');
     sChannel = db_get('FunctionalFile', sStudy.iChannel);
     if ~isempty(sChannel)
         ChannelFile = sChannel.FileName;
@@ -1434,7 +1436,8 @@ function [iDS, iDipoles] = LoadDipolesFile(DipolesFile, isTimeCheck) %#ok<DEFNU>
         DipolesFullFile = file_fullpath(DipolesFile);
     end
     % Get file information
-    [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', DipolesFile, 'FileName', 'FileName', 'ExtraStr1');
+    [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', DipolesFile, 'Id', 'FileName', 'ExtraStr1');
+    sSubject = db_get('Subject', sSubject.Id, 'FileName', 'raw');
     % ===== ARE DIPOLES ALREADY LOADED ? ====
     % Check if file is already loaded in this DataSet
     [iDS, iDipoles] = GetDataSetDipoles(DipolesFile);
@@ -1590,7 +1593,8 @@ function [iDS, iTimefreq, iResults] = LoadTimefreqFile(TimefreqFile, isTimeCheck
         TimefreqFile = TimefreqFile(1:find(TimefreqFile == '$',1)-1);
     end
     % Get file information
-    [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', TimefreqFile, 'FileName', {'FileName', 'iChannel'}, {'FileName', 'Type', 'ExtraStr1'});
+    [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', TimefreqFile, 'Id', {'FileName', 'iChannel'}, {'FileName', 'Type', 'ExtraStr1'});
+    sSubject = db_get('Subject', sSubject.Id, 'FileName', 'raw');
     sChannel = db_get('FunctionalFile', sStudy.iChannel);
     if ~isempty(sChannel)
         ChannelFile = sChannel.FileName;
@@ -1987,7 +1991,8 @@ function [iDS, iMatrix] = LoadMatrixFile(MatFile, iDS, iMatrix) %#ok<DEFNU>
         
     % ===== GET/CREATE A NEW DATASET =====
     % Get study
-    [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', MatFile, 'FileName', 'FileName', 'FileName');
+    [sSubject, sStudy, sFuncFile] = db_get('SubjectFromFunctionalFile', MatFile, 'Id', 'FileName', 'FileName');
+    sSubject = db_get('Subject', sSubject.Id, 'FileName', 'raw');
     if isempty(sFuncFile)
         iDS = [];
         return;
@@ -2025,7 +2030,7 @@ function [iDS, iMatrix] = LoadMatrixFile(MatFile, iDS, iMatrix) %#ok<DEFNU>
         % Create a new DataSet only for results
         iDS = length(GlobalData.DataSet) + 1;
         GlobalData.DataSet(iDS)             = db_template('DataSet');
-        GlobalData.DataSet(iDS).SubjectFile = file_short(sStudy.BrainStormSubject);
+        GlobalData.DataSet(iDS).SubjectFile = file_short(sSubject.FileName);
         GlobalData.DataSet(iDS).StudyFile   = file_short(sStudy.FileName);
         % Save measures information
         GlobalData.DataSet(iDS).Measures.Time            = double(Mat.Time([1, end]));

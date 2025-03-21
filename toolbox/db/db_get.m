@@ -1014,6 +1014,9 @@ switch contextName
         studyFields = '*';
         functionalFileFields = '*';
         varargout{1} = [];
+        varargout{2} = [];
+        addedFieldSubject = 0;
+        addedFieldStudy = 0;
         if length(args) > 1 && ~isempty(args{2})
             subjectFields = args{2};
             if length(args) > 2 && ~isempty(args{3})
@@ -1024,18 +1027,12 @@ switch contextName
             end
         end
         if ischar(subjectFields), subjectFields = {subjectFields}; end
-        % Prepend 'Subject.' to requested fields
-        subjectFields = cellfun(@(x) ['Subject.' x], subjectFields, 'UniformOutput', 0);
         % Get study fields ONLY if output sStudy is expected
         if nargout > 1
             if ischar(studyFields), studyFields = {studyFields}; end
-            % Prepend 'Study.' to requested study fields
-            studyFields = cellfun(@(x) ['Study.' x], studyFields, 'UniformOutput', 0);
-            % Get study fields ONLY if output sStudy is expected
+            % Get functionalfile fields ONLY if output sFunctionalFile is expected
             if nargout > 2
                 if ischar(functionalFileFields), functionalFileFields = {functionalFileFields}; end
-                % Prepend 'FunctionalFile.' to requested study fields
-                functionalFileFields = cellfun(@(x) ['FunctionalFile.' x], functionalFileFields, 'UniformOutput', 0);
             else
                 functionalFileFields = {};
             end
@@ -1043,20 +1040,34 @@ switch contextName
             functionalFileFields = {};
             studyFields = {};
         end
-        fields = [subjectFields, studyFields, functionalFileFields];
-        % Join query
-        joinQry = ['Subject LEFT JOIN Study ON Subject.Id = Study.Subject ' ...
-                   'LEFT JOIN FunctionalFile ON Study.Id = FunctionalFile.Study'];
-        % Add query
-        addQuery = 'AND FunctionalFile.';
-        % Complete query with FileName of FileID
-        if ischar(args{1})
-            addQuery = [addQuery 'FileName = "' file_short(args{1}) '"'];
-        else
-            addQuery = [addQuery 'Id = ' num2str(args{1})];
+        % Study fields must contain Subject
+        if isempty(studyFields) || all(~ismember({'*', 'Subject'}, studyFields))
+            addedFieldSubject = 1;
+            studyFields = [studyFields, {'Subject'}];
         end
-        % Select query
-        [varargout{1}, varargout{2}, varargout{3}] = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
+        % FunctFile fields must contain Study
+        if isempty(functionalFileFields) || all(~ismember({'*', 'Study'}, functionalFileFields))
+            addedFieldStudy = 1;
+            functionalFileFields = [functionalFileFields, {'Study'}];
+        end
+        % Get FunctionalFile
+        sFunctFile = db_get(sqlConn, 'FunctionalFile', args{1}, functionalFileFields);
+        % Get Study
+        sStudy = db_get(sqlConn, 'Study', sFunctFile.Study, studyFields);
+        % Get Subject
+        sSubject = db_get(sqlConn, 'Subject', sStudy.Subject, subjectFields);
+        % Remove 'Subject' field if added
+        if addedFieldSubject
+            sStudy = rmfield(sStudy, 'Subject');
+        end
+        % Remove 'Study' field if added
+        if addedFieldStudy
+            sFunctFile = rmfield(sFunctFile, 'Study');
+        end
+        % Output
+        varargout{1} = sSubject;
+        varargout{2} = sStudy;
+        varargout{3} = sFunctFile;
 
 
 %% ==== SUBJECT FROM ANATOMY FILE ====
