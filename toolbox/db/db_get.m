@@ -610,6 +610,7 @@ switch contextName
         studyFields   = '*';
         varargout{1} = [];
         varargout{2} = [];
+        addedFieldSubject = 0;
         if length(args) > 1 && ~isempty(args{2})
             subjectFields = args{2};
             if length(args) > 2 && ~isempty(args{3})
@@ -624,13 +625,18 @@ switch contextName
             studyFields = {};
         end
         % Study fields must contain Subject
-        if ~strcmpi('*', studyFields)
-            studyFields = [studyFields, setdiff({'Subject'}, studyFields)];
+        if isempty(studyFields) || all(~ismember({'*', 'Subject'}, studyFields))
+            addedFieldSubject = 1;
+            studyFields = [studyFields, {'Subject'}];
         end
         % Get Study
         sStudy = db_get(sqlConn, 'Study', args{1}, studyFields);
         % Get Subject
         sSubject = db_get(sqlConn, 'Subject', sStudy.Subject, subjectFields);
+        % Remove 'Subject' field if added
+        if addedFieldSubject
+            sStudy = rmfield(sStudy, 'Subject');
+        end
         varargout{1} = sSubject;
         varargout{2} = sStudy;
 
