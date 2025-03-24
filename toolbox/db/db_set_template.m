@@ -40,7 +40,7 @@ end
 sSubject = db_get('Subject', iSubject);
 ProtocolInfo = bst_get('ProtocolInfo');
 targetDir = bst_fullfile(ProtocolInfo.SUBJECTS, bst_fileparts(sSubject.FileName));
-sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, 'Id');
+sAnatFiles = db_get('AnatomyFiles', struct('Subject', sSubject.Id));
 % Ask for confirmation if existing anatomy
 if isInteractive && ~isempty(sAnatFiles)
     if ~java_dialog('confirm', ['Warning: There is already an anatomy defined for this subject.' 10 10 ...

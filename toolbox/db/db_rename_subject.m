@@ -103,7 +103,7 @@ sSubject.Name = newName;
 sSubject.FileName = bst_fullfile(newName, [fBase, fExt]);
 db_set(sqlConn, 'Subject', sSubject, sSubject.Id);
 % Update anatomy and surfaces
-sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, {'Id', 'FileName'});
+sAnatFiles = db_get('AnatomyFile', struct('Subject', sSubject.Id));
 for i = 1 : length(sAnatFiles)
     [fPath, fBase, fExt] = bst_fileparts(sAnatFiles(i).FileName);
     sAnatFiles(i).FileName = bst_fullfile(newName, [fBase, fExt]);

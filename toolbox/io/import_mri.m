@@ -79,8 +79,11 @@ end
 if ~isempty(strfind(Comment, 'Import'))
     Comment = [];
 end
-% Current anatomy files
-sAnatFiles = db_get('AnatomyFilesWithSubject', iSubject, '*', 'volume');
+% Current anatomy (volume) files
+sAnatFiles = db_get('AnatomyFile', struct('Subject', sSubject.Id));
+if ~isempty(sAnatFiles)
+    sAnatFiles(~strcmpi({sAnatFiles.Type}, 'volume')) = [];
+end
 
 %% ===== SELECT MRI FILE =====
 % If MRI file to load was not defined : open a dialog box to select it

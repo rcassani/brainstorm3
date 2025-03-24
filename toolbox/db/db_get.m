@@ -338,8 +338,8 @@ switch contextName
 
 
 %% ==== ANATOMY FILES WITH SUBJECT ====
-    % [sAnatomyFiles, sSubject] = db_get('AnatomyFilesWithSubject', SubjectID,       AnatomyFileType, AnatomyFileFields, AnatomyFileSubType, SubjectFields)
-    %                           = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileType, AnatomyFileFields, AnatomyFileSubType, SubjectFields)
+    % [sAnatomyFiles, sSubject] = db_get('AnatomyFilesWithSubject', SubjectID,       AnatomyFileFields, AnatomyFileType, AnatomyFileSubType, SubjectFields)
+    %                           = db_get('AnatomyFilesWithSubject', SubjectFileName, AnatomyFileFields, AnatomyFileType, AnatomyFileSubType, SubjectFields)
     case 'AnatomyFilesWithSubject'
         anatomyFileFields = '*';
         fileType = '';
@@ -359,45 +359,43 @@ switch contextName
                 end
             end
         end
-        if ischar(anatomyFileFields), anatomyFileFields = {anatomyFileFields}; end
-        % Prepend 'AnatomyFile.' to requested fields
-        anatomyFileFields = cellfun(@(x) ['AnatomyFile.' x], anatomyFileFields, 'UniformOutput', 0);
-        if nargout > 1
-            if ischar(subjectFields), subjectFields = {subjectFields}; end
-            % Prepend 'Subject.' to requested study fields
-            subjectFields = cellfun(@(x) ['Subject.' x], subjectFields, 'UniformOutput', 0);
-        else
-            subjectFields = {};
+        % Subject fields must contain Id UseDefaultAnat
+        addedFieldUDA = 0;
+        if isempty(subjectFields) || all(~ismember({'*', 'UseDefaultAnat'}, subjectFields))
+            addedFieldUDA = 1;
+            subjectFields = [subjectFields, {'UseDefaultAnat'}];
         end
-        fields = [anatomyFileFields, subjectFields];
-        % Join query
-        joinQry = 'AnatomyFile LEFT JOIN Subject ON AnatomyFile.Subject = Subject.Id';
-        % Add query
-        addQuery = '';
-        if ~isempty(fileType)
-            addQuery = ['AND AnatomyFile.Type = "' fileType '" '];
+        addedFieldId = 0;
+        if isempty(subjectFields) || all(~ismember({'*', 'Id'}, subjectFields))
+            addedFieldId = 1;
+            subjectFields = [subjectFields, {'Id'}];
         end
-        if ~isempty(subType)
-            addQuery = ['AND AnatomyFile.SubType = "' subType '" '];
+        % Get Subject
+        sSubject = db_get(sqlConn, 'Subject', args{1}, subjectFields);
+        idForAnatFiles = sSubject.Id;
+        if sSubject.UseDefaultAnat == 1
+            sSubjectDef = db_get(sqlConn, 'Subject', '@default_subject', 'Id');
+            idForAnatFiles = sSubjectDef.Id;
         end
-        addQuery = [addQuery, 'AND Subject.'];
-        % Complete query with FileName of FileID
-        if ischar(args{1})
-            args{1} = file_short(args{1});
-            [~, ~, fExt] = bst_fileparts(args{1});
-            % Argument is not a Matlab .mat filename, assume it is a directory
-            if ~strcmpi(fExt, '.mat')
-                args{1} = bst_fullfile(file_standardize(args{1}), 'brainstormsubject.mat');
-            end
-            addQuery = [addQuery 'FileName = "' args{1} '"'];
-        else
-            addQuery = [addQuery 'Id = ' num2str(args{1})];
+        % Remove unsolicited fields
+        if addedFieldUDA
+            sSubject = rmfield(sSubject, 'UseDefaultAnat');
         end
-        % Select query
-        [varargout{1}, tmp]= sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
-        if nargout > 1 && ~isempty(tmp)
-            varargout{2} = tmp(1);
+        if addedFieldId
+            sSubject = rmfield(sSubject, 'Id');
         end
+        % Build query for AnatFiles
+        CondQuery.Subject = idForAnatFiles;
+        if ~isempty(fileType) && ~strcmp('*', fileType)
+            CondQuery.Type = fileType;
+        end
+        if ~isempty(subType) && ~strcmp('*', subType)
+            CondQuery.SubType = subType;
+        end
+        % Get AnatomyFiles
+        sAnatFiles = db_get(sqlConn, 'AnatomyFile', CondQuery, anatomyFileFields);
+        varargout{1} = sAnatFiles;
+        varargout{2} = sSubject;
 
 
 %% ==== FUNCTIONAL FILES WITH STUDY ====

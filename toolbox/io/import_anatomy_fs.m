@@ -99,10 +99,10 @@ if (iSubject == 0)
 else
     sSubject = db_get('Subject', iSubject);
 end
-sAnatFilesMri  = db_get('AnatomyFilesWithSubject', iSubject, 'Id', 'volume', 'Image');
-nAnatFilesSurf = db_get('AnatomyFilesWithSubject', iSubject, 'Id', 'surface');
+sAnatFilesMri = db_get('AnatomyFilesWithSubject', iSubject, 'Id', 'volume', 'Image');
+sAnatFilesSrf = db_get('AnatomyFilesWithSubject', iSubject, 'Id', 'surface');
 % Check for existing anatomy
-if (~isempty(sAnatFilesMri) && (isKeepMri == 0)) || (~isempty(nAnatFilesSurf) && (isKeepMri < 2))
+if (~isempty(sAnatFilesMri) && (isKeepMri == 0)) || (~isempty(sAnatFilesSrf) && (isKeepMri < 2))
     % Ask user whether the previous anatomy should be removed
     if isInteractive
         isDel = java_dialog('confirm', ['Warning: There is already an anatomy defined for this subject.' 10 10 ...

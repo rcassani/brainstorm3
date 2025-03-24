@@ -1154,11 +1154,10 @@ switch contextName
         % Return found subject
         else                 
             % Populate Anatomy files: Volume and Surface
-            sSubject.Anatomy = [repmat(db_template('Anatomy'), 0), ...
-                db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, '*', 'volume'))];
-            sSubject.Surface = [repmat(db_template('Surface'), 0), ...
-                db_convert_anatomyfile(db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, '*', 'surface'))];
-            
+            tmp = db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, '*', 'volume');
+            sSubject.Anatomy = [repmat(db_template('Anatomy'), 0), db_convert_anatomyfile(tmp)];
+            tmp = db_get(sqlConn, 'AnatomyFilesWithSubject', sSubject.Id, '*', 'surface');
+            sSubject.Surface = [repmat(db_template('Surface'), 0), db_convert_anatomyfile(tmp)];
             argout1 = sSubject;
             argout2 = sSubject.Id;
         end
