@@ -1209,10 +1209,9 @@ switch contextName
             FileName = varargin{2};
             [sItem, table] = db_get('AnyFile', FileName);
             if strcmpi(table, 'Subject')
-                sSubject = db_get('Subject', sItem.Id);
+                sSubject = sItem;
             elseif strcmpi(table, 'AnatomyFile')
-                sSubject = db_get('SubjectFromAnatomyFile', sItem.Id, 'Id');
-                sSubject = db_get('Subject', sSubject.Id);
+                sSubject = db_get('Subject', sItem.Subject);
             end
         else
             iSubject = varargin{2};

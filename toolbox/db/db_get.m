@@ -1077,6 +1077,7 @@ switch contextName
         subjectFields = '*';
         anatomyFileFields  = '*';
         varargout{1} = [];
+        varargout{2} = [];
         if length(args) > 1 && ~isempty(args{2})
             subjectFields = args{2};
             if length(args) > 2 && ~isempty(args{3})
@@ -1084,30 +1085,27 @@ switch contextName
             end
         end
         if ischar(subjectFields), subjectFields = {subjectFields}; end
-        % Prepend 'Subject.' to requested fields
-        subjectFields = cellfun(@(x) ['Subject.' x], subjectFields, 'UniformOutput', 0);
         % Get anatomyFile fields ONLY if output sAnatomyFile is expected
         if nargout > 1
             if ischar(anatomyFileFields), anatomyFileFields = {anatomyFileFields}; end
-            % Prepend 'AnatomyFile.' to requested anatomyFile fields
-            anatomyFileFields = cellfun(@(x) ['AnatomyFile.' x], anatomyFileFields, 'UniformOutput', 0);
         else
             anatomyFileFields = {};
         end
-        fields = [subjectFields, anatomyFileFields];
-        % Join query
-        joinQry = 'Subject LEFT JOIN AnatomyFile ON Subject.Id = AnatomyFile.Subject ';
-        % Add query
-        addQuery = 'AND AnatomyFile.';
-        % Complete query with FileName of FileID
-        if ischar(args{1})
-            addQuery = [addQuery 'FileName = "' file_short(args{1}) '"'];
-        else
-            addQuery = [addQuery 'Id = ' num2str(args{1})];
+        % AnatFile fields must contain Subject
+        if isempty(anatomyFileFields) || all(~ismember({'*', 'Subject'}, anatomyFileFields))
+            addedFieldSubject = 1;
+            anatomyFileFields = [anatomyFileFields, {'Subject'}];
         end
-        % Select query
-        [varargout{1}, varargout{2}] = sql_query(sqlConn, 'SELECT', joinQry, [], fields, addQuery);
-
+        % Get AnatFile
+        sAnatFile = db_get(sqlConn, 'AnatomyFile', args{1}, anatomyFileFields);
+        % Get Subject
+        sSubject = db_get(sqlConn, 'Subject', sAnatFile.Subject, subjectFields);
+        % Remove 'Subject' field if added
+        if addedFieldSubject
+            sAnatFile = rmfield(sAnatFile, 'Subject');
+        end
+        varargout{1} = sSubject;
+        varargout{2} = sAnatFile;
 
 %% ==== STUDY WITH CONDITION PATH ====
     % sStudies = db_get('StudyWithCondition', ConditionPath, Fields)

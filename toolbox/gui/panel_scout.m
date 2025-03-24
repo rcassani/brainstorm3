@@ -4467,7 +4467,7 @@ function PlotScouts(iScouts, hFigSel)
     end
     % Get anatomy file
     sqlConn = sql_connect();
-    sSubject  = db_get(sqlConn, 'SubjectFromAnatomyFile', sSurf.FileName, 'iAnatomy');
+    sSubject = db_get(sqlConn, 'SubjectFromAnatomyFile', sSurf.FileName, 'iAnatomy');
     % Volume scouts: Get number of points for this atlas
     [isVolumeAtlas, nAtlasGrid] = ParseVolumeAtlas(sAtlas.Name);
     isStructAtlas = ismember(sAtlas.Name, {'Structures', 'Source model'});
