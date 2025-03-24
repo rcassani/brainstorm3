@@ -65,8 +65,10 @@ else
         switch lower(type)
             case 'volume'
                 SubType = 'Image';
-                if ~isempty(strfind(inStructs(iStruct).FileName, '_volatlas'))
+                if ~isempty(strfind(inStructs(iStruct).FileName, '_volatlas')) || ~isempty(strfind(inStructs(iStruct).FileName, '_tissues'))
                     SubType = 'Atlas';
+                elseif ~isempty(strfind(inStructs(iStruct).FileName, '_volct'))
+                    SubType = 'CT';
                 end
                 outStructs(iStruct).SubType = SubType;
                 % No extra fields

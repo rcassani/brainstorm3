@@ -60,7 +60,7 @@ if (nargin < 4) || isempty(SubType)
         % Volumes
         case 'subjectimage'
             SubType = 'Image';
-            if ~isempty(strfind(FileName, '_volatlas'))
+            if ~isempty(strfind(FileName, '_volatlas')) || ~isempty(strfind(FileName, '_tissues'))
                 SubType = 'Atlas';
             elseif ~isempty(strfind(FileName, '_volct'))
                 SubType = 'CT';
