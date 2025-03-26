@@ -163,6 +163,12 @@ switch contextName
     %          = db_get('Subject');
     % If isRaw == 'raw' : force to return the real brainstormsubject description
     % (ignoring whether it uses protocol's default anatomy or not)    
+    % NOTE: This SQLite query could be done faster by using JOIN and COALESCE.
+    %       Since there are Subjects with and without UseDefAnat, the query gets
+    %       complicated making less human readable. We may want to update it once
+    %       the DB migration is fully tested.
+    %       This applies for calls 'SubjectFromXx' that return non-raw Subject
+    %       See this example: https://gist.github.com/rcassani/f9da1026053a8dad3c9ce0ad3c4be492
     case 'Subject'
         % Default parameters
         fields = '*';   
