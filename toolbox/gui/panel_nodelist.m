@@ -694,26 +694,13 @@ function sFiles = GetFiles(nodelistName)      %#ok<DEFNU>
     sqlConn = sql_connect();
     for is = 1:length(iUniqueStudies)
         iStudy = iUniqueStudies(is);
-        % Get study/subject
-        result = sql_query(sqlConn, [
-            'SELECT Subject.Filename AS SubjectFile, ' ...
-              'Subject.Name AS SubjectName, ' ...
-              'Study.Name AS StudyName, ' ...
-              'Study.Condition AS StudyCond, ' ...
-              'Study.iChannel AS iChannel ' ...
-            'FROM Study ' ...
-            'LEFT JOIN Subject on Subject.Id = Study.Subject ' ...
-            sprintf('WHERE Study.Id = %d', iStudy)]);
-        if ~result.next()
-            sFiles = [];
-            return;
-        end
-        iChannel    = result.getInt('iChannel');
-        SubjectFile = char(result.getString('SubjectFile'));
-        SubjectName = char(result.getString('SubjectName'));
-        StudyName   = char(result.getString('StudyName'));
-        StudyCond   = char(result.getString('StudyCond'));
-        result.close();
+        % Get Subject and Study
+        [sSubject, sStudy] = db_get(sqlConn, 'SubjectFromStudy', iStudy);
+        iChannel    = sStudy.iChannel;
+        SubjectFile = sSubject.FileName;
+        SubjectName = sSubject.Name;
+        StudyName   = sStudy.Name;
+        StudyCond   = sStudy.Condition;
         % Get channel file
         if iChannel ~= 0
             sFuncFile = db_get(sqlConn, 'FunctionalFile', iChannel);
