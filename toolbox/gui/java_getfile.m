@@ -270,6 +270,8 @@ end
                 case 'fileFilterChanged'
                     % Get new filter
                     newFilter = java_call(ev, 'getNewValue');
+                    % New format name
+                    newFormatName = java_call(newFilter, 'getFormatName');
                     % New suffix
                     newSuffix = java_call(newFilter, 'getSuffixes');
                     newSuffix = char(newSuffix(1));
@@ -287,14 +289,20 @@ end
 
                     % Replace old extension by new one
                     [fPath, fBase, fExt] = bst_fileparts(oldFilename);
-                    % Brainstorm or external file
-                    if ~isempty(newSuffix) && (newSuffix(1) == '_')
+                    % Handle extensions
+                    % Brainstorm, _PREFIX.EXT (e.g. _type.mat) > type_FILENAME.mat
+                    if ~isempty(newSuffix) && (newSuffix(1) == '_') && strncmpi(newFormatName, 'BST', 3)
                         fBase = strrep(fBase, ['_' newSuffix(2:end)], '');
                         fBase = strrep(fBase, [newSuffix(2:end) '_'], '');
                         fBase = [newSuffix(2:end) '_' fBase];
                         fExt  = '.mat';
-                    else
+                    % Suffix =       .EXT (e.g. .csv)         > FILENAME.csv
+                    % Suffix = STRING.EXT (e.g. _string.ext)  > FILENAME_string.ext
+                    elseif (newSuffix(1) == '.') || (newSuffix(1) == '_')
                         fExt = newSuffix;
+                    % Suffix = Whole filename (e.g. text.txt) > text.txt
+                    else
+                        [~, fBase, fExt] = bst_fileparts(newSuffix);
                     end
                     newFilename = bst_fullfile(fPath, [fBase, fExt]);
                     % Update default filename
