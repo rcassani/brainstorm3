@@ -69,6 +69,8 @@ else
                     SubType = 'Atlas';
                 elseif ~isempty(strfind(inStructs(iStruct).FileName, '_volct'))
                     SubType = 'CT';
+                elseif ~isempty(strfind(inStructs(iStruct).FileName, '_volpet'))
+                    SubType = 'PET';
                 end
                 outStructs(iStruct).SubType = SubType;
                 % No extra fields

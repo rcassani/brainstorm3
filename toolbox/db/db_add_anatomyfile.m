@@ -64,6 +64,8 @@ if (nargin < 4) || isempty(SubType)
                 SubType = 'Atlas';
             elseif ~isempty(strfind(FileName, '_volct'))
                 SubType = 'CT';
+            elseif ~isempty(strfind(FileName, '_volpet'))
+                SubType = 'PET';
             end
         % Surface
         case 'cortex',       SubType = 'Cortex';
@@ -87,8 +89,8 @@ sAnatFile.SubType = SubType;
 % Add AnatomyFile to database
 iAnatFile = db_set('AnatomyFile', sAnatFile);
 
-% Make surface as default (if not 'Other', 'Atlas', nor 'CT')
-if ~ismember(lower(SubType), {'other', 'atlas', 'ct'})
+% Make surface as default (if not 'Other' nor 'Atlas' nor 'CT' nor PET)
+if ~ismember(lower(SubType), {'other', 'atlas', 'ct', 'pet'})
     if strcmpi(SubType, 'image')
         SubType = 'Anatomy';
     end

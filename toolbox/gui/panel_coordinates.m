@@ -292,6 +292,7 @@ function SetSelectionState(isSelected)
             TessInfo = getappdata(hFig, 'Surface');
             if ~isempty(TessInfo)
                 setappdata(hFig, 'isSelectingCoordinates', 1);
+                setappdata(hFig, 'isSelectingCentroid', 0);
                 set(hFig, 'Pointer', 'cross');
             end
         end
@@ -304,9 +305,27 @@ function SetSelectionState(isSelected)
         % Exit 3DViz figures from SelectingCorticalSpot mode
         for hFig = hFigures
             set(hFig, 'Pointer', 'arrow');
+            setappdata(hFig, 'isSelectingCentroid', 0);
             setappdata(hFig, 'isSelectingCoordinates', 0);      
         end
     end
+    % Update iEEG panel
+    if ~isempty(ctrl2)
+        panel_ieeg('UpdatePanel');
+    end
+end
+
+
+%% ===== GET SELECTION STATE =====
+function isSelected = GetSelectionState()
+    % Get "Coordinates" panel controls
+    ctrl = bst_get('PanelControls', 'Coordinates');
+    if isempty(ctrl)
+        isSelected = 0;
+        return
+    end
+    % Return status
+    isSelected = ctrl.jButtonSelect.isSelected();
 end
 
 
@@ -364,7 +383,7 @@ function vi = SelectPoint(hFig, AcceptMri, isCentroid) %#ok<DEFNU>
             else
                 scsLoc = vout';
             end
-            plotLoc = vout;
+            plotLoc = vout';
             iVertex = vi;
             % Get value
             if ~isempty(TessInfo(iTess).Data)
@@ -431,8 +450,9 @@ function vi = SelectPoint(hFig, AcceptMri, isCentroid) %#ok<DEFNU>
          'Tag',             'ptCoordinates');
     % Update "Coordinates" panel
     UpdatePanel();
-    % Open MRI viewer for SEEG
-    if isCentroid
+    % Update MRI viewer (if open)
+    hFigMri = bst_figures('GetFiguresByType', 'MriViewer');
+    if ~isempty(hFigMri)
         ViewInMriViewer();
     end
 end
@@ -441,7 +461,7 @@ end
 %% ===== POINT SELECTION: Surface detection =====
 function [TessInfo, iTess, pout, vout, vi, hPatch] = ClickPointInSurface(hFig, SurfacesType, isCentroid)     
     % Parse inputs
-    if (nargin < 3)
+    if (nargin < 3) || isempty(isCentroid)
         isCentroid = 0;
     end
     if (nargin < 2)
@@ -488,7 +508,7 @@ function [TessInfo, iTess, pout, vout, vi, hPatch] = ClickPointInSurface(hFig, S
             % Find centroid the blob mesh that contains the vertex 'vi'
             if isCentroid
                 VertexList = FindCentroid(sSurf, find(sSurf.VertConn(vi{i},:)), [], 1, 6);
-                vout{i} = mean(sSurf.Vertices(VertexList(:), :)); % SCS of the centroid
+                vout{i} = mean(sSurf.Vertices(VertexList(:), :))'; % SCS of the centroid
                 vi{i} = []; % No surface vertex associated to centroid
             end
         else
@@ -516,6 +536,19 @@ function [TessInfo, iTess, pout, vout, vi, hPatch] = ClickPointInSurface(hFig, S
             iTess = i;
             break;
         end
+    end
+end
+
+%% ===== SET CENTROID SELECTION =====
+function SetCentroidSelection(isSelected)
+    hFig = bst_figures('GetCurrentFigure', '3D');
+    if isempty(hFig)
+        return;
+    end
+    setappdata(hFig, 'isSelectingCentroid', isSelected);
+    ctrl = bst_get('PanelControls', 'iEEG');
+    if ~isempty(ctrl)
+        ctrl.jButtonCentroid.setSelected(isSelected);
     end
 end
 

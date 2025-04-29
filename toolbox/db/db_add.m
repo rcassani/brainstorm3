@@ -196,7 +196,7 @@ if isAnatomy
     % Update comment with a file tag, to make it unique
     switch (fileType)
         case 'subjectimage'
-            % Nothing to do: file is replaced anyway
+            sMat.Comment = file_unique(sMat.Comment, {sSubject.Anatomy.Comment});
         case {'tess', 'cortex', 'scalp', 'outerskull', 'innerskull', 'fibers', 'fem'}
             sAnatFiles = db_get(sqlConn, 'AnatomyFile', struct('Subject', iTarget), 'Comment');
             sMat.Comment = file_unique(sMat.Comment, {sAnatFiles.Comment});

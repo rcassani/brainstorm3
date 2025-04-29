@@ -70,13 +70,16 @@ else
     volimages = sAnatFiles(strcmpi('Image', {sAnatFiles.SubType}));
     volatlas  = sAnatFiles(strcmpi('Atlas', {sAnatFiles.SubType}));
     volcts    = sAnatFiles(strcmpi('CT',    {sAnatFiles.SubType}));
+    volpets   = sAnatFiles(strcmpi('PET',   {sAnatFiles.SubType}));
     % Surfaces
     surfaces  = sAnatFiles(strcmpi('surface', {sAnatFiles.Type}));
     % Sort by Id
     [~, ixs]  = sort([volimages.Id]);
     volimages = volimages(ixs);
     [~, ixs]  = sort([volcts.Id]);
-    volcts    = volcts(ixs);    
+    volcts    = volcts(ixs);
+    [~, ixs]  = sort([volpets.Id]);
+    volpets    = volpets(ixs);    
     [~, ixs]  = sort([volatlas.Id]);
     volatlas  = volatlas(ixs);
     [~, ixs]  = sort([surfaces.Id]);
@@ -87,7 +90,7 @@ else
     if ~isempty(iDefaults)
         volimages = [volimages(iDefaults), volimages(~iDefaults)];
     end
-    volumes = [volimages, volcts, volatlas];
+    volumes = [volimages, volcts, volpets, volatlas];
     % Create and add volume nodes
     for iVolume = 1 : length(volumes)
         nodeType = 'anatomy';
@@ -95,6 +98,8 @@ else
             nodeType = 'volatlas';
         elseif strcmpi(volumes(iVolume).SubType, 'ct')
             nodeType = 'volct';
+        elseif strcmpi(volumes(iVolume).SubType, 'pet')
+            nodeType = 'volpet';            
         end
         [nodeCreated, nodeVolume] = CreateNode(nodeType, ...
             char(volumes(iVolume).Comment), ...

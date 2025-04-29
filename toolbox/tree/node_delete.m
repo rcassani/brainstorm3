@@ -136,7 +136,7 @@ switch (lower(nodeType{1}))
         iModifiedStudies  = -1;
 
 %% ===== ANATOMY, VOLATLAS and SURFACES =====
-    case {'anatomy', 'volatlas', 'volct', 'scalp', 'outerskull', 'innerskull', 'cortex', 'fibers', 'fem', 'other'}
+    case {'anatomy', 'volatlas', 'volct', 'volpet', 'scalp', 'outerskull', 'innerskull', 'cortex', 'fibers', 'fem', 'other'}
         bst_progress('start', 'Delete nodes', 'Deleting surfaces...');
         % Full file names
         FullFilesList = cellfun(@(f)bst_fullfile(ProtocolInfo.SUBJECTS,f), FileName', 'UniformOutput',0);
