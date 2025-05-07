@@ -156,9 +156,9 @@ function [hFig, Handles] = CreateFigure(FigureId) %#ok<DEFNU>
     jPanelTitleAxial.setBackground(Color(0,0,0));
     jPanelTitleCoronal.setBackground(Color(0,0,0));
     % Title: Buttons
-    Handles.jButtonRotateS  = gui_component('button', jPanelTitleSagittal, [], '', IconLoader.ICON_MRI_ROTATE,  'Rotate MRI: 90° clockwise around axis X', @(h,ev)MriTransform(hFig, 'Rotate', 1));
-    Handles.jButtonRotateA  = gui_component('button', jPanelTitleAxial,    [], '', IconLoader.ICON_MRI_ROTATE,  'Rotate MRI: 90° clockwise around axis Z', @(h,ev)MriTransform(hFig, 'Rotate', 3));
-    Handles.jButtonRotateC  = gui_component('button', jPanelTitleCoronal,  [], '', IconLoader.ICON_MRI_ROTATE,  'Rotate MRI: 90° clockwise around axis Y', @(h,ev)MriTransform(hFig, 'Rotate', 2));
+    Handles.jButtonRotateS  = gui_component('button', jPanelTitleSagittal, [], '', IconLoader.ICON_MRI_ROTATE,  'Rotate MRI: 90ï¿½ clockwise around axis X', @(h,ev)MriTransform(hFig, 'Rotate', 1));
+    Handles.jButtonRotateA  = gui_component('button', jPanelTitleAxial,    [], '', IconLoader.ICON_MRI_ROTATE,  'Rotate MRI: 90ï¿½ clockwise around axis Z', @(h,ev)MriTransform(hFig, 'Rotate', 3));
+    Handles.jButtonRotateC  = gui_component('button', jPanelTitleCoronal,  [], '', IconLoader.ICON_MRI_ROTATE,  'Rotate MRI: 90ï¿½ clockwise around axis Y', @(h,ev)MriTransform(hFig, 'Rotate', 2));
     Handles.jButtonFlipS    = gui_component('button', jPanelTitleSagittal, [], '', IconLoader.ICON_MRI_FLIP,    'Flip MRI anterior-posterior', @(h,ev)MriTransform(hFig, 'Flip', 2));
     Handles.jButtonFlipA    = gui_component('button', jPanelTitleAxial,    [], '', IconLoader.ICON_MRI_FLIP,    'Flip MRI left-right',         @(h,ev)MriTransform(hFig, 'Flip', 1));
     Handles.jButtonFlipC    = gui_component('button', jPanelTitleCoronal,  [], '', IconLoader.ICON_MRI_FLIP,    'Flip MRI left-right',         @(h,ev)MriTransform(hFig, 'Flip', 1));
@@ -629,6 +629,10 @@ function FigureKeyPress_Callback(hFig, keyEvent)
                     if ismember('control', keyEvent.Modifier)
                         SetElectrodePosition(hFig);
                     end
+                    % For iEEG: Add contact
+                    if gui_brainstorm('isTabVisible', 'iEEG')
+                        panel_ieeg('AddContact');
+                    end
                 % CTRL+E : Set electrode labels visible
                 case 'e'
                     if ismember('control', keyEvent.Modifier)
@@ -1064,6 +1068,11 @@ function DisplayFigurePopup(hFig)
             % Set position
             jItem = gui_component('MenuItem', jMenuElec, [], 'Set electrode position',  IconLoader.ICON_CHANNEL, [], @(h,ev)SetElectrodePosition(hFig));      
             jItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_MASK));
+            % For iEEG: Add contact
+            if isequal(GlobalData.DataSet(iDS).Figure(iFig).Id.Modality, 'SEEG')
+                jItem = gui_component('MenuItem', jMenuElec, [], 'Add SEEG contact', IconLoader.ICON_PLUS, [], @(h,ev)panel_ieeg('AddContact'));
+                jItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, 0));
+            end
         elseif isequal(GlobalData.DataSet(iDS).Figure(iFig).Id.Modality, 'SEEG')
             gui_component('MenuItem', jMenuElec, [], 'SEEG contacts', IconLoader.ICON_CHANNEL, [], @(h,ev)panel_ieeg('LoadElectrodes', hFig, GlobalData.DataSet(iDS).ChannelFile, 'SEEG'));
         elseif isequal(GlobalData.DataSet(iDS).Figure(iFig).Id.Modality, 'ECOG')

@@ -1238,8 +1238,8 @@ function destFile = PasteNode( targetNode )
             end
             destFile{i} = CopyFile(iTarget, srcFile, srcType, iSrcStudy, [], targetNode(1).getItemIndex());
         else
-            % Cannot copy (channel/noisecov/MRI) or move to the same folder
-            if (isCut || ismember(srcType, {'channel', 'noisecov', 'ndatacov', 'anatomy', 'volatlas', 'volct'})) && (iSrcStudy == iTarget)
+            % Cannot copy (channel/noisecov/ndatacov) or move to the same folder
+            if (isCut || ismember(srcType, {'channel', 'noisecov', 'ndatacov'})) && (iSrcStudy == iTarget)
                 bst_error('Source and destination folders are the same.', 'Clipboard', 0);
                 destFile = {};
                 return;
