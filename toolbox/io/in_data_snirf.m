@@ -33,15 +33,6 @@ if ~exist('loadsnirf', 'file')
     end
 end
 
-if isempty(jnirs) || ~isfield(jnirs, 'nirs')
-    error('The file doesnt seems to be a valid SNIRF file')
-end
-
-if ~isfield(jnirs.nirs.probe,'sourceLabels') || ~isfield(jnirs.nirs.probe,'detectorLabels')
-    warning('SNIRF format doesnt contains source or detector name. Name of the channels might be wrong');
-    jnirs.nirs.probe.sourceLabels = {};
-    jnirs.nirs.probe.detectorLabels = {};
-end
 
 % Load file
 jnirs = loadjsnirf(DataFile);
