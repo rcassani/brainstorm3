@@ -21,7 +21,7 @@ function sSubject = db_surface_default( iSubject, SurfaceType, iSurface, isUpdat
 % For more information type "brainstorm license" at command prompt.
 % =============================================================================@
 %
-% Authors: Francois Tadel, 2008-2011
+% Authors: Francois Tadel, 2008-2022
 %          Raymundo Cassani, 2021-2022
 
 % Get protocol description
