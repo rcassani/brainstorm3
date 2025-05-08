@@ -75,6 +75,9 @@ volType = 'MRI';
 if ~isempty(strfind(Comment, 'CT'))
     volType = 'CT';
 end
+if ~isempty(strfind(Comment, 'PET'))
+    volType = 'PET';
+end
 % Get node comment from filename
 if ~isempty(strfind(Comment, 'Import'))
     Comment = [];
@@ -83,18 +86,6 @@ end
 sAnatFiles = db_get('AnatomyFile', struct('Subject', sSubject.Id));
 if ~isempty(sAnatFiles)
     sAnatFiles(~strcmpi({sAnatFiles.Type}, 'volume')) = [];
-end
-% Volume type
-volType = 'MRI';
-if ~isempty(strfind(Comment, 'CT'))
-    volType = 'CT';
-end
-if ~isempty(strfind(Comment, 'PET'))
-    volType = 'PET';
-end
-% Get node comment from filename
-if ~isempty(strfind(Comment, 'Import'))
-    Comment = [];
 end
 
 %% ===== SELECT MRI FILE =====
@@ -363,11 +354,6 @@ if ( ix > 1) && (isInteractive || isAutoAdjust)
             RegMethod = 'Ignore';
             % Reslice: never reslice
             isReslice = 0;
-        end
-        % Check that reference volume has set fiducials for reslicing
-        if isReslice && (~isfield(sMriRef, 'SCS') || ~isfield(sMriRef.SCS, 'R') || ~isfield(sMriRef.SCS, 'T') || isempty(sMriRef.SCS.R) || isempty(sMriRef.SCS.T))
-            errMsg = 'Reslice: No SCS transformation available for the reference volume. Set the fiducials first.';
-            RegMethod = ''; % Registration will not be performed
         end
 
         % Check that reference volume has set fiducials for reslicing
