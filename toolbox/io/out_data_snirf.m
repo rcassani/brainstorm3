@@ -77,40 +77,6 @@ det_pos     = zeros(length(unique(idets)),3);
 det_label   = repmat( "", 1,length(unique(idets)));
 det_Index   = zeros(length(unique(isrcs)),1);
 
-% Set Probe; maybe can be simplified with the export of the measurment list
-[isrcs, idets, chan_measures, measure_type] = nst_unformat_channels({ChannelMatOut.Channel(nirs_channels).Name});
-
-src_pos     = zeros(length(unique(isrcs)),3); 
-src_label   = repmat( "", 1,length(unique(isrcs)));
-src_Index   = zeros(length(unique(isrcs)),1);
-det_pos     = zeros(length(unique(idets)),3); 
-det_label   = repmat( "", 1,length(unique(idets)));
-det_Index   = zeros(length(unique(isrcs)),1);
-
-% Set Measurment list
-nSrc = 1;
-nDet = 1;
-for ichan=1:n_channel
-    [isrc, idet, chan_measures, measure_type] = nst_unformat_channels({ChannelMatOut.Channel(ichan).Name});
-
-    if ~any(cellfun(@(x)strcmp(x, sprintf('S%d',isrc )), src_label))
-        src_label(nSrc) = sprintf("S%d",isrc );
-        src_Index(nSrc) = isrc;
-        src_pos(nSrc,:)=ChannelMatOut.Channel(ichan).Loc(:,1)';
-
-        nSrc = nSrc + 1;
-    end
-
-    if ~any(cellfun(@(x)strcmp(x, sprintf('D%d',idet )), det_label))
-        det_label(nDet) = sprintf("D%d",idet );
-        det_Index(nDet) = idet;
-        det_pos(nDet,:)=ChannelMatOut.Channel(ichan).Loc(:,2)';
-
-        nDet = nDet + 1;
-    end
-
-end
-
 % Set Measurment list
 nSrc = 1;
 nDet = 1;
