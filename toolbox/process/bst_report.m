@@ -194,8 +194,6 @@ function img = Snapshot(SnapType, FileName, Comment, varargin)
         end
         return;
     end
-    % Use short file name
-    FileName = file_short(FileName);
     % Get current window layout
     curLayout = bst_get('Layout', 'WindowManager');
     if ~isempty(curLayout)
