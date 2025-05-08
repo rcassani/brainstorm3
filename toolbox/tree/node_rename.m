@@ -22,7 +22,7 @@ function node_rename(bstNode, newComment)
 % For more information type "brainstorm license" at command prompt.
 % =============================================================================@
 %
-% Authors: Francois Tadel, 2008-2015
+% Authors: Francois Tadel, 2008-2022
 %          Raymundo Cassani, 2022
 
 
@@ -86,7 +86,7 @@ switch lower(nodeType)
         end
         if isempty(newComment), return, end
         % Update File, Node display and Database
-        if file_update(bst_fullfile(ProtocolInfo.SUBJECTS, fileName), 'Field', 'Comment', newComment);
+        if file_update(bst_fullfile(ProtocolInfo.SUBJECTS, fileName), 'Field', 'Comment', newComment)
             bstNode.setComment(newComment);
             % Update comment
             [iAnatFile, sAnatFile] = db_set('AnatomyFile', struct('Comment', newComment), iSurface);
