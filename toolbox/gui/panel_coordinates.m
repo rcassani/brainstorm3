@@ -329,19 +329,6 @@ function isSelected = GetSelectionState()
 end
 
 
-%% ===== GET SELECTION STATE =====
-function isSelected = GetSelectionState()
-    % Get "Coordinates" panel controls
-    ctrl = bst_get('PanelControls', 'Coordinates');
-    if isempty(ctrl)
-        isSelected = 0;
-        return
-    end
-    % Return status
-    isSelected = ctrl.jButtonSelect.isSelected();
-end
-
-
 %% ===== SELECT POINT =====
 % Usage : SelectPoint(hFig) : Point location = user click in figure hFIg
 function vi = SelectPoint(hFig, AcceptMri, isCentroid) %#ok<DEFNU>
@@ -350,7 +337,6 @@ function vi = SelectPoint(hFig, AcceptMri, isCentroid) %#ok<DEFNU>
     end
     if (nargin < 2) || isempty(AcceptMri)
         AcceptMri = 1;
-        isCentroid = 0;
     end
     % Get axes handle
     hAxes = findobj(hFig, '-depth', 1, 'Tag', 'Axes3D');
@@ -466,7 +452,6 @@ function [TessInfo, iTess, pout, vout, vi, hPatch] = ClickPointInSurface(hFig, S
     end
     if (nargin < 2)
         SurfacesType = [];
-        isCentroid = 0;
     end
     iTess = [];
     pout = {};
