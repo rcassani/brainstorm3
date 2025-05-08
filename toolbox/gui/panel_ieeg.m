@@ -354,43 +354,6 @@ function bstPanelNew = CreatePanel() %#ok<DEFNU>
             % Rename selection
             EditElectrodeLabel();
         end
-
-        if (ev.getClickCount() == 1)
-            % Update contact list
-            UpdateContactList('SCS');
-        end
-    end
-
-    %% ===== CONTACT LIST CLICK CALLBACK =====
-    function ContListClick_Callback(h, ev)
-        % IF SINGLE CLICK
-        if (ev.getClickCount() == 1)
-            ctrl = bst_get('PanelControls', 'iEEG');
-            % if contact list rendering is blank in panel then dont't proceed
-            if ctrl.jListCont.isSelectionEmpty()
-                return;
-            end
-            % highlight the location on MRI Viewer and Surface
-            HighlightLocCont();
-            [sSelCont, sContactName] = GetSelectedContacts();
-            bst_figures('SetSelectedRows', sContactName);
-        end
-    end
-
-    %% ===== CONTACT LIST CHANGED CALLBACK =====
-    function ContListChanged_Callback(h, ev)
-        ctrl = bst_get('PanelControls', 'iEEG');
-        sContacts = GetSelectedContacts();
-        bst_figures('SetSelectedRows', {sContacts.Name});
-        SetMriCrosshair(sContacts);
-    end
-
-    %% ===== CONTACT LIST CHANGED CALLBACK =====
-    function ContListChanged_Callback(h, ev)
-        ctrl = bst_get('PanelControls', 'iEEG');
-        sContacts = GetSelectedContacts();
-        bst_figures('SetSelectedRows', {sContacts.Name});
-        SetMriCrosshair(sContacts);
     end
 
     %% ===== CONTACT LIST CHANGED CALLBACK =====
@@ -839,16 +802,6 @@ function UpdateElecProperties(isUpdateModelList)
     ctrl.jLabelSelectElec.setText(num2str(iSelElec));
 end
 
-%% ===== SET CROSSHAIR POSITION ON MRI =====
-function SetMriCrosshair(sSelContacts) %#ok<DEFNU>
-    % Get the handles
-    hFig = bst_figures('GetFiguresByType', {'MriViewer'});
-    if isempty(hFig) || isempty(sSelContacts)
-        return
-    end
-    % Update the cross-hair position on the MRI
-    figure_mri('SetLocation', 'scs', hFig, [], [sSelContacts(end).Loc]);
-end
 
 %% ===== SET CROSSHAIR POSITION ON MRI =====
 function SetMriCrosshair(sSelContacts) %#ok<DEFNU>
@@ -1114,7 +1067,7 @@ function EditElectrodeLabel(varargin)
         java_dialog('warning', ['Electrode "' newLabel '" already exists.'], 'Rename selected electrode');
         return;
     % Check that name do not include a digit
-    elseif any(ismember(newLabel, '0123456789:;*=?!<>"`&%$()[]{}/\_@ ���������������������������������������������؜����������'))
+    elseif any(ismember(newLabel, '0123456789:;*=?!<>"`&%$()[]{}/\_@ áÁàÀâÂäÄãÃåÅæÆçÇéÉèÈêÊëËíÍìÌîÎïÏñÑóÓòÒôÔöÖõÕøØßúÚùÙûÛüÜ'))
         java_dialog('warning', 'New electrode name should not include digits, spaces or special characters.', 'Rename selected electrode');
         return;
     end
@@ -1447,7 +1400,7 @@ function AddElectrode(newLabel)
         java_dialog('warning', ['Electrode "' newLabel '" already exists.'], 'New electrode');
         return;
     % Check if labels include invalid characters
-    elseif any(ismember(newLabel, '0123456789:;*=?!<>"`&%$()[]{}/\_@ ���������������������������������������������؜����������'))
+    elseif any(ismember(newLabel, '0123456789:;*=?!<>"`&%$()[]{}/\_@ áÁàÀâÂäÄãÃåÅæÆçÇéÉèÈêÊëËíÍìÌîÎïÏñÑóÓòÒôÔöÖõÕøØßúÚùÙûÛüÜ'))
         java_dialog('warning', 'New electrode name should not include digits, spaces or special characters.', 'New electrode');
         return;
     end
@@ -1655,11 +1608,6 @@ function RemoveElectrode(sSelElec)
     end
     % Mark channel file as modified (only the first one)
     GlobalData.DataSet(iDSall(1)).isChannelModified = 1;
-    % remove any line fitting
-    hCoord = findobj(0, 'Tag', sSelElec.Name); 
-    if ~isempty(hCoord)
-        delete(hCoord);
-    end
     % Update list of electrodes
     UpdateElecList();
     % Update figure
@@ -3632,133 +3580,6 @@ function CreateImplantation(MriFile) %#ok<DEFNU>
     end
     % Close progress bar
     bst_progress('stop');
-end
-
-%% ===== LOAD ELECTRODES =====
-function LoadElectrodes(hFig, ChannelFile, Modality) %#ok<DEFNU>
-    global GlobalData;
-    % Get figure and dataset
-    [hFig,iFig,iDS] = bst_figures('GetFigure', hFig);
-    if isempty(iDS)
-        return;
-    end
-    % Check that the channel is not already defined
-    if ~isempty(GlobalData.DataSet(iDS).ChannelFile) && ~file_compare(GlobalData.DataSet(iDS).ChannelFile, ChannelFile)
-        error('There is already another channel file loaded for this MRI. Close the existing figures.');
-    end
-    % Load channel file in the dataset
-    bst_memory('LoadChannelFile', iDS, ChannelFile);
-    % If iEEG channels: load both SEEG and ECOG
-    if ismember(Modality, {'SEEG', 'ECOG', 'ECOG+SEEG'})
-        iChannels = channel_find(GlobalData.DataSet(iDS).Channel, 'SEEG, ECOG');
-    else
-        iChannels = channel_find(GlobalData.DataSet(iDS).Channel, Modality);
-    end
-    % Set the list of selected sensors
-    GlobalData.DataSet(iDS).Figure(iFig).SelectedChannels = iChannels;
-    GlobalData.DataSet(iDS).Figure(iFig).Id.Modality      = Modality;
-    % Plot electrodes
-    if ~isempty(iChannels)
-        switch(GlobalData.DataSet(iDS).Figure(iFig).Id.Type)
-            case 'MriViewer'
-                GlobalData.DataSet(iDS).Figure(iFig).Handles = figure_mri('PlotElectrodes', iDS, iFig, GlobalData.DataSet(iDS).Figure(iFig).Handles);
-                figure_mri('PlotSensors3D', iDS, iFig);
-            case '3DViz'
-                figure_3d('PlotSensors3D', iDS, iFig);
-        end
-    end
-
-    % Set EEG flag for MRI Viewer
-    if strcmpi(GlobalData.DataSet(iDS).Figure(iFig).Id.Type, 'MriViewer')
-        figure_mri('SetFigureStatus', hFig, [], [], [], 1, 1);
-    end
-    % Update figure name
-    bst_figures('UpdateFigureName', hFig);
-end
-
-%% ===== LOAD ELECTRODES =====
-function LoadElectrodes(hFig, ChannelFile, Modality) %#ok<DEFNU>
-    global GlobalData;
-    % Get figure and dataset
-    [hFig,iFig,iDS] = bst_figures('GetFigure', hFig);
-    if isempty(iDS)
-        return;
-    end
-    % Check that the channel is not already defined
-    if ~isempty(GlobalData.DataSet(iDS).ChannelFile) && ~file_compare(GlobalData.DataSet(iDS).ChannelFile, ChannelFile)
-        error('There is already another channel file loaded for this MRI. Close the existing figures.');
-    end
-    % Load channel file in the dataset
-    bst_memory('LoadChannelFile', iDS, ChannelFile);
-    % If iEEG channels: load both SEEG and ECOG
-    if ismember(Modality, {'SEEG', 'ECOG', 'ECOG+SEEG'})
-        iChannels = channel_find(GlobalData.DataSet(iDS).Channel, 'SEEG, ECOG');
-    else
-        iChannels = channel_find(GlobalData.DataSet(iDS).Channel, Modality);
-    end
-    % Set the list of selected sensors
-    GlobalData.DataSet(iDS).Figure(iFig).SelectedChannels = iChannels;
-    GlobalData.DataSet(iDS).Figure(iFig).Id.Modality      = Modality;
-    % Plot electrodes
-    if ~isempty(iChannels)
-        switch(GlobalData.DataSet(iDS).Figure(iFig).Id.Type)
-            case 'MriViewer'
-                GlobalData.DataSet(iDS).Figure(iFig).Handles = figure_mri('PlotElectrodes', iDS, iFig, GlobalData.DataSet(iDS).Figure(iFig).Handles);
-                figure_mri('PlotSensors3D', iDS, iFig);
-            case '3DViz'
-                figure_3d('PlotSensors3D', iDS, iFig);
-        end
-    end
-
-    % Set EEG flag for MRI Viewer
-    if strcmpi(GlobalData.DataSet(iDS).Figure(iFig).Id.Type, 'MriViewer')
-        figure_mri('SetFigureStatus', hFig, [], [], [], 1, 1);
-    end
-    % Update figure name
-    bst_figures('UpdateFigureName', hFig);
-end
-
-
-%% ===== LOAD ELECTRODES =====
-function LoadElectrodes(hFig, ChannelFile, Modality) %#ok<DEFNU>
-    global GlobalData;
-    % Get figure and dataset
-    [hFig,iFig,iDS] = bst_figures('GetFigure', hFig);
-    if isempty(iDS)
-        return;
-    end
-    % Check that the channel is not already defined
-    if ~isempty(GlobalData.DataSet(iDS).ChannelFile) && ~file_compare(GlobalData.DataSet(iDS).ChannelFile, ChannelFile)
-        error('There is already another channel file loaded for this MRI. Close the existing figures.');
-    end
-    % Load channel file in the dataset
-    bst_memory('LoadChannelFile', iDS, ChannelFile);
-    % If iEEG channels: load both SEEG and ECOG
-    if ismember(Modality, {'SEEG', 'ECOG', 'ECOG+SEEG'})
-        iChannels = channel_find(GlobalData.DataSet(iDS).Channel, 'SEEG, ECOG');
-    else
-        iChannels = channel_find(GlobalData.DataSet(iDS).Channel, Modality);
-    end
-    % Set the list of selected sensors
-    GlobalData.DataSet(iDS).Figure(iFig).SelectedChannels = iChannels;
-    GlobalData.DataSet(iDS).Figure(iFig).Id.Modality      = Modality;
-    % Plot electrodes
-    if ~isempty(iChannels)
-        switch(GlobalData.DataSet(iDS).Figure(iFig).Id.Type)
-            case 'MriViewer'
-                GlobalData.DataSet(iDS).Figure(iFig).Handles = figure_mri('PlotElectrodes', iDS, iFig, GlobalData.DataSet(iDS).Figure(iFig).Handles);
-                figure_mri('PlotSensors3D', iDS, iFig);
-            case '3DViz'
-                figure_3d('PlotSensors3D', iDS, iFig);
-        end
-    end
-
-    % Set EEG flag for MRI Viewer
-    if strcmpi(GlobalData.DataSet(iDS).Figure(iFig).Id.Type, 'MriViewer')
-        figure_mri('SetFigureStatus', hFig, [], [], [], 1, 1);
-    end
-    % Update figure name
-    bst_figures('UpdateFigureName', hFig);
 end
 
 
