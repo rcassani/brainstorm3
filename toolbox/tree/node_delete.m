@@ -19,7 +19,7 @@ function node_delete(bstNodes, isUserConfirm)
 % For more information type "brainstorm license" at command prompt.
 % =============================================================================@
 %
-% Authors: Francois Tadel, 2008-2019
+% Authors: Francois Tadel, 2008-2022
 %          Raymundo Cassani 2022
 
 %% ===== INITIALIZATION =====
