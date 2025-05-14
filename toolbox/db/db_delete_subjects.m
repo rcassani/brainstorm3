@@ -63,7 +63,7 @@ for i = 1:length(iSubjects)
     end    
     % === DELETE SUBJECT ===
     % Remove subject's directory
-    subjAnatDir = bst_fullfile(ProtocolInfo.SUBJECTS, bst_fileparts(SubjectFile));
+    subjAnatDir = bst_fullfile(ProtocolInfo.SUBJECTS, bst_fileparts(sSubject.FileName));
     if (file_delete(subjAnatDir, 1, 1) ~= 1)
         errFolders{end+1} = subjAnatDir;
         return;
