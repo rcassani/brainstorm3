@@ -89,11 +89,14 @@ sAnatFile.SubType = SubType;
 % Add AnatomyFile to database
 iAnatFile = db_set('AnatomyFile', sAnatFile);
 
-% Make surface as default (if not 'Other' nor 'Atlas' nor 'CT' nor PET)
+% Anatomy defaults (if not 'Other' nor 'Atlas' nor 'CT' nor PET)
 if ~ismember(lower(SubType), {'other', 'atlas', 'ct', 'pet'})
     if strcmpi(SubType, 'image')
         SubType = 'Anatomy';
     end
-    db_surface_default(iSubject, SubType, iAnatFile);
+    % Set AnatFile as Default if not Default defined for its Type
+    sSubject = db_get('Subject', iSubject, ['i' SubType], 'raw');
+    if isempty(sSubject.(['i' SubType]))
+        db_surface_default(iSubject, SubType, iAnatFile);
+    end
 end
-
