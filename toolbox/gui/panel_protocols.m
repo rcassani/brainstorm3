@@ -1260,6 +1260,12 @@ function destFile = PasteNode( targetNode )
     if ismember(firstSrcType, {'data'})
         db_links('Study', iTarget);
     end
+    % Update the target study
+    if isAnatomy
+        panel_protocols('UpdateNode', 'Subject', iTarget);
+    else
+        panel_protocols('UpdateNode', 'Study', iTarget);
+    end
     % If moving files instead of copying    
     if isCut
         % Delete source file
