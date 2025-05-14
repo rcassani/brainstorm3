@@ -2844,7 +2844,7 @@ end % END SWITCH( ACTION )
         % Get default subject
         sDefSubject = db_get('Subject', '@default_subject');
         % Get all anatomies for default subject
-        sDefAnats = db_get('AnatomyFilesWithSubject', sDefSubject.Id, '*', 'Anatomy');
+        sDefAnats = db_get('AnatomyFilesWithSubject', sDefSubject.Id, '*', 'Volume', 'Image');
         % Get all cortex surfaces for default subject
         sDefCortex = db_get('AnatomyFilesWithSubject', sDefSubject.Id, '*', 'Surface', 'Cortex');
         nCortex = nCortex + length(sDefCortex);
@@ -3468,7 +3468,7 @@ function SurfaceFillHoles_Callback(TessFile)
     % Get subject
     sSubject = db_get('SubjectFromAnatomyFile', TessFile);
     % Get all MRI files for subject
-    sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'Id', 'Anatomy', 'Image');
+    sAnatFiles = db_get('AnatomyFilesWithSubject', sSubject.Id, 'Id', 'Volume', 'Image');
     if isempty(sAnatFiles)
         bst_error('No MRI available.', 'Remove surface holes');
         return;
