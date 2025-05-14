@@ -1284,20 +1284,24 @@ end
 % USAGE:   destFile = CopyFile(iTarget, srcFile, srcType, iSrcStudy, sSubjectTargetRaw)
 %          destFile = CopyFile(iTarget, srcFile)
 function destFile = CopyFile(iTarget, srcFile, srcType, iSrcStudy, sSubjectTargetRaw, iParent)
+    isAnatomy = ismember(srcType, {'anatomy','volatlas','volct','cortex','scalp','innerskull','outerskull','fibers','fem','other'});
     % File info is not passed in input
     sqlConn = sql_connect();
     if nargin < 5 || isempty(sSubjectTargetRaw)
-        sSubjectTargetRaw = db_get(sqlConn, 'SubjectFromFunctionalFile', srcFile, 'Id');
+        if isAnatomy
+            sSubjectTargetRaw = db_get(sqlConn, 'SubjectFromAnatomyFile', srcFile, 'Id');
+        else
+            sSubjectTargetRaw = db_get(sqlConn, 'SubjectFromFunctionalFile', srcFile, 'Id');
+        end
         sSubjectTargetRaw = db_get(sqlConn, 'Subject', sSubjectTargetRaw.Id, '*', 'raw');
     end
     if nargin < 6
         iParent = [];
     end
-    isAnatomy = ismember(srcType, {'anatomy','volatlas','volct','cortex','scalp','innerskull','outerskull','fibers','fem','other'});
     % Get source subject
     if ~isAnatomy
         sSubject = db_get(sqlConn, 'SubjectFromStudy', iSrcStudy, 'Id');
-        sSubjectSrcRaw = db_get(sqlConn, 'Subject', sSubject.Id, 'raw');
+        sSubjectSrcRaw = db_get(sqlConn, 'Subject', sSubject.Id, '*', 'raw');
         % Check if the subject changes
         UseDefaultAnatSrc    = (sSubjectSrcRaw.UseDefaultAnat == 1)    || (sSubjectSrcRaw.Id == 0);
         UseDefaultAnatTarget = (sSubjectTargetRaw.UseDefaultAnat == 1) || (sSubjectTargetRaw.Id == 0);
@@ -1347,7 +1351,7 @@ function destFile = CopyFile(iTarget, srcFile, srcType, iSrcStudy, sSubjectTarge
         src = srcFile;
     end
     % Copy file
-    destFile = db_add(iTarget, src, 1, iParent);
+    destFile = db_add(iTarget, src, 0, iParent);
     if isempty(destFile)
         return
     end

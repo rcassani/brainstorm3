@@ -196,11 +196,12 @@ if isAnatomy
     % Update comment with a file tag, to make it unique
     switch (fileType)
         case 'subjectimage'
-            sMat.Comment = file_unique(sMat.Comment, {sSubject.Anatomy.Comment});
+            anatFileType = 'volume';
         case {'tess', 'cortex', 'scalp', 'outerskull', 'innerskull', 'fibers', 'fem'}
-            sAnatFiles = db_get(sqlConn, 'AnatomyFile', struct('Subject', iTarget), 'Comment');
-            sMat.Comment = file_unique(sMat.Comment, {sAnatFiles.Comment});
+            anatFileType = 'surface';
     end
+    sAnatFiles = db_get(sqlConn, 'AnatomyFilesWithSubject', iTarget, 'Comment', anatFileType);
+    sMat.Comment = file_unique(sMat.Comment, {sAnatFiles.Comment});
 else
     % Add comment if missing
     if isempty(sMat.Comment)
@@ -245,7 +246,7 @@ bst_save(OutputFileFull, sMat, matVer);
 if isAnatomy
     db_add_anatomyfile(iTarget, OutputFile);
 else
-    db_add_functionalfile(iTarget, OutputFile, iParent)
+    db_add_functionalfile(iTarget, OutputFile, iParent);
 end
 sql_close(sqlConn);
 
@@ -256,7 +257,7 @@ end
 % Refresh display
 if isReload
     panel_protocols('UpdateTree');
-    panel_protocols('SelectNode', [], OutputFileFull);
+    panel_protocols('SelectNode', [], OutputFile);
 end
 
 
