@@ -78,11 +78,9 @@ end
 sFiles = sql_query('SELECT', 'FunctionalFile', conditions, '*', additionalQry);
 
 % Sort files by natural order
-[tmp, iSort] = sort_nat({sFiles.Comment});
+[tmp, iSort] = sort_nat({sFiles.FileName});
 sFiles = sFiles(iSort);
-
 allTypes = {sFiles.Type};
-
 
 %% ===== CHANNEL =====
 iChannel = find(strcmp('channel', allTypes), 1);
@@ -132,21 +130,6 @@ if (~UseDefaultChannel || isDefaultStudyNode)
     end
 end
 
-%% ===== KERNELS =====
-iResults = find(strcmp('result', allTypes));
-for i = 1:length(iResults)
-    iResult = iResults(i);
-    isLink = sFiles(iResult).ExtraNum;
-    DataFile = sFiles(iResult).ExtraStr1;
-    
-    % Only add kernels at this point
-    if ~isLink && isempty(DataFile) && ~isempty(strfind(sFiles(iResult).FileName, 'KERNEL'))
-        CreateNode(nodeParent, 'kernel', sFiles(iResult).Comment, sFiles(iResult).FileName, ...
-            sFiles(iResult).Id, iStudy, sFiles(iResult).NumChildren, sFiles(iResult).LastModified);
-    end
-end
-
-
 %% ===== FOLDERS =====
 iFolders = find(strcmp('folder', allTypes));
 for i = 1:length(iFolders)
@@ -185,6 +168,20 @@ for i = 1:length(iDatas)
     CreateNode(nodeParent, nodeType, sFiles(iData).Comment, sFiles(iData).FileName, ...
         sFiles(iData).Id, iStudy, sFiles(iData).NumChildren, ...
         sFiles(iData).LastModified, Modifier);
+end
+
+%% ===== KERNELS =====
+iResults = find(strcmp('result', allTypes));
+for i = 1:length(iResults)
+    iResult = iResults(i);
+    isLink = sFiles(iResult).ExtraNum;
+    DataFile = sFiles(iResult).ExtraStr1;
+    
+    % Only add kernels at this point
+    if ~isLink && isempty(DataFile) && ~isempty(strfind(sFiles(iResult).FileName, 'KERNEL'))
+        CreateNode(nodeParent, 'kernel', sFiles(iResult).Comment, sFiles(iResult).FileName, ...
+            sFiles(iResult).Id, iStudy, sFiles(iResult).NumChildren, sFiles(iResult).LastModified);
+    end
 end
 
 %% ===== RESULT =====
