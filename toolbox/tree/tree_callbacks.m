@@ -1424,11 +1424,11 @@ switch (lower(action))
                 if isempty(strfind(filenameRelative, 'headmodel_grid_'))
                     AddSeparator(jPopup);
                     for mod = {'MEG', 'EEG', 'SEEG', 'ECOG'}
-                        if isempty(sStudy.HeadModel(iHeadModel).([mod{1}, 'Method']))
+                        if isempty(sHeadModel.([mod{1}, 'Method']))
                             continue;
                         end
                         gui_component('MenuItem', jPopup, [], ['View ' mod{1} ' leadfield vectors'], IconLoader.ICON_RESULTS, [], @(h,ev)bst_call(@view_leadfield_vectors, GetAllFilenames(bstNodes), mod{1}));
-                        if strcmpi(sStudy.HeadModel(iHeadModel).HeadModelType, 'volume')
+                        if strcmpi(sHeadModel.HeadModelType, 'volume')
                             if ismember(mod, {'SEEG', 'ECOG'})
                                 gui_component('MenuItem', jPopup, [], ['View ' mod{1} ' leadfield sensitivity (isosurface)'], IconLoader.ICON_ANATOMY, [], @(h,ev)bst_call(@view_leadfield_sensitivity, filenameRelative, mod{1}, 'Isosurface'));
                             end
@@ -1436,7 +1436,7 @@ switch (lower(action))
                             gui_component('MenuItem', jPopup, [], ['View ' mod{1} ' leadfield sensitivity (MRI Viewer)'], IconLoader.ICON_ANATOMY, [], @(h,ev)bst_call(@view_leadfield_sensitivity, filenameRelative, mod{1}, 'MriViewer'));
                             AddSeparator(jPopup);
                             gui_component('MenuItem', jPopup, [], ['Apply ' mod{1} ' leadfield exclusion zone'], IconLoader.ICON_HEADMODEL, [], @(h,ev)process_headmodel_exclusionzone('ComputeInteractive', filenameRelative, mod{1}, iStudy));
-                        elseif strcmpi(sStudy.HeadModel(iHeadModel).HeadModelType, 'surface')
+                        elseif strcmpi(sHeadModel.HeadModelType, 'surface')
                             gui_component('MenuItem', jPopup, [], ['View ' mod{1} ' leadfield sensitivity'], IconLoader.ICON_ANATOMY, [], @(h,ev)bst_call(@view_leadfield_sensitivity, filenameRelative, mod{1}, 'Surface'));
                         end
                     end
