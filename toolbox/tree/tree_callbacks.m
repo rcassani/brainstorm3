@@ -2034,7 +2034,7 @@ switch (lower(action))
                         if isStat
                             cnxTimeDef = length(TimefreqMat.Time) > 1;
                         else
-                            cnxTimeDef = ~isempty(strfind(sStudy.Timefreq(iTimefreq).Comment, '-time'));
+                            cnxTimeDef = ~isempty(strfind(sTimefreq.Comment, '-time'));
                         end
                         % [NxN] only
                         if ~isempty(strfind(filenameRelative, '_connectn'))                           
