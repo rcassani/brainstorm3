@@ -213,8 +213,6 @@ function [argout1, argout2, argout3, argout4, argout5] = bst_get( varargin )
 %    - bst_get('InstanceID')              : Get current InstanceID
 %    - bst_get('ProgramStartUnixTime')    : Get Brainstorm start time (Unix time)
 %    - bst_get('CurrentUnixTime')         : Get current time (Unix time)
-
-
 %
 % SEE ALSO bst_set
 
