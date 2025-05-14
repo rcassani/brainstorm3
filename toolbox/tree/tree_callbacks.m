@@ -2468,9 +2468,7 @@ switch (lower(action))
 %% ===== POPUP: MATRIX =====
             case {'matrix', 'pmatrix'}
                 % Get subject structure
-                iStudy = bstNodes(1).getStudyIndex();
-                sStudy = bst_get('Study', iStudy);
-                [sSubject, iSubject] = bst_get('Subject', sStudy.BrainStormSubject);
+                sSubject = db_get('SubjectFromFunctionalFile', filenameRelative);
                 % For only one file
                 if (length(bstNodes) == 1)
                     % Basic displays
@@ -2484,7 +2482,7 @@ switch (lower(action))
                         gui_component('MenuItem', jMenuCluster, [], 'Cluster indices', IconLoader.ICON_TIMEFREQ, [], @(h,ev)view_statcluster(filenameRelative, 'clustindex_time', []));
                     end
                     AddSeparator(jPopup);
-		    gui_component('MenuItem', jPopup, [], 'Review as raw', IconLoader.ICON_RAW_DATA, [], @(h,ev)import_raw(filenameFull, 'BST-MATRIX', iSubject));
+		    gui_component('MenuItem', jPopup, [], 'Review as raw', IconLoader.ICON_RAW_DATA, [], @(h,ev)import_raw(filenameFull, 'BST-MATRIX', sSubject.Id));
                 else
                     gui_component('MenuItem', jPopup, [], 'Display as image', IconLoader.ICON_NOISECOV, [], @(h,ev)view_erpimage(GetAllFilenames(bstNodes), 'erpimage', 'none'));
                 end
