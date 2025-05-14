@@ -60,10 +60,8 @@ isMeg  = ismember(Modality, {'MEG', 'MEG GRAD', 'MEG MAG', 'Vectorview306', 'CTF
 isNirs = ismember(Modality, {'NIRS','NIRS-BRS'});
 isHp   = ismember(Modality, {'HeadPoints'});
 isEeg  = ~isMeg && ~isNirs && ~isHp;
-% Get study
-sStudy = bst_get('ChannelFile', ChannelFile);
 % Get subject
-sSubject = bst_get('Subject', sStudy.BrainStormSubject);
+sSubject = db_get('SubjectFromFunctionalFile', ChannelFile);
 
 
 % ===== VIEW SURFACE =====
@@ -79,9 +77,10 @@ end
 % View surface if available
 switch lower(SurfaceType)
     case 'cortex'
-        if ~isempty(sSubject.iCortex) && (sSubject.iCortex <= length(sSubject.Surface))
+        if ~isempty(sSubject.iCortex)
             if isempty(SurfaceFile)
-                SurfaceFile = sSubject.Surface(sSubject.iCortex).FileName;
+                sAnatFile = db_get('AnatomyFile', sSubject.iCortex, 'FileName');
+                SurfaceFile = sAnatFile.FileName;
             end
             switch (Modality)
                 case 'SEEG',  SurfAlpha = .8;
@@ -92,9 +91,10 @@ switch lower(SurfaceType)
         end
         isSurface = 1;
     case 'innerskull'
-        if ~isempty(sSubject.iInnerSkull) && (sSubject.iInnerSkull <= length(sSubject.Surface))
+        if ~isempty(sSubject.iInnerSkull)
             if isempty(SurfaceFile)
-                SurfaceFile = sSubject.Surface(sSubject.iInnerSkull).FileName;
+                sAnatFile = db_get('AnatomyFile', sSubject.iInnerSkull, 'FileName');
+                SurfaceFile = sAnatFile.FileName;
             end
             switch (Modality)
                 case 'SEEG',  SurfAlpha = .5;
@@ -105,9 +105,10 @@ switch lower(SurfaceType)
         end
         isSurface = 1;
     case 'scalp'
-        if ~isempty(sSubject.iScalp) && (sSubject.iScalp <= length(sSubject.Surface))
+        if ~isempty(sSubject.iScalp)
             if isempty(SurfaceFile)
-                SurfaceFile = sSubject.Surface(sSubject.iScalp).FileName;
+                sAnatFile = db_get('AnatomyFile', sSubject.iScalp, 'FileName');
+                SurfaceFile = sAnatFile.FileName;
             end
             switch (Modality)
                 case 'SEEG',  SurfAlpha = .8;
@@ -118,9 +119,10 @@ switch lower(SurfaceType)
         end
         isSurface = 1;
     case {'anatomy', 'subjectimage'}
-        if ~isempty(sSubject.iAnatomy) && (sSubject.iAnatomy <= length(sSubject.Anatomy))
+        if ~isempty(sSubject.iAnatomy)
             if isempty(SurfaceFile)
-                SurfaceFile = sSubject.Anatomy(sSubject.iAnatomy).FileName;
+                sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+                SurfaceFile = sAnatFile.FileName;
             end
             SurfAlpha = .1;
             hFig = view_mri_3d(SurfaceFile, [], SurfAlpha, 'NewFigure');
@@ -244,7 +246,8 @@ end
     
 % ===== DISPLAY MRI FIDUCIALS =====
 % Get the fiducials positions defined in the MRI volume
-sMri = load(file_fullpath(sSubject.Anatomy(sSubject.iAnatomy).FileName), 'SCS');
+sAnatFile = db_get('AnatomyFile', sSubject.iAnatomy, 'FileName');
+sMri = load(file_fullpath(sAnatFile.FileName), 'SCS');
 if ~isempty(sMri.SCS.NAS) && ~isempty(sMri.SCS.LPA) && ~isempty(sMri.SCS.RPA)
     % Convert coordinates MRI => SCS
     MriFidLoc = [cs_convert(sMri, 'mri', 'scs', sMri.SCS.NAS ./ 1000); ...
@@ -919,7 +922,8 @@ function AlignClose_Callback(varargin)
             % Save new electrodes positions in ChannelFile
             bst_save(gChanAlign.ChannelFile, ChannelMat, 'v7');
             % Get study associated with channel file
-            [sStudy, iStudy] = bst_get('ChannelFile', gChanAlign.ChannelFile);
+            sFunctFile = db_get('FunctionalFile', gChanAlign.ChannelFile, 'Study');
+            iStudy = sFunctFile.Study;
             % Reload study file
             db_reload_studies(iStudy);
             bst_progress('stop');
@@ -941,8 +945,7 @@ function CopyToOtherFolders(ChannelMatSrc, iStudySrc, Transf, iChannels)
     % Confirmation: ask the first time
     isConfirm = [];
     % Get subject
-    sStudySrc = bst_get('Study', iStudySrc);
-    [sSubject, iSubject] = bst_get('Subject', sStudySrc.BrainStormSubject);
+    sSubject = db_get('SubjectFromStudy', iStudySrc);
     % If the subject is configured to share its channel files, nothing to do
     if (sSubject.UseDefaultChannel >= 1)
         return;
@@ -950,7 +953,8 @@ function CopyToOtherFolders(ChannelMatSrc, iStudySrc, Transf, iChannels)
     % Get positions of all the sensors
     locSrc = [ChannelMatSrc.Channel.Loc];
     % Get all the dependent studies
-    [sStudies, iStudies] = bst_get('StudyWithSubject', sSubject.FileName);
+    sStudies = db_get('StudiesFromSubject',sSubject.Id);
+    iStudies = [sStudies.Id];
     % List of channel files to update
     ChannelFiles = {};
     strMsg = '';
@@ -961,11 +965,12 @@ function CopyToOtherFolders(ChannelMatSrc, iStudySrc, Transf, iChannels)
             continue;
         end
         % Skip studies without channel files
-        if isempty(sStudies(i).Channel) || isempty(sStudies(i).Channel(1).FileName)
+        sFunctFile = db_get('ChannelFromStudy', sStudies(i).Id);
+        if isempty(sFunctFile)
             continue;
         end
         % Load channel file
-        ChannelMatDest = in_bst_channel(sStudies(i).Channel(1).FileName);
+        ChannelMatDest = in_bst_channel(sFunctFile.FileName);
         % Get positions of all the sensors
         locDest = [ChannelMatDest.Channel.Loc];
         % Check if the channel files are similar
