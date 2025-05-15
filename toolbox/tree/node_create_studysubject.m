@@ -62,29 +62,36 @@ sIntraStudy   = [];
 % Get all studies of selected subject
 sqlConn = sql_connect();
 sStudies = db_get(sqlConn, 'StudiesFromSubject', iSubject, '*', '@intra', '@default_study');
+nStudies = length(sStudies);
+isExpandStudy = ones(1, nStudies);
+for ix = 1 : nStudies
+    isExpandStudy(ix) = sql_query(sqlConn, 'EXIST', 'FunctionalFile', struct('Study', sStudies(ix).Id));
+end
 % Separate @intra and @default_study, and check if they have functional files
 % TODO COMPARE AGAINST FILENAME WHICH IS UNIQUE
 iDefaultStudy = find(strcmp({sStudies.Name}, bst_get('DirDefaultStudy')), 1);
 if ~isempty(iDefaultStudy)
     sDefaultStudy = sStudies(iDefaultStudy);
-    sStudies(iDefaultStudy) = [];
-    if ~sql_query(sqlConn, 'EXIST', 'FunctionalFile', struct('Study', sDefaultStudy.Id))
+    if ~isExpandStudy(iDefaultStudy)
         sDefaultStudy = [];
     end
+    sStudies(iDefaultStudy) = [];
+    isExpandStudy(iDefaultStudy) = [];
 end
 iIntraStudy = find(strcmp({sStudies.Name}, bst_get('DirAnalysisIntra')), 1);
 if ~isempty(iIntraStudy)
     sIntraStudy = sStudies(iIntraStudy);
-    sStudies(iIntraStudy) = [];
-    if ~sql_query(sqlConn, 'EXIST', 'FunctionalFile', struct('Study', sIntraStudy.Id))
+    if ~isExpandStudy(iIntraStudy)
         sIntraStudy = [];
     end
+    sStudies(iIntraStudy) = [];
+    isExpandStudy(iIntraStudy) = [];
 end
 sql_close(sqlConn);
 % Extract raw studies
-listRaw = strncmp('@raw', {sStudies.Name}, 4);
-isRaw = find(listRaw);
-isNonRaw = find(~listRaw);
+listRaw   = strncmp('@raw', {sStudies.Name}, 4);
+isRaw     = find(listRaw);
+isNonRaw  = find(~listRaw);
 % Sort studies by Condition (raw first, non-raw after)
 [tmp__, iStudiesSortedRaw] = sort_nat({sStudies(isRaw).Name});
 [tmp__, iStudiesSortedNonRaw] = sort_nat({sStudies(isNonRaw).Name});
@@ -175,8 +182,10 @@ for i = 1:length(sStudies)
     else
         % Set the node as un-processed
         nodeStudy.setUserObject(0);
-        % Add a "Loading" node
-        nodeStudy.add(BstNode('loading', 'Loading...'));
+        % Add a "Loading" node to expandable Studies
+        if isExpandStudy(iStudy)
+            nodeStudy.add(BstNode('loading', 'Loading...'));
+        end
     end
     
     % Add node to tree
