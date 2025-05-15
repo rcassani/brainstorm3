@@ -80,6 +80,19 @@ if ~isempty(sAnalysisStudy) && ~sql_query(sqlConn, 'EXIST', 'FunctionalFile', st
     sAnalysisStudy = [];
 end
 sSubjects = db_get(sqlConn, 'AllSubjectsRaw', {'Id', 'FileName', 'Name'}, '@default_subject');
+% Expand Subject if it has Conditions or FunctFiles in special Studies
+isExpandSubject = ones(1:length(sSubjects));
+for ix = 1 : length(sSubjects)
+    sStudies = db_get(sqlConn, 'StudiesFromSubject', sSubjects(ix).Id, '*', '@intra', '@default_study');
+    if length(intersect({sStudies.Name}, {'@intra', '@default_study'})) == length(sStudies)
+        isExpand = 0;
+        for iy = 1 : length(sStudies)
+            isExpand = isExpand | sql_query(sqlConn, 'EXIST', 'FunctionalFile', struct('Study', sStudies(iy).Id));
+        end
+        isExpandSubject(ix) = isExpand;
+    end
+end
+
 sql_close(sqlConn);
 iDefaultSubject = find(strcmp({sSubjects.Name}, bst_get('DirDefaultSubject')), 1);
 iGroupSubject   = find(strcmp({sSubjects.Name}, bst_get('NormalizedSubjectName')), 1);
@@ -165,7 +178,9 @@ if strcmpi(expandOrder, 'subject')
             % Set the node as un-processed
             nodeSubject.setUserObject(0);
             % Add a "Loading" node
-            nodeSubject.add(BstNode('loading', 'Loading...'));
+            if isExpandSubject(iSubject)
+                nodeSubject.add(BstNode('loading', 'Loading...'));
+            end
         end
         
         % Add node to tree
