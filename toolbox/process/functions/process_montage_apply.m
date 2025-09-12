@@ -137,6 +137,8 @@ function OutputFiles = Run(sProcess, sInputs) %#ok<DEFNU>
             % Build average reference
             if ~isempty(strfind(sMontage.Name, 'Average reference'))
                 sMontage = panel_montage('GetMontageAvgRef', sMontage, ChannelMat.Channel, DataMat.ChannelFlag, 0);
+            elseif ~isempty(strfind(sMontage.Name, 'Infinity reference (REST)'))
+                sMontage = panel_montage('GetMontageAvgRef', sMontage, ChannelMat.Channel, DataMat.ChannelFlag, 0);
             elseif ~isempty(strfind(sMontage.Name, '(local average ref)'))
                 sMontage = panel_montage('GetMontageAvgRef', sMontage, ChannelMat.Channel, DataMat.ChannelFlag, 1);
             elseif ~isempty(strfind(sMontage.Name, 'Scalp current density'))

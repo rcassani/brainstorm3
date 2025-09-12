@@ -717,6 +717,8 @@ function UpdateDisplayOptions(hFig)
             DispName = 'Avg Ref';
         elseif strcmpi(TsInfo.MontageName, 'Average reference (L -> R)')
             DispName = 'Avg Ref LR';
+        elseif strcmpi(TsInfo.MontageName, 'Infinity reference (REST)')
+            DispName = 'REST Ref';
         % Scalp current density
         elseif strcmpi(TsInfo.MontageName, 'Scalp current density')
             DispName = 'SCD';
