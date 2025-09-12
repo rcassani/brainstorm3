@@ -938,14 +938,14 @@ function LoadDefaultMontages() %#ok<DEFNU>
     sMontage.Name = 'Average reference';
     sMontage.Type = 'matrix';
     SetMontage(sMontage.Name, sMontage);
-    % Set REST (EEG) montage
-    sMontage = db_template('Montage');
-    sMontage.Name = 'Infinity reference (REST)';
-    sMontage.Type = 'matrix';
-    SetMontage(sMontage.Name, sMontage);
     % Set average reference montage (sorted Left>Right)
     sMontage = db_template('Montage');
     sMontage.Name = 'Average reference (L -> R)';
+    sMontage.Type = 'matrix';
+    SetMontage(sMontage.Name, sMontage);
+    % Set infinity reference (REST) montage
+    sMontage = db_template('Montage');
+    sMontage.Name = 'Infinity reference (REST)';
     sMontage.Type = 'matrix';
     SetMontage(sMontage.Name, sMontage);
     % Set scalp current density montage
