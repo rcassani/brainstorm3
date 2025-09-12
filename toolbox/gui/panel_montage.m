@@ -1629,10 +1629,10 @@ function SetCurrentMontage(Modality, MontageName)
         TsInfo = getappdata(hFig, 'TsInfo');
         TsInfo.MontageName = MontageName;
         setappdata(hFig, 'TsInfo', TsInfo);
-        % Update panel Recorf
-        panel_record('UpdateDisplayOptions', hFig);
         % Update figure plot
         bst_figures('ReloadFigures', hFig, 0);
+        % Update panel Recorf
+        panel_record('UpdateDisplayOptions', hFig);
         % Close progress bar
         bst_progress('stop');
     end
