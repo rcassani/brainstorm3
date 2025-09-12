@@ -1023,7 +1023,7 @@ function [sMontage, iMontage] = GetMontage(MontageName, hFig)
             % Find infinity reference (REST) montage
             iAvgRef = find(strcmpi({sMontage.Name}, 'Infinity reference (REST)'));
             if ~isempty(iAvgRef) && ~isempty(hFig)
-                sTmp = GetMontageAvgRef(sMontage(iAvgRef), hFig, [], 0);    % Infinity reference (REST)
+                sTmp = GetMontageRestRef(sMontage(iAvgRef), hFig, [], []);    % Infinity reference (REST)
                 if ~isempty(sTmp)
                     sMontage(iAvgRef) = sTmp;
                 end
@@ -1420,63 +1420,17 @@ function sMontage = GetMontageAvgRef(sMontage, Channels, ChannelFlag, isSubGroup
     sMontage.Matrix    = eye(numChannels);
     % Get EEG groups
     [iEEG, GroupNames] = GetEegGroups(Channels, ChannelFlag, isSubGroups);
-    isOnlyEeg = length(GroupNames) == 1 && strcmp(GroupNames{1}, 'EEG');
-    % COMPUTATION
-    % === Average reference ===
+    % Computation
     for i = 1:length(iEEG)
         nChan = length(iEEG{i});
         if (nChan >= 2)
             sMontage.Matrix(iEEG{i},iEEG{i}) = eye(nChan) - ones(nChan) ./ nChan;
         end
     end
-    % === Average reference (L -> R) ===
     % Sort electrodes per hemisphere if required
     if ~isempty(sMontage) && strcmpi(sMontage.Name, 'Average reference (L -> R)')
         sMontage = SortLeftRight(sMontage);
     end
-    % === Infinity reference (REST) ===
-    if strcmp(sMontage.Name, 'Infinity reference (REST)')
-        sHeadModel = bst_get('HeadModelForStudy', GlobalData.DataSet(iDS).StudyFile);
-        if isOnlyEeg && ~isempty(sHeadModel) && ~isempty(sHeadModel.EEGMethod)
-            %   Main function of Reference Electrode Standardization Technique
-            %   Reference:
-            %  Yao D (2001) A method to standardize a reference of scalp EEG recordings to a point at infinity.
-            %                       Physiol Meas 22:693?11. doi: 10.1088/0967-3334/22/4/305
-            %  Li Dong*, Fali Li, Qiang Liu, Xin Wen, Yongxiu Lai, Peng Xu and Dezhong Yao*.
-            %              MATLAB Toolboxes for Reference Electrode Standardization Technique (REST)
-            %              of Scalp EEG. Frontiers in Neuroscience,  2017:11(601).
-            % Algorithm:
-            %   'data'  : EEG data size                  size [nChannels, nSamples]
-            %   'G'     : Leadfield matrix               size [nChannels, nSources]
-            %   'data_z': EEG data with zero reference   size [nChannels, nSamples]
-            %
-            %   data   = data - repmat(mean(data),Nchans,1);        % data   = (I - ones(nChannels)./nChannels) * data = (I - A) * data = Av * data
-            %   Gar    = G - repmat(mean(G),size(G,1),1);           % Gar    = Av * G
-            %   data_z = G * pinv(Gar,0.05) * data_a;               % data_z = G * pinv(Av * G) * Av * data = R * Av * data
-            %   data_z = data + repmat(mean(data_z),size(G,1),1);   % data_z = data + A * data_z = (Av * data) + (A * R * Av * data) = (I + A*R) * Av *data
-            HeadModelMat = in_bst_headmodel(sHeadModel.FileName);
-            G = HeadModelMat.Gain(iChannels, :);
-            % Average (across channels) projector
-            A = ones(nChan)./nChan;
-            % Average reference projector
-            Av = eye(nChan) - A;
-            % Standardization matrix
-            R = G * pinv(Av * G, 0.05);
-            % data_z = data + mean(data_z)
-            % data_z = (Av * data) + mean(R * Av * data) = (I + A*R) * Av * data =  W * data
-            sMontage.Matrix = (eye(nChan) + A * R) * Av;
-
-        elseif ~isOnlyEeg
-            disp('BST> Infinity reference (REST) only available for EEG channels');
-            % Return already computed 'Average reference' montage
-            sMontage.Name = 'Average reference';
-
-        elseif isempty(sHeadModel) || isempty(sHeadModel.EEGMethod)
-            disp('BST> Infinity reference (REST) requires a EEG head model');
-            % Return already computed 'Average reference' montage
-            sMontage.Name = 'Average reference';
-        end
-     end
 end
 
 
@@ -1506,6 +1460,104 @@ function sMontage = SortLeftRight(sMontage)
     sMontage.DispNames = sMontage.DispNames(iOrder);
     sMontage.ChanNames = sMontage.ChanNames(iOrder);
     sMontage.Matrix = sMontage.Matrix(iOrder, iOrder);
+end
+
+%% ===== GET INFINITY REFERENCE (REST) MONTAGE =====
+% USAGE:  sMontage = GetMontageRestRef(sMontage, hFig)
+%         sMontage = GetMontageRestRef(sMontage, Channels, ChannelFlag, Leadfield)
+function sMontage = GetMontageRestRef(sMontage, Channels, ChannelFlag, Leadfield)
+    global GlobalData;
+    % Headmodel
+    if (nargin < 4) || isempty(Leadfield)
+        Leadfield = [];
+    end
+    % Get info from figure
+    if (nargin < 3) || isempty(ChannelFlag)
+        hFig = Channels;
+        % Create EEG menu
+        TsInfo = getappdata(hFig,'TsInfo');
+        if isempty(TsInfo.Modality) || ~strcmp(TsInfo.Modality, 'EEG')
+            sMontage = [];
+            return;
+        end
+        % Get figure description
+        [hFig, iFig, iDS] = bst_figures('GetFigure', hFig);
+        % Check that this figure can handle montages
+        if isempty(GlobalData.DataSet(iDS).Figure(iFig).SelectedChannels) || isempty(GlobalData.DataSet(iDS).Channel) || isempty(GlobalData.DataSet(iDS).Measures.ChannelFlag)
+            sMontage = [];
+            return;
+        end
+        % Get selected channels
+        iChannels = GlobalData.DataSet(iDS).Figure(iFig).SelectedChannels;
+        Channels = GlobalData.DataSet(iDS).Channel(iChannels);
+        ChannelFlag = GlobalData.DataSet(iDS).Measures.ChannelFlag(iChannels);
+        % Get leadfield matrix
+        sHeadModel = bst_get('HeadModelForStudy', GlobalData.DataSet(iDS).StudyFile);
+        if ~isempty(sHeadModel) && ~isempty(sHeadModel.EEGMethod)
+            HeadModelMat = in_bst_headmodel(sHeadModel.FileName);
+            Leadfield = HeadModelMat.Gain;
+        end
+    else
+        iChannels = 1:length(Channels);
+    end
+    % If no montage in input: get the Infinity reference (REST)
+    if isempty(sMontage)
+        iMontage = find(strcmpi({GlobalData.ChannelMontages.Montages.Name}, 'Infinity reference (REST)'), 1);
+        if isempty(iMontage)
+            return;
+        end
+        sMontage = GlobalData.ChannelMontages.Montages(iMontage(1));
+    end
+    if isempty(Leadfield)
+        disp('BST> Infinity reference (REST) requires a EEG head model');
+        % Compute 'Average reference' instead
+        sMontage.Name = 'Average reference';
+    end
+    % Update montage
+    numChannels = length(iChannels);
+    sMontage.DispNames = {Channels.Name};
+    sMontage.ChanNames = {Channels.Name};
+    sMontage.Matrix    = eye(numChannels);
+    % Get EEG groups
+    iEEG = GetEegGroups(Channels, ChannelFlag);
+    iChannels = iChannels(iEEG{1});
+    nChan = length(iChannels);
+    % Computation
+    % === Infinity reference (REST) ===
+    if strcmp(sMontage.Name, 'Infinity reference (REST)')
+        %   Main function of Reference Electrode Standardization Technique
+        %   Reference:
+        %  Yao D (2001) A method to standardize a reference of scalp EEG recordings to a point at infinity.
+        %                       Physiol Meas 22:693?11. doi: 10.1088/0967-3334/22/4/305
+        %  Li Dong*, Fali Li, Qiang Liu, Xin Wen, Yongxiu Lai, Peng Xu and Dezhong Yao*.
+        %              MATLAB Toolboxes for Reference Electrode Standardization Technique (REST)
+        %              of Scalp EEG. Frontiers in Neuroscience,  2017:11(601).
+        % Algorithm:
+        %   'data'  : EEG data size                  size [nChannels, nSamples]
+        %   'G'     : Leadfield matrix               size [nChannels, nSources]
+        %   'data_z': EEG data with zero reference   size [nChannels, nSamples]
+        %
+        %   data   = data - repmat(mean(data),Nchans,1);        % data   = (I - ones(nChannels)./nChannels) * data = (I - A) * data = Av * data
+        %   Gar    = G - repmat(mean(G),size(G,1),1);           % Gar    = Av * G
+        %   data_z = G * pinv(Gar,0.05) * data_a;               % data_z = G * pinv(Av * G) * Av * data = R * Av * data
+        %   data_z = data + repmat(mean(data_z),size(G,1),1);   % data_z = data + A * data_z = (Av * data) + (A * R * Av * data) = (I + A*R) * Av *data
+        G = Leadfield(iChannels, :);
+        % Average (across channels) projector
+        A = ones(nChan)./nChan;
+        % Average reference projector
+        Av = eye(nChan) - A;
+        % Standardization matrix
+        R = G * pinv(Av * G, 0.05);
+        % data_z = data + mean(data_z)
+        % data_z = (Av * data) + mean(R * Av * data) = (I + A*R) * Av * data =  W * data
+        W = (eye(nChan) + A * R) * Av;
+
+    elseif strcmp(sMontage.Name, 'Average reference')
+        W = eye(nChan) - ones(nChan)./nChan;
+    end
+    if (nChan >= 2)
+        sMontage.Matrix(iEEG{1},iEEG{1}) = W;
+    end
 end
 
 %% ===== GET SCALP CURRENT DENSITY MONTAGE =====
@@ -1692,10 +1744,10 @@ function SetCurrentMontage(Modality, MontageName)
         TsInfo = getappdata(hFig, 'TsInfo');
         TsInfo.MontageName = MontageName;
         setappdata(hFig, 'TsInfo', TsInfo);
+        % Update panel Record
+        panel_record('UpdateDisplayOptions', hFig);
         % Update figure plot
         bst_figures('ReloadFigures', hFig, 0);
-        % Update panel Recorf
-        panel_record('UpdateDisplayOptions', hFig);
         % Close progress bar
         bst_progress('stop');
     end
