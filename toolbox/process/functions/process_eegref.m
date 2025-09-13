@@ -140,6 +140,10 @@ function OutputFile = Run(sProcess, sInputs) %#ok<DEFNU>
             iEegRef = iChannels;
             % Get leadfield matrix
             sHeadModel = bst_get('HeadModelForStudy', iStudy);
+            if isempty(sHeadModel) || isempty(sHeadModel.EEGMethod)
+                bst_report('Error', sProcess, [], ['The montage "' sMontage.Name '" requires requires a EEG head model.']);
+                return
+            end
             HeadModelMat = in_bst_headmodel(sHeadModel.FileName);
             sMontage = panel_montage('GetMontageRestRef', [], ChannelMat.Channel(iChannels), ChannelFlag(iChannels), HeadModelMat.Gain(iChannels,:));
             W(iChannels,iChannels) = sMontage.Matrix;
