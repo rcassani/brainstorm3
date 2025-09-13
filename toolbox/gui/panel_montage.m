@@ -948,6 +948,11 @@ function LoadDefaultMontages() %#ok<DEFNU>
     sMontage.Name = 'Infinity reference (REST)';
     sMontage.Type = 'matrix';
     SetMontage(sMontage.Name, sMontage);
+    % Set infinity reference (REST) montage (sorted Left>Right)
+    sMontage = db_template('Montage');
+    sMontage.Name = 'Infinity reference (REST) (L -> R)';
+    sMontage.Type = 'matrix';
+    SetMontage(sMontage.Name, sMontage);
     % Set scalp current density montage
     sMontage = db_template('Montage');
     sMontage.Name = 'Scalp current density';
@@ -1024,6 +1029,13 @@ function [sMontage, iMontage] = GetMontage(MontageName, hFig)
             iAvgRef = find(strcmpi({sMontage.Name}, 'Infinity reference (REST)'));
             if ~isempty(iAvgRef) && ~isempty(hFig)
                 sTmp = GetMontageRestRef(sMontage(iAvgRef), hFig, [], []);    % Infinity reference (REST)
+                if ~isempty(sTmp)
+                    sMontage(iAvgRef) = sTmp;
+                end
+            end
+            iAvgRef = find(strcmpi({sMontage.Name}, 'Infinity reference (REST) (L -> R)'));
+            if ~isempty(iAvgRef) && ~isempty(hFig)
+                sTmp = GetMontageRestRef(sMontage(iAvgRef), hFig, [], []);    % Infinity reference (REST) sorted L -> R
                 if ~isempty(sTmp)
                     sMontage(iAvgRef) = sTmp;
                 end
@@ -1174,7 +1186,11 @@ function DeleteMontage(MontageName)
         iMontage = iMontage(1);
     end
     % If this is a non-editable montage: error
-    if ismember(sMontage.Name, {'Bad channels', 'Average reference', 'Average reference (L -> R)', 'Infinity reference (REST)', 'Scalp current density', 'Scalp current density (L -> R)', 'Head distance'})
+    if ismember(sMontage.Name, {'Bad channels', ...
+                                'Average reference', 'Average reference (L -> R)', ...
+                                'Infinity reference (REST)', 'Infinity reference (REST) (L -> R)', ...
+                                'Scalp current density', 'Scalp current density (L -> R)', ...
+                                'Head distance'})
         return;
     end    
     % Remove montage if it exists
@@ -1247,9 +1263,13 @@ function [sMontage, iMontage] = GetMontagesForFigure(hFig)
             if ismember(GlobalData.ChannelMontages.Montages(i).Name, {'Average reference (L -> R)', 'Scalp current density (L -> R)'}) && (~strcmpi(FigId.Type, 'DataTimeSeries') || (~isempty(FigId.Modality) && ~ismember(FigId.Modality, {'EEG','SEEG','ECOG','ECOG+SEEG'})) || ~Is1020Setup(FigChannels))
                 continue;
             end
-            % Not EEG or Not EEG head model: Skip infinity reference (REST)
+            % Not EEG: Skip infinity reference (REST)
             if strcmpi(GlobalData.ChannelMontages.Montages(i).Name, 'Infinity reference (REST)') && ~isempty(FigId.Modality) && ~ismember(FigId.Modality, {'EEG'})
-                    continue;
+                continue;
+            end
+            % Not EEG: Skip infinity reference (REST) L -> R (only available for recordings figures)
+            if strcmpi(GlobalData.ChannelMontages.Montages(i).Name, 'Infinity reference (REST) (L -> R)') && (~strcmpi(FigId.Type, 'DataTimeSeries') || (~isempty(FigId.Modality) && ~ismember(FigId.Modality, {'EEG'})) || ~Is1020Setup(FigChannels))
+                continue;
             end
             % Not EEG or no 3D positions or less than 4 unique points: Skip scalp current density
             if ismember(GlobalData.ChannelMontages.Montages(i).Name, {'Scalp current density', 'Scalp current density (L -> R)'}) && ~isempty(FigId.Modality) && ...
@@ -1524,7 +1544,7 @@ function sMontage = GetMontageRestRef(sMontage, Channels, ChannelFlag, Leadfield
     nChan = length(iChannels);
     % Computation
     % === Infinity reference (REST) ===
-    if strcmp(sMontage.Name, 'Infinity reference (REST)')
+    if ismember(sMontage.Name, {'Infinity reference (REST)', 'Infinity reference (REST) (L -> R)'})
         %   Main function of Reference Electrode Standardization Technique
         %   Reference:
         %  Yao D (2001) A method to standardize a reference of scalp EEG recordings to a point at infinity.
@@ -1557,6 +1577,10 @@ function sMontage = GetMontageRestRef(sMontage, Channels, ChannelFlag, Leadfield
     end
     if (nChan >= 2)
         sMontage.Matrix(iEEG{1},iEEG{1}) = W;
+    end
+    % Sort electrodes per hemisphere if required
+    if ~isempty(sMontage) && strcmpi(sMontage.Name, 'Infinity reference (REST) (L -> R)')
+        sMontage = SortLeftRight(sMontage);
     end
 end
 
