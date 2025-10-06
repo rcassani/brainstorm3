@@ -1,9 +1,9 @@
 function varargout = panel_ieeg_implantation(varargin)
-% PANEL_IEEG_IMPLANTATION: Figures to be used during iEEG implantation
+% PANEL_IEEG_IMPLANTATION: Figures to be used during SEEG/ECOG implantation
 %
 % USAGE: [bstPanelNew, panelName] = panel_ieeg_implantation('CreatePanel', isMri, isCt, isIso)
 %
-% impFigs = gui_show_dialog('iEEG implantation', @panel_ieeg_implantation, 1, [], isMri, isCt, isIso)
+% impFigs = gui_show_dialog('SEEG/ECOG implantation', @panel_ieeg_implantation, 1, [], isMri, isCt, isIso)
 %
 % @=============================================================================
 % This function is part of the Brainstorm software:

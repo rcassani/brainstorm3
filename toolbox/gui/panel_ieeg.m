@@ -3626,7 +3626,7 @@ function CreateImplantation(MriFile) %#ok<DEFNU>
         iIsoSrf = find(cellfun(@(x) ~isempty(regexp(x, '_isosurface', 'match')), {sSubject.Surface.FileName}));
         iMriVol = setdiff(iMriVol, iCtVol);
         % User dialog
-        impFigs = gui_show_dialog('iEEG implantation', @panel_ieeg_implantation, 1, [], ~isempty(iMriVol), ~isempty(iCtVol), ~isempty(iIsoSrf));        
+        impFigs = gui_show_dialog('SEEG/ECOG implantation', @panel_ieeg_implantation, 1, [], ~isempty(iMriVol), ~isempty(iCtVol), ~isempty(iIsoSrf));        
         if isempty(impFigs) || (isstruct(impFigs) && all(structfun(@(x) x==0, impFigs)))
             return
         end
@@ -3684,7 +3684,7 @@ function CreateImplantation(MriFile) %#ok<DEFNU>
     end
 
     % Preparing files for implantation
-    bst_progress('start', 'iEEG implantation', 'Loading and verifying files for implantation...');
+    bst_progress('start', 'SEEG/ECOG implantation', 'Loading and verifying files for implantation...');
     % Check SCS coordinates in MRI
     if ~isempty(mriVolFile)
         sMri = bst_memory('LoadMri', mriVolFile);
@@ -3694,7 +3694,7 @@ function CreateImplantation(MriFile) %#ok<DEFNU>
             refVoxSize  = round(sMri.Voxsize(1:3) .* 1000); % mm
         else
             bst_memory('UnloadMri', mriVolFile);
-            bst_error('You need to set the fiducial points in the MRI first.', 'iEEG implantation', 0);
+            bst_error('You need to set the fiducial points in the MRI first.', 'SEEG/ECOG implantation', 0);
             return
         end
     end
@@ -3715,7 +3715,7 @@ function CreateImplantation(MriFile) %#ok<DEFNU>
             end
         else
             bst_memory('UnloadMri', ctVolFile);
-            bst_error('You need to set the fiducial points in the CT first.', 'iEEG implantation', 0);
+            bst_error('You need to set the fiducial points in the CT first.', 'SEEG/ECOG implantation', 0);
             return
         end
     end
