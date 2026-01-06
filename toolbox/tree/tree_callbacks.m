@@ -3945,10 +3945,10 @@ function SimulateSimmeeg(iStudy)
     PlugName = 'simmeeg';
     % Check that SimMEEG is installed
     PlugDesc = bst_plugin('GetInstalled', PlugName);
-    isOk = 1;
     if isempty(PlugDesc)
-        % Install
         [isOk, errMsg, PlugDesc] = bst_plugin('Install', PlugName, 1);
+    else
+        [isOk, errMsg, PlugDesc] = bst_plugin('Load', PlugName);
     end
     % Check the plugin has the function 'bst_simmeeg.m'
     if isOk && ~exist(fullfile(PlugDesc.Path, 'SimMEEG-master', 'bst_simmeeg.m'), 'file')
