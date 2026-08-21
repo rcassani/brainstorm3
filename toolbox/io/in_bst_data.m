@@ -97,8 +97,10 @@ if isRaw && ismember('F', FieldsToRead) && ~isfield(DataMat.F, 't0')
     DataMat.F.t0 = [];
 end
 
-% ===== RAW: ADD DISPLAY UNITS IN F HEADER =====
-if isRaw && ismember('F', FieldsToRead) && isfield(DataMat.F, 'header') && isfield(DataMat, 'DisplayUnits') && ~isempty(DataMat.DisplayUnits)
+% ===== RAW: MISSING OR EMPTY FIELD displayunits IN F.header =====
+if isRaw && ismember('F', FieldsToRead) && isfield(DataMat.F, 'header') && ...
+        (~isfield(DataMat.F.header, 'displayunits') || isempty(DataMat.F.header.displayunits)) && ...
+        isfield(DataMat, 'DisplayUnits') && ~isempty(DataMat.DisplayUnits)
     DataMat.F.header.displayunits = DataMat.DisplayUnits;
 end
 
