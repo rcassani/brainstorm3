@@ -204,6 +204,10 @@ switch (sFile.format)
         F = in_fread_spm(sFile, SamplesBounds, iChannels);
     case 'BST-BIN'
         F = in_fread_bst(sFile, sfid, SamplesBounds, ChannelRange);
+        % Load display units
+        if isfield(sFile, 'header') && isfield(sFile.header, 'displayunits') && ~isempty(sFile.header.displayunits)
+            DisplayUnits = sFile.header.displayunits;
+        end
     case 'BST-DATA'
         if ~isempty(SamplesBounds)
             fileSamples = round(sFile.prop.times * sFile.prop.sfreq);
