@@ -1,4 +1,4 @@
-function str = str_striptag( str )
+function str = str_striptag( str, keepBr )
 % STR_STRIPTAG: Remove HTML tags using REGEXP.
 
 % @=============================================================================
@@ -20,6 +20,15 @@ function str = str_striptag( str )
 % =============================================================================@
 %
 % Authors: Francois Tadel, 2014-2016
+
+if nargin < 2 || isempty(keepBr)
+    keepBr = 0;
+end
+
+if keepBr
+    % Keep line breaks
+    str = regexprep(str, '<br\s*/?>', '\n', 'ignorecase');
+end
 
 % Remove HTML tags
 reghtml = '</?\w+((\s+\w+(\s*=\s*(?:".*?"|''.*?''|[^''">\s]+))?)+\s*|\s*)/?>';

@@ -162,6 +162,9 @@ else
     end
     % Tooltip
     if ~isempty(compTooltip)
+        if bst_get('MatlabVersion') >= 2501
+            compTooltip = sprintf(str_striptag(compTooltip, 1));
+        end
         set(hComp, 'Tooltip', compTooltip);
     end
     % Callback
